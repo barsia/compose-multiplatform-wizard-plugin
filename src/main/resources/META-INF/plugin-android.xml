@@ -8,32 +8,19 @@
     <supportsKotlinPluginMode supportsK2="true"/>
   </extensions>
   
-  <!-- Android Studio-specific extension points -->
-  <extensions defaultExtensionNs="com.android.tools.idea.wizard.template">
-    <wizardTemplateProvider 
-      implementation="io.github.heisiar.composewizard.android.ComposeMultiplatformTemplateProvider"/>
-  </extensions>
-  
-  <extensions defaultExtensionNs="com.android">
-    <moduleDescriptionProvider 
-      implementation="io.github.heisiar.composewizard.android.ComposeMultiplatformModuleDescriptionProvider"/>
-  </extensions>
-  
-  <!-- Actions for Android Studio -->
+  <!-- Actions for Android Studio using shared Compose UI -->
   <actions>
     <action id="ComposeMultiplatform.NewProject.AS"
-            class="io.github.heisiar.composewizard.android.CreateComposeMultiplatformProjectAction"
+            class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project..."
-            description="Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
-            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+            description="Create a new Compose Multiplatform project with shared Compose UI">
       <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewProject"/>
     </action>
     
     <action id="ComposeMultiplatform.WelcomeScreen.AS"
-            class="io.github.heisiar.composewizard.android.CreateComposeMultiplatformProjectAction"
+            class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project"
-            description="Create a new Compose Multiplatform project"
-            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+            description="Create a new Compose Multiplatform project with shared Compose UI">
       <add-to-group group-id="WelcomeScreen.QuickStart" anchor="after" relative-to-action="WelcomeScreen.CreateNewProject"/>
     </action>
   </actions>

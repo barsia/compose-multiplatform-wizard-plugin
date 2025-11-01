@@ -1,4 +1,4 @@
-package io.github.heisiar.composewizard.android.actions
+package io.github.heisiar.composewizard.androidstudio
 
 import androidx.compose.runtime.mutableStateOf
 import com.intellij.openapi.actionSystem.AnAction
@@ -12,9 +12,13 @@ import io.github.heisiar.composewizard.shared.ui.createComposeWizardPanel
 import java.io.File
 import javax.swing.JComponent
 
-class NewComposeMultiplatformProjectAction : AnAction(
+/**
+ * Action for creating Compose Multiplatform projects in Android Studio.
+ * Uses shared Compose UI from the shared module.
+ */
+class AndroidStudioComposeWizardAction : AnAction(
     "Compose Multiplatform Project",
-    "Create a new Compose Multiplatform project with Compose UI wizard",
+    "Create a new Compose Multiplatform project with shared Compose UI",
     null
 ) {
     
@@ -22,11 +26,13 @@ class NewComposeMultiplatformProjectAction : AnAction(
         val dialog = ComposeMultiplatformDialog()
         if (dialog.showAndGet()) {
             val data = dialog.getData()
-            createProject(data)
+            createProject(data, e)
         }
     }
     
-    private fun createProject(data: WizardData) {
+    private fun createProject(data: WizardData, e: AnActionEvent) {
+        val project = e.project
+        
         println("=== Creating Compose Multiplatform Project ===")
         println("Name: ${data.projectName}")
         println("Location: ${data.projectLocation}")
@@ -42,7 +48,7 @@ class NewComposeMultiplatformProjectAction : AnAction(
         
         // Create project directory
         val projectDir = File(data.projectLocation, data.projectName)
-        if (!projectDir.mkdirs()) {
+        if (!projectDir.mkdirs() && !projectDir.exists()) {
             println("ERROR: Cannot create project directory")
             return
         }
@@ -64,8 +70,8 @@ class NewComposeMultiplatformProjectAction : AnAction(
             processor.copyTemplateToProject(projectDir.absolutePath)
             println("=== Project created successfully at ${projectDir.absolutePath} ===")
             
-            // TODO: Open project in AS
-            // ProjectUtil.openOrImport(projectDir.toPath(), null, true)
+            // TODO: In real AS plugin, open project here
+            // ProjectUtil.openOrImport(projectDir.toPath(), project, true)
         } catch (ex: Exception) {
             println("ERROR: ${ex.message}")
             ex.printStackTrace()
@@ -73,12 +79,16 @@ class NewComposeMultiplatformProjectAction : AnAction(
     }
 }
 
+/**
+ * Dialog that uses shared Compose UI for project configuration.
+ * Works in both IntelliJ IDEA and Android Studio!
+ */
 private class ComposeMultiplatformDialog : DialogWrapper(null, true) {
     
     private val wizardDataState = mutableStateOf(
         WizardData(
-            projectLocation = System.getProperty("user.home") + "/AndroidStudioProjects",
-            includeAndroid = true // Always true in AS
+            projectLocation = System.getProperty("user.home") + "/IdeaProjects",
+            includeAndroid = true
         )
     )
     
@@ -88,10 +98,10 @@ private class ComposeMultiplatformDialog : DialogWrapper(null, true) {
     }
     
     override fun createCenterPanel(): JComponent {
-        // Use shared Compose UI!
+        // Use shared Compose UI - same code for IDEA and AS!
         return createComposeWizardPanel(
             data = wizardDataState,
-            showAndroidOption = false // In AS, Android is always included
+            showAndroidOption = true
         )
     }
     
