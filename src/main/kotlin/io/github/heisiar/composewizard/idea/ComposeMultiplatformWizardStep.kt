@@ -1537,7 +1537,12 @@ class ComposeMultiplatformWizardStep(
     }
 
     private fun getDefaultProjectPath(): String {
-        return "~/IdeaProjects"
+        // Use platform-specific default project location
+        return if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            "~/AndroidStudioProjects"
+        } else {
+            "~/IdeaProjects"
+        }
     }
     
     private fun expandPath(path: String): String {
