@@ -12,7 +12,7 @@ version = "1.0.0"
 // Platform configuration: IDEA by default, AS if runAndroidStudio=true
 val runAndroidStudio = project.findProperty("runAndroidStudio")?.toString()?.toBoolean() ?: false
 val platformType = if (runAndroidStudio) "AI" else "IC"
-val platformVersion = if (runAndroidStudio) "2024.2.1.11" else "2025.2.4"
+val platformVersion = if (runAndroidStudio) "2025.2.1.7" else "2025.2.4"
 
 repositories {
     mavenCentral()
