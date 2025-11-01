@@ -8,7 +8,12 @@
     <supportsKotlinPluginMode supportsK2="true"/>
   </extensions>
   
-  <!-- Actions for Android Studio using shared Compose UI -->
+  <!-- 
+    Actions for Android Studio using shared Compose UI
+    These appear in:
+    - File -> New -> Compose Multiplatform Project
+    - Welcome Screen -> New Project -> Compose Multiplatform Project
+  -->
   <actions>
     <action id="ComposeMultiplatform.NewProject.AS"
             class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"

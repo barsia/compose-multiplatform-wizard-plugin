@@ -32,14 +32,13 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
         
-        // Android plugin (only in AS, but safe to declare)
-        if (runAndroidStudio) {
-            bundledPlugin("org.jetbrains.android")
-        }
-        
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
+    
+    // Android Studio API - only for compilation, available at runtime in AS
+    compileOnly("com.android.tools:sdk-common:31.7.2")
+    compileOnly("com.android.tools.build:gradle-api:8.7.3")
     
     // Compose Multiplatform for wizard UI
     implementation(compose.desktop.macos_arm64)
