@@ -1,0 +1,59 @@
+# Cursor Rules for Compose Multiplatform Wizard Plugin
+
+## Compilation Verification
+
+**IMPORTANT**: Always verify implementation by running BOTH compilation commands:
+
+```bash
+# 1. Compile for Android Studio (default)
+cd /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin
+./gradlew compileKotlin
+
+# 2. Compile for IntelliJ IDEA
+cd /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin
+./gradlew compileKotlin -PrunIntellijIdea=true
+```
+
+**Both must succeed!** The plugin supports both platforms.
+
+Do NOT run `gradle runIde` unless explicitly requested by user.
+
+## Code Style
+
+- NO Russian text in code or comments
+- Keep files compact (max 300 lines, excluding imports)
+- Use `remember { FocusRequester() }` in Compose, not inline creation
+- NEVER use `runBlocking` on EDT! Use `launch`, `async`, or sync calls
+
+## Testing
+
+Test the plugin in both IDEs:
+```bash
+# Test in IntelliJ IDEA
+./run-idea.sh
+# or
+./gradlew runIde -PrunIntellijIdea=true
+
+# Test in Android Studio
+./run-android-studio.sh
+# or
+./gradlew runIde
+```
+
+## Architecture
+
+- `shared/` - Code used by BOTH IDEA and AS
+- `idea/` - IntelliJ IDEA-specific integration (compiled for both)
+- `androidstudio/` - Android Studio-specific code (excluded in IDEA builds)
+
+## Logs
+
+Android Studio logs: Not applicable (this is a different project)
+
+## Readme & Testing
+
+- `README.md` - Must contain current implementation info
+- `Testing.md` - Testing documentation (if exists)
+- Do NOT create additional markdown files without request
+- Write summary only for current step, not all previous changes
+
