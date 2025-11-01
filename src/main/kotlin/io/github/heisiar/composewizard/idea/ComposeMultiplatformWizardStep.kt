@@ -40,7 +40,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.idea.statistics.ComposeWizardUsageCollector
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.awt.RelativePoint
@@ -642,7 +642,7 @@ class ComposeMultiplatformWizardStep(
         var web by remember { mutableStateOf(targetWeb) }
         var git by remember { mutableStateOf(initGit) }
         var tests by remember { mutableStateOf(includeTests) }
-        var enableDevVersions by remember { mutableStateOf(com.example.wizard.settings.WizardSettings.getInstance().enableDevVersions) }
+        var enableDevVersions by remember { mutableStateOf(io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions) }
         
         // FUS: Track wizard opened
         LaunchedEffect(Unit) {
@@ -652,7 +652,7 @@ class ComposeMultiplatformWizardStep(
         // Dev checkbox visibility logic
         // By default hidden, visible only with internal mode OR explicitly shown by user OR checkbox enabled
         val isInternalMode = com.intellij.openapi.application.ApplicationManager.getApplication().isInternal
-        var devCheckboxVisibleByUser by remember { mutableStateOf(com.example.wizard.settings.WizardSettings.getInstance().devCheckboxVisibleByUser) }
+        var devCheckboxVisibleByUser by remember { mutableStateOf(io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxVisibleByUser) }
         var isDevCheckboxVisible by remember { mutableStateOf(isInternalMode || devCheckboxVisibleByUser || enableDevVersions) }
         
         // Update visibility when dependencies change
@@ -773,8 +773,8 @@ class ComposeMultiplatformWizardStep(
                 projectIdValue = projectId
                 composeVersionValue = composeVersion
                 this@ComposeMultiplatformWizardStep.enableDevVersions = enableDevVersions
-                com.example.wizard.settings.WizardSettings.getInstance().enableDevVersions = enableDevVersions
-                com.example.wizard.settings.WizardSettings.getInstance().devCheckboxVisibleByUser = devCheckboxVisibleByUser
+                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = enableDevVersions
+                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxVisibleByUser = devCheckboxVisibleByUser
                 targetDesktop = desktop
                 targetAndroid = android
                 targetIOS = ios
@@ -1402,7 +1402,7 @@ class ComposeMultiplatformWizardStep(
             builder.targetWeb = targetWeb
             builder.initGit = initGit
             builder.includeTests = includeTests
-            builder.enableDevVersions = com.example.wizard.settings.WizardSettings.getInstance().enableDevVersions
+            builder.enableDevVersions = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
         }
 
     override fun validate(): Boolean {
@@ -1580,6 +1580,6 @@ class ComposeMultiplatformWizardStep(
     fun getComposeVersion(): String = composeVersionValue
     
     private suspend fun loadComposeVersionsFromMaven(includeDevVersions: Boolean = false): List<String> {
-        return com.example.wizard.services.ComposeVersionService().fetchAvailableVersions(includeDevVersions)
+        return io.github.heisiar.composewizard.shared.services.ComposeVersionService().fetchAvailableVersions(includeDevVersions)
     }
 }

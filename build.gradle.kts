@@ -1,7 +1,9 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
     id("org.jetbrains.intellij.platform") version "2.7.1"
+    id("org.jetbrains.compose") version "1.7.1"
 }
 
 group = "io.github.heisiar"
@@ -13,6 +15,7 @@ repositories {
     intellijPlatform {
         defaultRepositories()
     }
+    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
 }
 
 dependencies {
@@ -22,14 +25,21 @@ dependencies {
         
         // Gradle support
         bundledPlugin("org.jetbrains.plugins.gradle")
-        
-        // Android Studio support (optional, will be available in AS)
-        bundledPlugin("org.jetbrains.android")
         bundledPlugin("org.jetbrains.kotlin")
         
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
+    
+    // Compose Multiplatform for wizard UI
+    implementation(compose.desktop.macos_arm64)
+    implementation(compose.desktop.macos_x64)
+    implementation(compose.desktop.linux_x64)
+    implementation(compose.desktop.windows_x64)
+    implementation(compose.material3)
+    implementation(compose.foundation)
+    implementation(compose.ui)
+    implementation(compose.runtime)
     
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
