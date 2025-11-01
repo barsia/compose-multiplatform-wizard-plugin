@@ -41,6 +41,13 @@ dependencies {
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
     
+    // Android Studio API - only for compilation, available at runtime in AS
+    // These are needed for AS wizard template integration
+    if (!runIntellijIdea) {
+        compileOnly("com.android.tools:sdk-common:31.7.2")
+        compileOnly("com.android.tools.build:gradle-api:8.7.3")
+    }
+    
     // Compose Multiplatform for wizard UI
     implementation(compose.desktop.macos_arm64)
     implementation(compose.desktop.macos_x64)
@@ -76,6 +83,22 @@ intellijPlatform {
               <li>Multi-platform project templates (Desktop, Android, iOS, Web)</li>
             </ul>
         """.trimIndent()
+    }
+}
+
+// Exclude Android Studio-specific code when building for IDEA
+sourceSets {
+    main {
+        java {
+            if (runIntellijIdea) {
+                exclude("**/androidstudio/**")
+            }
+        }
+        kotlin {
+            if (runIntellijIdea) {
+                exclude("**/androidstudio/**")
+            }
+        }
     }
 }
 
