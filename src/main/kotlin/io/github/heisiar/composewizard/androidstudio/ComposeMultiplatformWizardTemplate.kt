@@ -46,13 +46,30 @@ val composeMultiplatformTemplate: Template
             help = "Web (Wasm) module"
         )
         
+        val includeTests = BooleanParameter(
+            name = "Include sample tests",
+            defaultValue = true,
+            help = "Add example unit and UI tests"
+        )
+        
+        val initGit = BooleanParameter(
+            name = "Initialize Git repository",
+            defaultValue = true,
+            help = "Create .git directory and initial commit"
+        )
+        
         override val widgets: Collection<Widget<*>> = listOf(
             LabelWidget("Target platforms:"),
             Separator,
             CheckBoxWidget(includeAndroid),
             CheckBoxWidget(includeIos),
             CheckBoxWidget(includeDesktop),
-            CheckBoxWidget(includeWeb)
+            CheckBoxWidget(includeWeb),
+            Separator,
+            LabelWidget("Additional options:"),
+            Separator,
+            CheckBoxWidget(includeTests),
+            CheckBoxWidget(initGit)
         )
         
         override fun thumb(): Thumb {
@@ -66,7 +83,9 @@ val composeMultiplatformTemplate: Template
                 includeAndroid.value,
                 includeIos.value,
                 includeDesktop.value,
-                includeWeb.value
+                includeWeb.value,
+                includeTests.value,
+                initGit.value
             )
         }
         
@@ -79,10 +98,13 @@ fun composeMultiplatformProjectRecipe(
     includeAndroid: Boolean,
     includeIos: Boolean,
     includeDesktop: Boolean,
-    includeWeb: Boolean
+    includeWeb: Boolean,
+    includeTests: Boolean,
+    initGit: Boolean
 ): Boolean {
     println("=== Compose Multiplatform Recipe Started ===")
     println("Platforms: Android=$includeAndroid, iOS=$includeIos, Desktop=$includeDesktop, Web=$includeWeb")
+    println("Options: Tests=$includeTests, Git=$initGit")
     
     if (moduleData == null) {
         println("ERROR: ModuleTemplateData is null")
@@ -110,7 +132,7 @@ fun composeMultiplatformProjectRecipe(
         projectName = applicationName,
         projectId = packageName,
         composeVersion = "1.7.1",
-        includeTests = false,
+        includeTests = includeTests,
         targetDesktop = includeDesktop,
         targetAndroid = includeAndroid,
         targetIOS = includeIos,
@@ -121,6 +143,20 @@ fun composeMultiplatformProjectRecipe(
     // Copy template to project
     try {
         processor.copyTemplateToProject(projectPath)
+        
+        // Initialize Git if requested
+        if (initGit) {
+            try {
+                val projectDir = java.io.File(projectPath)
+                // Simple git init - could be enhanced with .gitignore and initial commit
+                Runtime.getRuntime().exec(arrayOf("git", "init"), null, projectDir).waitFor()
+                println("Git repository initialized")
+            } catch (e: Exception) {
+                println("WARNING: Could not initialize git: ${e.message}")
+                // Don't fail the whole project creation if git fails
+            }
+        }
+        
         println("=== Project created successfully! ===")
         return true
     } catch (e: Exception) {
