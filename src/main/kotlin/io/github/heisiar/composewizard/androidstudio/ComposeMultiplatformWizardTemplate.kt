@@ -10,18 +10,33 @@ import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageColle
  * Appears in New Project wizard under "Phone and Tablet".
  */
 val composeMultiplatformTemplate: Template
-    get() = object : Template {
-        override val name: String = "Compose Multiplatform"
-        override val description: String = "Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
-        override val minSdk: Int = 24
-        override val category: Category = Category.Application
-        override val formFactor: FormFactor = FormFactor.Mobile
-        override val constraints: Collection<TemplateConstraint> = emptyList()
-        override val uiContexts: Collection<WizardUiContext> = listOf(
-            WizardUiContext.NewProject,
-            WizardUiContext.NewProjectExtraDetail
+    get() {
+        // Available Compose versions
+        // Note: Native AS wizard doesn't support async initialization,
+        // so we use a predefined list instead of fetching from Maven dynamically.
+        // The Compose UI action wizard (File → New) uses dynamic version fetching.
+        val availableVersions = listOf(
+            "1.7.1",
+            "1.7.0", 
+            "1.6.11",
+            "1.6.10",
+            "1.6.2",
+            "1.6.1",
+            "1.6.0"
         )
-        override val documentationUrl: String? = null
+        
+        return object : Template {
+            override val name: String = "Compose Multiplatform"
+            override val description: String = "Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
+            override val minSdk: Int = 24
+            override val category: Category = Category.Application
+            override val formFactor: FormFactor = FormFactor.Mobile
+            override val constraints: Collection<TemplateConstraint> = emptyList()
+            override val uiContexts: Collection<WizardUiContext> = listOf(
+                WizardUiContext.NewProject,
+                WizardUiContext.NewProjectExtraDetail
+            )
+            override val documentationUrl: String? = null
         
         val includeAndroid = BooleanParameter(
             name = "🤖 Android",
@@ -59,6 +74,13 @@ val composeMultiplatformTemplate: Template
             help = "Create .git directory and initial commit"
         )
         
+        val composeVersion = StringParameter(
+            name = "Compose Multiplatform version",
+            defaultValue = availableVersions.first(),
+            help = "Version of Compose Multiplatform to use",
+            constraints = emptyList()
+        )
+        
         override val widgets: Collection<Widget<*>> = listOf(
             LabelWidget("Target platforms:"),
             Separator,
@@ -70,7 +92,9 @@ val composeMultiplatformTemplate: Template
             LabelWidget("Additional options:"),
             Separator,
             CheckBoxWidget(includeTests),
-            CheckBoxWidget(initGit)
+            CheckBoxWidget(initGit),
+            Separator,
+            TextFieldWidget(composeVersion)
         )
         
         override fun thumb(): Thumb {
@@ -86,13 +110,15 @@ val composeMultiplatformTemplate: Template
                 includeDesktop.value,
                 includeWeb.value,
                 includeTests.value,
-                initGit.value
+                initGit.value,
+                composeVersion.value
             )
         }
         
         override val useGenericInstrumentedTests: Boolean = false
         override val useGenericLocalTests: Boolean = false
     }
+}
 
 fun composeMultiplatformProjectRecipe(
     moduleData: ModuleTemplateData?,
@@ -101,7 +127,8 @@ fun composeMultiplatformProjectRecipe(
     includeDesktop: Boolean,
     includeWeb: Boolean,
     includeTests: Boolean,
-    initGit: Boolean
+    initGit: Boolean,
+    composeVersion: String
 ): Boolean {
     val startTime = System.currentTimeMillis()
     
@@ -134,9 +161,8 @@ fun composeMultiplatformProjectRecipe(
         return false
     }
     
-    // Use default Compose version (1.7.1)
-    // Note: Native AS wizard doesn't support dynamic version selection
-    val composeVersion = "1.7.1"
+    // Use selected Compose version from dropdown
+    println("Selected Compose version: $composeVersion")
     
     // Log platform toggles (FUS)
     ComposeWizardUsageCollector.logPlatformToggled("Android", includeAndroid)
