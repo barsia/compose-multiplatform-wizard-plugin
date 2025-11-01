@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import io.github.heisiar.composewizard.idea.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.idea.ComposeMultiplatformWizardStep
 import com.intellij.openapi.ui.DialogWrapper
+import java.awt.Dimension
 import javax.swing.JComponent
 
 /**
@@ -48,8 +49,15 @@ private class ComposeMultiplatformDialog(
     
     override fun createCenterPanel(): JComponent {
         // Use the SAME advanced Compose UI from IDEA!
-        // Let DialogWrapper determine size automatically based on content (same as IDEA)
-        return wizardStep.component
+        return wizardStep.component.apply {
+            // Standard wizard size for comfortable viewing
+            preferredSize = Dimension(850, 650)
+        }
+    }
+    
+    override fun getPreferredSize(): Dimension {
+        // Standard wizard dialog size
+        return Dimension(850, 650)
     }
     
     override fun doOKAction() {

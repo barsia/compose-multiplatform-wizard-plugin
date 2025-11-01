@@ -23,16 +23,16 @@
     <action id="ComposeMultiplatform.NewProject.AS"
             class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project..."
-            description="Create a new Compose Multiplatform project with shared Compose UI"
-            icon="/wizards/compose-multiplatform.svg">
+            description="Create a new Compose Multiplatform project with advanced Compose UI"
+            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
       <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewProject"/>
     </action>
     
     <action id="ComposeMultiplatform.WelcomeScreen.AS"
             class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project"
-            description="Create a new Compose Multiplatform project with shared Compose UI"
-            icon="/wizards/compose-multiplatform.svg">
+            description="Create a new Compose Multiplatform project with advanced Compose UI"
+            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
       <add-to-group group-id="WelcomeScreen.QuickStart" anchor="after" relative-to-action="WelcomeScreen.CreateNewProject"/>
     </action>
   </actions>
