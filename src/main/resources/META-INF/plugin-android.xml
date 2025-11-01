@@ -8,11 +8,16 @@
     <supportsKotlinPluginMode supportsK2="true"/>
   </extensions>
   
+  <!-- Android Studio wizard integration - appears in "Phone and Tablet" section -->
+  <extensions defaultExtensionNs="com.android.tools.idea.wizard.template">
+    <wizardTemplateProvider implementation="io.github.heisiar.composewizard.androidstudio.ComposeMultiplatformTemplateProvider"/>
+  </extensions>
+  
   <!-- 
-    Actions for Android Studio using shared Compose UI
+    Additional actions for Android Studio
     These appear in:
     - File -> New -> Compose Multiplatform Project
-    - Welcome Screen -> New Project -> Compose Multiplatform Project
+    - Welcome Screen -> Compose Multiplatform Project
   -->
   <actions>
     <action id="ComposeMultiplatform.NewProject.AS"

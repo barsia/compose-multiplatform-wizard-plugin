@@ -50,24 +50,26 @@ Both IntelliJ IDEA and Android Studio use the **same Compose UI components** for
 
 **Option 1: Using helper scripts (recommended):**
 ```bash
-# Test in IntelliJ IDEA
-./run-idea.sh
-
-# Test in Android Studio
+# Test in Android Studio (default)
 ./run-android-studio.sh
+
+# Test in IntelliJ IDEA  
+./run-idea.sh
 ```
 
 **Option 2: Using Gradle directly:**
 ```bash
-# Test in IntelliJ IDEA (default)
+# Test in Android Studio (default - compiles against AS)
 ./gradlew runIde
 
-# Test in Android Studio
-./gradlew runIde -PrunAndroidStudio=true
+# Test in IntelliJ IDEA
+./gradlew runIde -PrunIntellijIdea=true
 ```
 
+**Important**: The plugin **compiles against Android Studio** by default to have access to AS wizard API. This allows the wizard to appear in the native "Phone and Tablet" section of AS New Project wizard.
+
 The plugin will automatically:
-- Download the appropriate IDE (IDEA or AS)
+- Download the appropriate IDE (AS 2025.2.1.7 or IDEA 2025.2.4)
 - Install the plugin
 - Launch the IDE with the plugin enabled
 - Show which platform is running in the console

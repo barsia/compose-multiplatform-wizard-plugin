@@ -9,10 +9,10 @@ plugins {
 group = "io.github.heisiar"
 version = "1.0.0"
 
-// Platform configuration: IDEA by default, AS if runAndroidStudio=true
-val runAndroidStudio = project.findProperty("runAndroidStudio")?.toString()?.toBoolean() ?: false
-val platformType = if (runAndroidStudio) "AI" else "IC"
-val platformVersion = if (runAndroidStudio) "2025.2.1.7" else "2025.2.4"
+// Platform configuration: AS by default (needed for wizard API), IDEA for testing
+val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
+val platformType = if (runIntellijIdea) "IC" else "AI"
+val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.2.1.7"
 
 repositories {
     mavenCentral()
@@ -25,20 +25,21 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Base platform - IntelliJ IDEA Community or Android Studio
+        // Base platform - Android Studio (for wizard API) or IntelliJ IDEA (for testing)
         create(platformType, platformVersion)
         
         // Gradle support
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
         
+        // Android plugin - needed for AS wizard API
+        if (!runIntellijIdea) {
+            bundledPlugin("org.jetbrains.android")
+        }
+        
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
-    
-    // Android Studio API - only for compilation, available at runtime in AS
-    compileOnly("com.android.tools:sdk-common:31.7.2")
-    compileOnly("com.android.tools.build:gradle-api:8.7.3")
     
     // Compose Multiplatform for wizard UI
     implementation(compose.desktop.macos_arm64)
@@ -97,7 +98,7 @@ tasks {
         autoReload = true
         
         doFirst {
-            val platform = if (runAndroidStudio) "Android Studio" else "IntelliJ IDEA"
+            val platform = if (runIntellijIdea) "IntelliJ IDEA" else "Android Studio"
             println("==============================================")
             println("  Running plugin in: $platform ($platformType $platformVersion)")
             println("==============================================")

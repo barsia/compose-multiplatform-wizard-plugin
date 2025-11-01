@@ -2,5 +2,5 @@
 # Run plugin in IntelliJ IDEA
 
 echo "🚀 Starting plugin in IntelliJ IDEA..."
-./gradlew runIde
+./gradlew runIde -PrunIntellijIdea=true
 
