@@ -1,0 +1,7 @@
+{
+  "name": "ios",
+  "displayName": "iOS",
+  "description": "iOS target for Compose Multiplatform",
+  "requiresIosApp": true
+}
+

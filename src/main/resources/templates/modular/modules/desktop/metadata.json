@@ -1,0 +1,7 @@
+{
+  "name": "desktop",
+  "displayName": "Desktop",
+  "description": "Desktop (JVM) target for Compose Multiplatform",
+  "requiresIosApp": false
+}
+

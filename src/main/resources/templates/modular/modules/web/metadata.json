@@ -1,0 +1,7 @@
+{
+  "name": "web",
+  "displayName": "Web",
+  "description": "Web (JS + Wasm) target for Compose Multiplatform",
+  "requiresIosApp": false
+}
+

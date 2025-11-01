@@ -1,4 +1,4 @@
-package io.github.heisiar.composewizard.android
+package io.github.heisiar.composewizard.android.android
 
 import com.android.tools.idea.wizard.template.Template
 import com.android.tools.idea.wizard.template.WizardTemplateProvider

@@ -1,0 +1,7 @@
+{
+  "name": "android",
+  "displayName": "Android",
+  "description": "Android target for Compose Multiplatform",
+  "requiresIosApp": false
+}
+

@@ -1,0 +1,24 @@
+{{IMPORTS}}
+
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+{{PLUGINS}}
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
+{{HOT_RELOAD_PLUGIN}}
+}
+
+kotlin {
+{{TARGETS}}
+    
+    sourceSets {
+{{SOURCE_SETS}}
+    }
+}
+
+{{ANDROID_CONFIG}}
+
+{{DEPENDENCIES}}
+
+{{DESKTOP_CONFIG}}
+

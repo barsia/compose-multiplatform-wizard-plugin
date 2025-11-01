@@ -1,0 +1,12 @@
+compose.desktop {
+    application {
+        mainClass = "{{PROJECT_ID}}.MainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "{{PROJECT_ID}}"
+            packageVersion = "1.0.0"
+        }
+    }
+}
+
