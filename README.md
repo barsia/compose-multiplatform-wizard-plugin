@@ -18,11 +18,20 @@ A unified IntelliJ Platform plugin that provides project creation wizard for Com
 
 This plugin uses a unified codebase with platform-specific integrations:
 
-- `shared/` - Common template processing and validation logic
-- `idea/` - IntelliJ IDEA-specific wizard integration
-- `android/` - Android Studio-specific wizard integration
+- `shared/` - Common logic shared across both IDEs:
+  - `ui/` - **Shared Compose UI** - Single wizard UI built with Compose Desktop that works in both IDEA and AS
+  - Template processing and validation
+  - Services and utilities
+- `idea/` - IntelliJ IDEA-specific wizard integration (New Project Wizard)
+- `android/` - Android Studio-specific wizard integration (Native AS wizard + actions)
 
-The plugin automatically detects the host IDE and activates the appropriate integration.
+### Key Innovation: Shared Compose UI
+
+Both IntelliJ IDEA and Android Studio use the **same Compose UI components** for the wizard:
+- Built with Compose Desktop
+- Integrated via Swing's `ComposePanel`
+- Consistent look and feel across platforms
+- Single source of truth for wizard UI logic
 
 ## Development
 
