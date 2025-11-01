@@ -1022,6 +1022,13 @@ class ComposeMultiplatformWizardStep(
                                 isWarning = false
                             )
                         }
+                        // Warning popup for non-empty directory
+                        if (projectLocationWarning != null && projectPathFocused) {
+                            ValidationPopup(
+                                message = projectLocationWarning!!,
+                                isWarning = true
+                            )
+                        }
                     }
                     val interactionSource = remember { MutableInteractionSource() }
                     val isHovered by interactionSource.collectIsHoveredAsState()
@@ -1062,18 +1069,6 @@ class ComposeMultiplatformWizardStep(
                             .padding(start = 2.dp)
                             .offset(y = (-4).dp)
                     )
-                }
-                
-                // Show location warning if directory is not empty
-                if (projectLocationWarning != null) {
-                    SelectionContainer {
-                        Text(
-                            text = projectLocationWarning!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFFF9800),
-                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-                        )
-                    }
                 }
 
                     // Project ID
