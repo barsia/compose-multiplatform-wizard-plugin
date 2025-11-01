@@ -1,0 +1,89 @@
+plugins {
+    id("java")
+    id("org.jetbrains.kotlin.jvm") version "2.1.0"
+    id("org.jetbrains.intellij.platform") version "2.7.1"
+}
+
+group = "io.github.heisiar"
+version = "1.0.0"
+
+repositories {
+    mavenCentral()
+    google()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+dependencies {
+    intellijPlatform {
+        // Base platform - IntelliJ IDEA Community
+        create("IC", "2025.2.4")
+        
+        // Gradle support
+        bundledPlugin("org.jetbrains.plugins.gradle")
+        
+        // Android Studio support (optional, will be available in AS)
+        bundledPlugin("org.jetbrains.android")
+        bundledPlugin("org.jetbrains.kotlin")
+        
+        // Test framework
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+    }
+    
+    // Testing
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:2.1.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.0")
+}
+
+intellijPlatform {
+    buildSearchableOptions = false
+    
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "242"
+            untilBuild = "253.*"
+        }
+        
+        name = "Compose Multiplatform Wizard"
+        
+        changeNotes = """
+            <h3>1.0.0</h3>
+            <ul>
+              <li>Initial release</li>
+              <li>Support for IntelliJ IDEA and Android Studio</li>
+              <li>Multi-platform project templates (Desktop, Android, iOS, Web)</li>
+            </ul>
+        """.trimIndent()
+    }
+}
+
+tasks {
+    withType<JavaCompile> {
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
+    }
+    
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "skipped", "failed")
+            showStandardStreams = false
+        }
+    }
+    
+    runIde {
+        jvmArgs("-Xmx2048m")
+        autoReload = true
+    }
+    
+    buildPlugin {
+        archiveFileName = "compose-multiplatform-wizard-$version.zip"
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+

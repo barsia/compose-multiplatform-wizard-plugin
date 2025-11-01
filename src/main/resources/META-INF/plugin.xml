@@ -1,0 +1,41 @@
+<idea-plugin>
+  <id>io.github.heisiar.compose-multiplatform-wizard</id>
+  <name>Compose Multiplatform Wizard</name>
+  <vendor email="your-email@example.com" url="https://github.com/heisiar">heisiar</vendor>
+  
+  <description><![CDATA[
+    <strong>Universal Compose Multiplatform Project Wizard</strong><br><br>
+    Works seamlessly in both <strong>IntelliJ IDEA</strong> and <strong>Android Studio</strong>!<br><br>
+    
+    <h3>Features:</h3>
+    <ul>
+      <li>Create multi-platform projects for Desktop, Android, iOS, and Web</li>
+      <li>Smart platform detection and adaptation</li>
+      <li>Modern project templates with best practices</li>
+      <li>Version selection for Compose Multiplatform</li>
+    </ul>
+    
+    <h3>Supported Platforms:</h3>
+    <ul>
+      <li>Desktop (JVM): Windows, macOS, Linux</li>
+      <li>Android: Native Android apps</li>
+      <li>iOS: Native iOS apps (via Kotlin/Native)</li>
+      <li>Web: Browser-based apps (via Kotlin/Wasm & Kotlin/JS)</li>
+    </ul>
+  ]]></description>
+  
+  <!-- Base dependency - available everywhere -->
+  <depends>com.intellij.modules.platform</depends>
+  <depends>org.jetbrains.plugins.gradle</depends>
+  
+  <!-- OPTIONAL: Android Studio support -->
+  <!-- This config file is loaded ONLY when org.jetbrains.android is available -->
+  <depends optional="true" config-file="plugin-android.xml">org.jetbrains.android</depends>
+  
+  <!-- Extensions for IntelliJ IDEA (always loaded) -->
+  <extensions defaultExtensionNs="com.intellij">
+    <newProjectWizard.generator 
+      implementation="io.github.heisiar.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
+  </extensions>
+</idea-plugin>
+

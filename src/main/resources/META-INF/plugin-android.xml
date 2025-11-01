@@ -1,0 +1,41 @@
+<idea-plugin>
+  <!-- This file is loaded ONLY in Android Studio (when org.jetbrains.android is available) -->
+  
+  <depends>org.jetbrains.kotlin</depends>
+  
+  <!-- Mark plugin as K2-compatible -->
+  <extensions defaultExtensionNs="org.jetbrains.kotlin">
+    <supportsKotlinPluginMode supportsK2="true"/>
+  </extensions>
+  
+  <!-- Android Studio-specific extension points -->
+  <extensions defaultExtensionNs="com.android.tools.idea.wizard.template">
+    <wizardTemplateProvider 
+      implementation="io.github.heisiar.composewizard.android.ComposeMultiplatformTemplateProvider"/>
+  </extensions>
+  
+  <extensions defaultExtensionNs="com.android">
+    <moduleDescriptionProvider 
+      implementation="io.github.heisiar.composewizard.android.ComposeMultiplatformModuleDescriptionProvider"/>
+  </extensions>
+  
+  <!-- Actions for Android Studio -->
+  <actions>
+    <action id="ComposeMultiplatform.NewProject.AS"
+            class="io.github.heisiar.composewizard.android.CreateComposeMultiplatformProjectAction"
+            text="Compose Multiplatform Project..."
+            description="Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
+            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+      <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewProject"/>
+    </action>
+    
+    <action id="ComposeMultiplatform.WelcomeScreen.AS"
+            class="io.github.heisiar.composewizard.android.CreateComposeMultiplatformProjectAction"
+            text="Compose Multiplatform Project"
+            description="Create a new Compose Multiplatform project"
+            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+      <add-to-group group-id="WelcomeScreen.QuickStart" anchor="after" relative-to-action="WelcomeScreen.CreateNewProject"/>
+    </action>
+  </actions>
+</idea-plugin>
+
