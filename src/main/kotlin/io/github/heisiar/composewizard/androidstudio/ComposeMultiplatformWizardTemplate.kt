@@ -3,6 +3,7 @@ package io.github.heisiar.composewizard.androidstudio
 import com.android.tools.idea.wizard.template.*
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import io.github.heisiar.composewizard.shared.ValidationUtils
+import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 
 /**
  * Compose Multiplatform wizard template for Android Studio.
@@ -102,6 +103,11 @@ fun composeMultiplatformProjectRecipe(
     includeTests: Boolean,
     initGit: Boolean
 ): Boolean {
+    val startTime = System.currentTimeMillis()
+    
+    // Log wizard opened (FUS)
+    ComposeWizardUsageCollector.logWizardOpened()
+    
     println("=== Compose Multiplatform Recipe Started ===")
     println("Platforms: Android=$includeAndroid, iOS=$includeIos, Desktop=$includeDesktop, Web=$includeWeb")
     println("Options: Tests=$includeTests, Git=$initGit")
@@ -124,14 +130,27 @@ fun composeMultiplatformProjectRecipe(
     val validation = ValidationUtils.validateProjectId(packageName)
     if (!validation.isValid) {
         println("ERROR: Invalid package name - ${validation.errors.first()}")
+        ComposeWizardUsageCollector.logValidationError("packageName", "invalid_format")
         return false
     }
+    
+    // Use default Compose version (1.7.1)
+    // Note: Native AS wizard doesn't support dynamic version selection
+    val composeVersion = "1.7.1"
+    
+    // Log platform toggles (FUS)
+    ComposeWizardUsageCollector.logPlatformToggled("Android", includeAndroid)
+    ComposeWizardUsageCollector.logPlatformToggled("iOS", includeIos)
+    ComposeWizardUsageCollector.logPlatformToggled("Desktop", includeDesktop)
+    ComposeWizardUsageCollector.logPlatformToggled("Web", includeWeb)
+    ComposeWizardUsageCollector.logTestsToggled(includeTests)
+    ComposeWizardUsageCollector.logGitToggled(initGit)
     
     // Create TemplateProcessor with all parameters
     val processor = TemplateProcessor(
         projectName = applicationName,
         projectId = packageName,
-        composeVersion = "1.7.1",
+        composeVersion = composeVersion,
         includeTests = includeTests,
         targetDesktop = includeDesktop,
         targetAndroid = includeAndroid,
@@ -157,11 +176,26 @@ fun composeMultiplatformProjectRecipe(
             }
         }
         
-        println("=== Project created successfully! ===")
+        // Log successful project creation (FUS)
+        val duration = System.currentTimeMillis() - startTime
+        val targetPlatformsCount = listOf(includeAndroid, includeIos, includeDesktop, includeWeb).count { it }
+        ComposeWizardUsageCollector.logWizardCompleted(
+            platformsCount = targetPlatformsCount,
+            includeTests = includeTests,
+            includeGit = initGit,
+            usedDevVersions = false,
+            timeSpentMs = duration
+        )
+        
+        println("=== Project created successfully in ${duration}ms! ===")
         return true
     } catch (e: Exception) {
         println("ERROR creating project: ${e.message}")
         e.printStackTrace()
+        
+        // Log validation error for failed creation
+        ComposeWizardUsageCollector.logValidationError("projectCreation", "exception")
+        
         return false
     }
 }

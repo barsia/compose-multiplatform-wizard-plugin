@@ -9,8 +9,8 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
-import io.github.heisiar.composewizard.idea.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.idea.ComposeMultiplatformWizardStep
+import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
+import io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import java.awt.Dimension
 import java.io.File

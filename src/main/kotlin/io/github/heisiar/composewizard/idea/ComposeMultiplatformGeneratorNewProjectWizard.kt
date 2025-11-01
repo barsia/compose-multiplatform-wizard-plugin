@@ -21,6 +21,8 @@ import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.settings.GradleSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
+import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
+import io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep
 import java.nio.file.Path
 import javax.swing.Icon
 

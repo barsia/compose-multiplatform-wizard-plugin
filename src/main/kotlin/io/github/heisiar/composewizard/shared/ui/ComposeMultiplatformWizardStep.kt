@@ -1,4 +1,4 @@
-package io.github.heisiar.composewizard.idea
+package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -40,6 +40,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopup

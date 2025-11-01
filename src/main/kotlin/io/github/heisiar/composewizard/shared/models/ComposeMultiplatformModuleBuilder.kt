@@ -1,4 +1,4 @@
-package io.github.heisiar.composewizard.idea
+package io.github.heisiar.composewizard.shared.models
 
 import com.intellij.ide.util.projectWizard.ModuleBuilder
 import com.intellij.openapi.module.EmptyModuleType
@@ -9,6 +9,9 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import javax.swing.Icon
+
+// Forward declaration - avoid circular dependency
+// ComposeMultiplatformWizardStep will import this class
 
 data class ValidationResult(
     val isValid: Boolean,
@@ -23,7 +26,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
 
     var projectName: String = "ComposeProject"
     var projectId: String = "org.example.project"
-    var composeVersion: String = ComposeMultiplatformWizardStep.DEFAULT_COMPOSE_VERSION
+    var composeVersion: String = "1.7.1" // Default Compose version
     var targetDesktop: Boolean = true
     var targetAndroid: Boolean = true
     var targetIOS: Boolean = true
@@ -60,7 +63,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     }
 
     override fun getCustomOptionsStep(context: com.intellij.ide.util.projectWizard.WizardContext?, parentDisposable: com.intellij.openapi.Disposable?): com.intellij.ide.util.projectWizard.ModuleWizardStep {
-        return ComposeMultiplatformWizardStep(this)
+        return io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep(this)
     }
 
     override fun createWizardSteps(context: com.intellij.ide.util.projectWizard.WizardContext, modulesProvider: com.intellij.openapi.roots.ui.configuration.ModulesProvider): Array<com.intellij.ide.util.projectWizard.ModuleWizardStep> {
