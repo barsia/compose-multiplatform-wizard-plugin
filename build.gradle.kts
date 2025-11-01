@@ -95,5 +95,10 @@ tasks {
 
 kotlin {
     jvmToolchain(21)
+    
+    sourceSets.configureEach {
+        // Exclude android package during compilation - it requires AS environment
+        kotlin.exclude("**/android/**")
+    }
 }
 

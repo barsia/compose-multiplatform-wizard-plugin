@@ -1,10 +1,14 @@
 package io.github.heisiar.composewizard.android.actions
 
+import androidx.compose.runtime.mutableStateOf
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.ValidationInfo
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import io.github.heisiar.composewizard.shared.ValidationUtils
+import io.github.heisiar.composewizard.shared.ui.WizardData
+import io.github.heisiar.composewizard.shared.ui.createComposeWizardPanel
 import java.io.File
 import javax.swing.JComponent
 
@@ -17,27 +21,27 @@ class NewComposeMultiplatformProjectAction : AnAction(
     override fun actionPerformed(e: AnActionEvent) {
         val dialog = ComposeMultiplatformDialog()
         if (dialog.showAndGet()) {
-            val settings = dialog.getSettings()
-            createProject(settings)
+            val data = dialog.getData()
+            createProject(data)
         }
     }
     
-    private fun createProject(settings: ProjectSettings) {
+    private fun createProject(data: WizardData) {
         println("=== Creating Compose Multiplatform Project ===")
-        println("Name: ${settings.projectName}")
-        println("Location: ${settings.projectLocation}")
-        println("Package: ${settings.packageName}")
-        println("Platforms: iOS=${settings.includeIos}, Desktop=${settings.includeDesktop}, Web=${settings.includeWeb}")
+        println("Name: ${data.projectName}")
+        println("Location: ${data.projectLocation}")
+        println("Package: ${data.packageName}")
+        println("Platforms: Android=${data.includeAndroid}, iOS=${data.includeIos}, Desktop=${data.includeDesktop}, Web=${data.includeWeb}")
         
         // Validation
-        val validation = ValidationUtils.validateProjectId(settings.packageName)
+        val validation = ValidationUtils.validateProjectId(data.packageName)
         if (!validation.isValid) {
             println("ERROR: ${validation.errors.first()}")
             return
         }
         
         // Create project directory
-        val projectDir = File(settings.projectLocation, settings.projectName)
+        val projectDir = File(data.projectLocation, data.projectName)
         if (!projectDir.mkdirs()) {
             println("ERROR: Cannot create project directory")
             return
@@ -45,15 +49,15 @@ class NewComposeMultiplatformProjectAction : AnAction(
         
         // Use TemplateProcessor to generate project
         val processor = TemplateProcessor(
-            projectName = settings.projectName,
-            projectId = settings.packageName,
-            composeVersion = "1.10.0-alpha03",
-            includeTests = false,
-            targetDesktop = settings.includeDesktop,
-            targetAndroid = true, // Always true in AS
-            targetIOS = settings.includeIos,
-            targetWeb = settings.includeWeb,
-            enableDevVersions = false
+            projectName = data.projectName,
+            projectId = data.packageName,
+            composeVersion = data.composeVersion,
+            includeTests = data.includeTests,
+            targetDesktop = data.includeDesktop,
+            targetAndroid = data.includeAndroid,
+            targetIOS = data.includeIos,
+            targetWeb = data.includeWeb,
+            enableDevVersions = data.enableDevVersions
         )
         
         try {
@@ -69,18 +73,14 @@ class NewComposeMultiplatformProjectAction : AnAction(
     }
 }
 
-data class ProjectSettings(
-    val projectName: String,
-    val projectLocation: String,
-    val packageName: String,
-    val includeIos: Boolean,
-    val includeDesktop: Boolean,
-    val includeWeb: Boolean
-)
-
 private class ComposeMultiplatformDialog : DialogWrapper(null, true) {
     
-    private val composeUI = ComposeMultiplatformDialogUI()
+    private val wizardDataState = mutableStateOf(
+        WizardData(
+            projectLocation = System.getProperty("user.home") + "/AndroidStudioProjects",
+            includeAndroid = true // Always true in AS
+        )
+    )
     
     init {
         title = "New Compose Multiplatform Project"
@@ -88,87 +88,37 @@ private class ComposeMultiplatformDialog : DialogWrapper(null, true) {
     }
     
     override fun createCenterPanel(): JComponent {
-        return composeUI.getComponent()
+        // Use shared Compose UI!
+        return createComposeWizardPanel(
+            data = wizardDataState,
+            showAndroidOption = false // In AS, Android is always included
+        )
     }
     
-    fun getSettings(): ProjectSettings {
-        return composeUI.getSettings()
+    fun getData(): WizardData {
+        return wizardDataState.value
     }
     
-    override fun doValidate(): com.intellij.openapi.ui.ValidationInfo? {
-        val settings = composeUI.getSettings()
+    override fun doValidate(): ValidationInfo? {
+        val data = wizardDataState.value
         
         // Validate project name
-        if (settings.projectName.isEmpty()) {
-            return com.intellij.openapi.ui.ValidationInfo("Project name cannot be empty")
+        if (data.projectName.isBlank()) {
+            return ValidationInfo("Project name cannot be empty")
         }
         
         // Validate package
-        val validation = ValidationUtils.validateProjectId(settings.packageName)
+        val validation = ValidationUtils.validateProjectId(data.packageName)
         if (!validation.isValid) {
-            return com.intellij.openapi.ui.ValidationInfo(validation.errors.first())
+            return ValidationInfo(validation.errors.first())
         }
         
         // Validate at least one platform
-        if (!settings.includeIos && !settings.includeDesktop && !settings.includeWeb) {
-            return com.intellij.openapi.ui.ValidationInfo("At least one platform must be selected")
+        if (!data.isValid()) {
+            return ValidationInfo("At least one platform must be selected")
         }
         
         return null
-    }
-}
-
-// Simple Swing version for now - will add Compose UI later
-private class ComposeMultiplatformDialogUI {
-    
-    private val panel = javax.swing.JPanel(java.awt.BorderLayout())
-    
-    private val projectNameField = javax.swing.JTextField("MyComposeApp", 30)
-    private val projectLocationField = javax.swing.JTextField(System.getProperty("user.home") + "/AndroidStudioProjects", 30)
-    private val packageNameField = javax.swing.JTextField("com.example.myapp", 30)
-    
-    private val iosCheckbox = javax.swing.JCheckBox("Include iOS", true)
-    private val desktopCheckbox = javax.swing.JCheckBox("Include Desktop", true)
-    private val webCheckbox = javax.swing.JCheckBox("Include Web", false)
-    
-    init {
-        val formPanel = javax.swing.JPanel()
-        formPanel.layout = javax.swing.BoxLayout(formPanel, javax.swing.BoxLayout.Y_AXIS)
-        
-        formPanel.add(createRow("Project name:", projectNameField))
-        formPanel.add(javax.swing.Box.createVerticalStrut(10))
-        formPanel.add(createRow("Location:", projectLocationField))
-        formPanel.add(javax.swing.Box.createVerticalStrut(10))
-        formPanel.add(createRow("Package name:", packageNameField))
-        formPanel.add(javax.swing.Box.createVerticalStrut(20))
-        
-        formPanel.add(javax.swing.JLabel("Target platforms:"))
-        formPanel.add(javax.swing.Box.createVerticalStrut(5))
-        formPanel.add(iosCheckbox)
-        formPanel.add(desktopCheckbox)
-        formPanel.add(webCheckbox)
-        
-        panel.add(formPanel, java.awt.BorderLayout.CENTER)
-    }
-    
-    private fun createRow(label: String, field: javax.swing.JTextField): javax.swing.JPanel {
-        val row = javax.swing.JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT))
-        row.add(javax.swing.JLabel(label))
-        row.add(field)
-        return row
-    }
-    
-    fun getComponent(): JComponent = panel
-    
-    fun getSettings(): ProjectSettings {
-        return ProjectSettings(
-            projectName = projectNameField.text,
-            projectLocation = projectLocationField.text,
-            packageName = packageNameField.text,
-            includeIos = iosCheckbox.isSelected,
-            includeDesktop = desktopCheckbox.isSelected,
-            includeWeb = webCheckbox.isSelected
-        )
     }
 }
 

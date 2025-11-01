@@ -40,7 +40,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
-import io.github.heisiar.composewizard.idea.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.awt.RelativePoint

@@ -1,11 +1,13 @@
 package io.github.heisiar.composewizard.idea
 
 import com.intellij.ide.util.projectWizard.ModuleBuilder
+import com.intellij.openapi.module.EmptyModuleType
 import com.intellij.openapi.module.ModuleType
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.IconLoader
+import io.github.heisiar.composewizard.shared.TemplateProcessor
 import javax.swing.Icon
 
 data class ValidationResult(
@@ -30,7 +32,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var includeTests: Boolean = false
     var enableDevVersions: Boolean = false
 
-    override fun getModuleType(): ModuleType<*> = ComposeMultiplatformModuleType.INSTANCE
+    override fun getModuleType(): ModuleType<*> = EmptyModuleType.getInstance()
 
     override fun getPresentableName(): String = "Compose Multiplatform"
 
