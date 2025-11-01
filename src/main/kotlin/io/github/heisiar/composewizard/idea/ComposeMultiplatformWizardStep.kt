@@ -1300,25 +1300,26 @@ class ComposeMultiplatformWizardStep(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastClickTime < 500) {
-                            clickCount++
-                            if (clickCount >= 3) {
-                                // Triple click: toggle dev checkbox visibility
-                                if (!devCheckboxVisibleByUser) {
-                                    ComposeWizardUsageCollector.logDevVersionsUnlocked()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastClickTime < 600) {
+                                    clickCount++
+                                    if (clickCount >= 3) {
+                                        // Triple click: toggle dev checkbox visibility
+                                        if (!devCheckboxVisibleByUser) {
+                                            ComposeWizardUsageCollector.logDevVersionsUnlocked()
+                                        }
+                                        devCheckboxVisibleByUser = !devCheckboxVisibleByUser
+                                        clickCount = 0
+                                    }
+                                } else {
+                                    clickCount = 1
                                 }
-                                devCheckboxVisibleByUser = !devCheckboxVisibleByUser
-                                clickCount = 0
+                                lastClickTime = currentTime
                             }
-                        } else {
-                            clickCount = 1
-                        }
-                        lastClickTime = currentTime
+                        )
                     }
             )
         }
