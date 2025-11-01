@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+out/
+target/
+.kotlin/
+
+# IntelliJ Platform SDK
+.intellijPlatform/
+.app-sandbox/
+system/
+config/
+
+# IDE
+.idea/workspace.xml
+.idea/tasks.xml
+*.iml
+
+# Gradle wrapper (optional)
+gradle/
+gradlew
+gradlew.bat
+
+# macOS
+.DS_Store
+
+# Build artifacts
+*.jar
+*.zip
+!gradle-wrapper.jar
+
