@@ -9,6 +9,11 @@ plugins {
 group = "io.github.heisiar"
 version = "1.0.0"
 
+// Platform configuration: IDEA by default, AS if runAndroidStudio=true
+val runAndroidStudio = project.findProperty("runAndroidStudio")?.toString()?.toBoolean() ?: false
+val platformType = if (runAndroidStudio) "AI" else "IC"
+val platformVersion = if (runAndroidStudio) "2024.2.1.11" else "2025.2.4"
+
 repositories {
     mavenCentral()
     google()
@@ -20,12 +25,17 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Base platform - IntelliJ IDEA Community
-        create("IC", "2025.2.4")
+        // Base platform - IntelliJ IDEA Community or Android Studio
+        create(platformType, platformVersion)
         
         // Gradle support
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
+        
+        // Android plugin (only in AS, but safe to declare)
+        if (runAndroidStudio) {
+            bundledPlugin("org.jetbrains.android")
+        }
         
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
@@ -86,6 +96,13 @@ tasks {
     runIde {
         jvmArgs("-Xmx2048m")
         autoReload = true
+        
+        doFirst {
+            val platform = if (runAndroidStudio) "Android Studio" else "IntelliJ IDEA"
+            println("==============================================")
+            println("  Running plugin in: $platform ($platformType $platformVersion)")
+            println("==============================================")
+        }
     }
     
     buildPlugin {

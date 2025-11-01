@@ -48,13 +48,29 @@ Both IntelliJ IDEA and Android Studio use the **same Compose UI components** for
 
 ### Testing
 
+**Option 1: Using helper scripts (recommended):**
 ```bash
 # Test in IntelliJ IDEA
+./run-idea.sh
+
+# Test in Android Studio
+./run-android-studio.sh
+```
+
+**Option 2: Using Gradle directly:**
+```bash
+# Test in IntelliJ IDEA (default)
 ./gradlew runIde
 
 # Test in Android Studio
-./gradlew runIde -Pplatform=androidStudio
+./gradlew runIde -PrunAndroidStudio=true
 ```
+
+The plugin will automatically:
+- Download the appropriate IDE (IDEA or AS)
+- Install the plugin
+- Launch the IDE with the plugin enabled
+- Show which platform is running in the console
 
 ## License
 
