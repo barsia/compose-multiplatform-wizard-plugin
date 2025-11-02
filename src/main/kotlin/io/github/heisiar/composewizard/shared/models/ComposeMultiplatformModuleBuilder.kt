@@ -8,6 +8,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.WizardDefaults
+import io.github.heisiar.composewizard.shared.WizardStrings
 import javax.swing.Icon
 
 // Forward declaration - avoid circular dependency
@@ -98,39 +99,39 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
         val errors = mutableListOf<String>()
         
         if (id.isBlank()) {
-            errors.add("Project ID must not be empty")
+            errors.add(WizardStrings.PACKAGE_NAME_EMPTY)
             return ValidationResult(false, errors)
         }
         
         if (!id.contains(".")) {
-            errors.add("Project ID must contain at least one '.' separator")
+            errors.add(WizardStrings.PACKAGE_NAME_NEEDS_SEPARATOR)
             return ValidationResult(false, errors)
         }
         
         val lastChar = id.last()
         if (!lastChar.isLetterOrDigit() && lastChar != '_') {
-            errors.add("Project ID must end with lowercase latin character, digit or '_'")
+            errors.add(WizardStrings.PACKAGE_NAME_INVALID_END_CHAR)
         }
         
         val parts = id.split(".")
         
         if (parts.any { it.isEmpty() }) {
-            errors.add("Project ID must not contain empty parts (consecutive dots)")
+            errors.add(WizardStrings.PACKAGE_NAME_EMPTY_PARTS)
         }
         
         parts.forEach { part ->
             if (part.isEmpty()) return@forEach
             
             if (!part[0].isLowerCase()) {
-                errors.add("Each part of Project ID must start with lowercase letter")
+                errors.add(WizardStrings.PACKAGE_NAME_PART_START_LOWERCASE)
             }
             
             if (!part.all { it.isLetterOrDigit() || it == '_' }) {
-                errors.add("Project ID can only contain lowercase letters, digits, '_' and '.'")
+                errors.add(WizardStrings.PACKAGE_NAME_INVALID_CHARS)
             }
             
             if (part.any { it.isUpperCase() }) {
-                errors.add("Project ID must contain only lowercase letters")
+                errors.add(WizardStrings.PACKAGE_NAME_LOWERCASE_ONLY)
             }
         }
         

@@ -9,19 +9,19 @@ object ValidationUtils {
     
     fun validateProjectName(name: String): String? {
         if (name.isEmpty()) {
-            return "Project name must not be empty"
+            return WizardStrings.PROJECT_NAME_EMPTY
         }
         
         if (!namePattern.matches(name)) {
-            return "Project name can only contain letters, digits, spaces, '_', '.' and '-'"
+            return WizardStrings.PROJECT_NAME_INVALID_CHARS
         }
         
         if (!firstSymbolNamePattern.matches(name)) {
-            return "Project name must start with a letter, digit or '_'"
+            return WizardStrings.PROJECT_NAME_INVALID_START
         }
         
         if (reservedWordsPattern.find(name) != null) {
-            return "Project name contains reserved words"
+            return WizardStrings.PROJECT_NAME_RESERVED_WORDS
         }
         
         return null
@@ -29,21 +29,21 @@ object ValidationUtils {
     
     fun validateProjectId(projectId: String): ValidationResult {
         if (projectId.isEmpty()) {
-            return ValidationResult(false, listOf("Project ID must not be empty"))
+            return ValidationResult(false, listOf(WizardStrings.PACKAGE_NAME_EMPTY))
         }
         
         if (projectId.startsWith(".") || projectId.endsWith(".")) {
-            return ValidationResult(false, listOf("Project ID cannot start or end with a dot"))
+            return ValidationResult(false, listOf(WizardStrings.PACKAGE_NAME_INVALID_START_END))
         }
         
         if (projectId.contains("..")) {
-            return ValidationResult(false, listOf("Project ID cannot contain consecutive dots"))
+            return ValidationResult(false, listOf(WizardStrings.PACKAGE_NAME_CONSECUTIVE_DOTS))
         }
         
         if (!packagePattern.matches(projectId)) {
             return ValidationResult(
                 false, 
-                listOf("Project ID must be a valid package name (e.g., com.example.project)")
+                listOf(WizardStrings.PACKAGE_NAME_INVALID_FORMAT)
             )
         }
         

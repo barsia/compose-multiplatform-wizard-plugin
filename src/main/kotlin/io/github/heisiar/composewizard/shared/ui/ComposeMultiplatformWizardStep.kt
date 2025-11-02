@@ -13,7 +13,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,6 +89,7 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import io.github.heisiar.composewizard.shared.WizardDefaults
+import io.github.heisiar.composewizard.shared.WizardStrings
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import kotlinx.coroutines.Dispatchers
@@ -161,22 +161,22 @@ class ComposeMultiplatformWizardStep(
 
         return if (isDark) {
             darkColorScheme(
-                background = androidx.compose.ui.graphics.Color(
+                background = Color(
                     panelBg?.red ?: 45,
                     panelBg?.green ?: 45,
                     panelBg?.blue ?: 45
                 ),
-                surface = androidx.compose.ui.graphics.Color(
+                surface = Color(
                     (panelBg?.red ?: 45) + 10,
                     (panelBg?.green ?: 45) + 10,
                     (panelBg?.blue ?: 45) + 10
                 ),
-                onBackground = androidx.compose.ui.graphics.Color(
+                onBackground = Color(
                     textColor?.red ?: 220,
                     textColor?.green ?: 220,
                     textColor?.blue ?: 220
                 ),
-                onSurface = androidx.compose.ui.graphics.Color(
+                onSurface = Color(
                     textColor?.red ?: 220,
                     textColor?.green ?: 220,
                     textColor?.blue ?: 220
@@ -184,22 +184,22 @@ class ComposeMultiplatformWizardStep(
             )
         } else {
             lightColorScheme(
-                background = androidx.compose.ui.graphics.Color(
+                background = Color(
                     panelBg?.red ?: 255,
                     panelBg?.green ?: 255,
                     panelBg?.blue ?: 255
                 ),
-                surface = androidx.compose.ui.graphics.Color(
+                surface = Color(
                     (panelBg?.red ?: 255),
                     (panelBg?.green ?: 255),
                     (panelBg?.blue ?: 255)
                 ),
-                onBackground = androidx.compose.ui.graphics.Color(
+                onBackground = Color(
                     textColor?.red ?: 0,
                     textColor?.green ?: 0,
                     textColor?.blue ?: 0
                 ),
-                onSurface = androidx.compose.ui.graphics.Color(
+                onSurface = Color(
                     textColor?.red ?: 0,
                     textColor?.green ?: 0,
                     textColor?.blue ?: 0
@@ -229,14 +229,14 @@ class ComposeMultiplatformWizardStep(
         val errorColor = MaterialTheme.colorScheme.error
         
         val bgColor = if (isWarning) {
-            androidx.compose.ui.graphics.Color(
+            Color(
                 red = surface.red * 0.85f + errorColor.red * 0.15f,
                 green = surface.green * 0.85f + errorColor.green * 0.15f,
                 blue = surface.blue * 0.85f + errorColor.blue * 0.15f,
                 alpha = 0.95f
             )
         } else {
-            androidx.compose.ui.graphics.Color(
+            Color(
                 red = surface.red * 0.7f + errorColor.red * 0.3f,
                 green = surface.green * 0.7f + errorColor.green * 0.3f,
                 blue = surface.blue * 0.7f + errorColor.blue * 0.3f,
@@ -252,9 +252,9 @@ class ComposeMultiplatformWizardStep(
         
         // Use white text for good contrast in dark theme, dark text in light theme
         val textColor = if (isDarkTheme()) {
-            androidx.compose.ui.graphics.Color.White
+            Color.White
         } else {
-            androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+            Color(0xFF1E1E1E)
         }
         
         // Convert Compose colors to AWT colors BEFORE DisposableEffect
@@ -345,7 +345,7 @@ class ComposeMultiplatformWizardStep(
     }
     
     @Composable
-    private fun BoxScope.ValidationPopup(
+    private fun ValidationPopup(
         message: String,
         isWarning: Boolean
     ) {
@@ -353,14 +353,14 @@ class ComposeMultiplatformWizardStep(
         val errorColor = MaterialTheme.colorScheme.error
         
         val backgroundColor = if (isWarning) {
-            androidx.compose.ui.graphics.Color(
+            Color(
                 red = surface.red * 0.85f + errorColor.red * 0.15f,
                 green = surface.green * 0.85f + errorColor.green * 0.15f,
                 blue = surface.blue * 0.85f + errorColor.blue * 0.15f,
                 alpha = 0.95f
             )
         } else {
-            androidx.compose.ui.graphics.Color(
+            Color(
                 red = surface.red * 0.7f + errorColor.red * 0.3f,
                 green = surface.green * 0.7f + errorColor.green * 0.3f,
                 blue = surface.blue * 0.7f + errorColor.blue * 0.3f,
@@ -376,9 +376,9 @@ class ComposeMultiplatformWizardStep(
         
         // Use white text for good contrast in dark theme, dark text in light theme
         val textColor = if (isDarkTheme()) {
-            androidx.compose.ui.graphics.Color.White
+            Color.White
         } else {
-            androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+            Color(0xFF1E1E1E)
         }
         
         Popup(
@@ -785,7 +785,7 @@ class ComposeMultiplatformWizardStep(
             }
         }
         
-        // Validate Project ID on change
+        // Validate Package name on change
         LaunchedEffect(projectId) {
             val validation = builder.validateProjectId(projectId)
             val newError = if (!validation.isValid) {
@@ -862,7 +862,7 @@ class ComposeMultiplatformWizardStep(
         }
 
             // Update stored values when state changes
-            LaunchedEffect(projectName, projectPath, projectId, composeVersion, desktop, android, ios, web, git, tests, enableDevVersions, devCheckboxVisibleByUser) {
+            LaunchedEffect(projectName, projectPath, projectId, composeVersion, desktop, android, ios, web, git, tests, enableDevVersions, devCheckboxVisibleByUser, projectNameError, projectPathError, projectIdError, projectLocationWarning) {
                 projectNameValue = projectName
                 projectPathValue = projectPath
                 projectIdValue = projectId
@@ -877,7 +877,12 @@ class ComposeMultiplatformWizardStep(
                 initGit = git
                 includeTests = tests
             
-            updateButtonState(!hasNoTargets)
+            // Check all validation conditions
+            val isFormValid = !hasNoTargets && 
+                             projectNameError == null && 
+                             projectPathError == null && 
+                             projectIdError == null
+            updateButtonState(isFormValid)
         }
 
         Surface(
@@ -912,8 +917,8 @@ class ComposeMultiplatformWizardStep(
                                     // In Android Studio, auto-update location when name changes (if not manually edited)
                                     if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && isLocationSynced) {
                                         // Extract base path (without project name)
-                                        val basePath = if (projectPath.contains(java.io.File.separator)) {
-                                            projectPath.substringBeforeLast(java.io.File.separator)
+                                        val basePath = if (projectPath.contains(File.separator)) {
+                                            projectPath.substringBeforeLast(File.separator)
                                         } else {
                                             projectPath
                                         }
@@ -973,11 +978,11 @@ class ComposeMultiplatformWizardStep(
                                 if (showTooltip) {
                                     androidx.compose.foundation.TooltipArea(
                                         tooltip = {
-                                            androidx.compose.material3.Surface(
+                                            Surface(
                                                 color = MaterialTheme.colorScheme.surface,
                                                 shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
                                                 shadowElevation = 4.dp,
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
                                             ) {
                                                 Text(
                                                     text = composeVersion,
@@ -988,8 +993,8 @@ class ComposeMultiplatformWizardStep(
                                         },
                                         delayMillis = 500,
                                         tooltipPlacement = androidx.compose.foundation.TooltipPlacement.ComponentRect(
-                                            anchor = androidx.compose.ui.Alignment.BottomCenter,
-                                            alignment = androidx.compose.ui.Alignment.TopCenter,
+                                            anchor = Alignment.BottomCenter,
+                                            alignment = Alignment.TopCenter,
                                             offset = androidx.compose.ui.unit.DpOffset(0.dp, 18.dp)
                                         )
                                     ) {
@@ -1111,7 +1116,7 @@ class ComposeMultiplatformWizardStep(
                                 // Higher zIndex to intercept clicks before ExposedDropdownMenuBox
                                 androidx.compose.foundation.TooltipArea(
                                     tooltip = {
-                                        androidx.compose.material3.Surface(
+                                        Surface(
                                             color = MaterialTheme.colorScheme.surface,
                                             shape = RoundedCornerShape(4.dp),
                                             shadowElevation = 4.dp,
@@ -1324,7 +1329,7 @@ class ComposeMultiplatformWizardStep(
                     )
                 }
 
-                    // Project ID
+                    // Package name
                     Box {
                         OutlinedTextField(
                             value = projectId,
@@ -1332,7 +1337,7 @@ class ComposeMultiplatformWizardStep(
                                 projectId = it
                                 ComposeWizardUsageCollector.logFieldEdited("project_id", it.isNotEmpty())
                             },
-                            label = { Text("Project ID") },
+                            label = { Text(WizardStrings.PACKAGE_NAME_LABEL) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             isError = projectIdError != null,
@@ -1679,10 +1684,10 @@ class ComposeMultiplatformWizardStep(
             return false
         }
         
-        // Validate Project ID format
+        // Validate Package name format
         val projectIdValidation = builder.validateProjectId(projectIdValue)
         if (!projectIdValidation.isValid) {
-            println("ERROR: Invalid Project ID - ${projectIdValidation.errors.firstOrNull()}")
+            println("ERROR: Invalid Package name - ${projectIdValidation.errors.firstOrNull()}")
             return false
         }
         
@@ -1702,7 +1707,7 @@ class ComposeMultiplatformWizardStep(
     
     private fun validateProjectName(name: String): String? {
         if (name.isEmpty()) {
-            return "Project name must not be empty"
+            return WizardStrings.PROJECT_NAME_EMPTY
         }
         
         // Android Studio validation: check for banned symbols /\:<>"?*|
@@ -1720,15 +1725,15 @@ class ComposeMultiplatformWizardStep(
         } else {
             // IntelliJ IDEA validation: more permissive
             if (!namePattern.matches(name)) {
-                return "Project name can only contain letters, digits, spaces, '_', '.' and '-'"
+                return WizardStrings.PROJECT_NAME_INVALID_CHARS
             }
             
             if (!firstSymbolNamePattern.matches(name)) {
-                return "Project name must start with a letter, digit or '_'"
+                return WizardStrings.PROJECT_NAME_INVALID_START
             }
             
             if (reservedWordsPattern.find(name) != null) {
-                return "Project name contains reserved words"
+                return WizardStrings.PROJECT_NAME_RESERVED_WORDS
             }
         }
         
