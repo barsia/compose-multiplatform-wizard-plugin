@@ -97,7 +97,9 @@ class IdeaWizardIntegration(
     }
     
     @Service(Service.Level.PROJECT)
-    private class CoroutineScopeService(val coroutineScope: CoroutineScope)
+    private class CoroutineScopeService(cs: CoroutineScope) {
+        val coroutineScope: CoroutineScope = cs
+    }
     
     /**
      * Runs an action after the project is opened.

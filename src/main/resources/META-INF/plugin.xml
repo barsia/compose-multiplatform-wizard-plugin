@@ -36,6 +36,10 @@
   <extensions defaultExtensionNs="com.intellij">
     <newProjectWizard.generator 
       implementation="io.github.heisiar.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
+    
+    <!-- Application-level service for caching Compose versions -->
+    <applicationService 
+      serviceImplementation="io.github.heisiar.composewizard.shared.services.ComposeVersionCache"/>
   </extensions>
 </idea-plugin>
 

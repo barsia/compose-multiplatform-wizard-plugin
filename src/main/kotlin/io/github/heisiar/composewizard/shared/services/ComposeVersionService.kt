@@ -31,7 +31,7 @@ class ComposeVersionService {
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
             // For dev versions without internet: fallback to stable versions
-            ComposeVersions.KNOWN_STABLE_VERSIONS
+            ComposeVersions.STABLE_VERSIONS
         }
     }
     
@@ -39,8 +39,8 @@ class ComposeVersionService {
         try {
             val metadataUrl = "${mavenUrl}maven-metadata.xml"
             val connection = URL(metadataUrl).openConnection() as HttpURLConnection
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
+            connection.connectTimeout = 2000  // Reduced from 5000ms to 2000ms
+            connection.readTimeout = 2000     // Reduced from 5000ms to 2000ms
             connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
             
             if (connection.responseCode == 200) {
@@ -75,7 +75,7 @@ class ComposeVersionService {
             logger.warn("Failed to fetch versions from $mavenUrl: ${e.message}")
         }
         
-        return ComposeVersions.KNOWN_STABLE_VERSIONS
+        return ComposeVersions.STABLE_VERSIONS
     }
     
     private fun parseVersion(version: String): Comparable<*> {

@@ -65,9 +65,9 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
             println("Creating project at: $projectPath (from project.basePath)")
             
             // Use unified wizard integration
-            val integration = io.github.heisiar.composewizard.idea.IdeaWizardIntegration(project)
+            val integration = IdeaWizardIntegration(project)
             integration.createAndOpenProject(projectPath, projectName, moduleBuilder)
-        }
+                }
     }
 }
 

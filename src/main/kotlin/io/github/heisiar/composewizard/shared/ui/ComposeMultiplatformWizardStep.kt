@@ -1,72 +1,104 @@
 package io.github.heisiar.composewizard.shared.ui
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
-import androidx.compose.runtime.*
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.unit.offset
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
-import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.openapi.ui.popup.JBPopup
-import com.intellij.ui.awt.RelativePoint
-import com.intellij.ui.WindowRoundedCornersManager
-import com.intellij.ui.popup.AbstractPopup
-import com.intellij.util.ui.JBUI
-import java.awt.Point
-import javax.swing.JLabel
-import javax.swing.BorderFactory
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import java.awt.Cursor
+import androidx.compose.ui.zIndex
 import com.intellij.ide.IdeBundle
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.ide.util.projectWizard.ModuleWizardStep
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.ui.awt.RelativePoint
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import io.github.heisiar.composewizard.shared.WizardDefaults
+import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
+import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.event.KeyEvent
 import java.io.File
 import java.nio.file.InvalidPathException
@@ -75,28 +107,35 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
-import kotlin.io.path.*
 
 class ComposeMultiplatformWizardStep(
     private val builder: ComposeMultiplatformModuleBuilder
 ) : ModuleWizardStep() {
 
-    companion object {
-        const val DEFAULT_COMPOSE_VERSION = "1.10.0-alpha03"
-    }
 
-    // Store values
-    private var projectNameValue = suggestUniqueName("ComposeProject", getDefaultProjectPath())
-    private var projectPathValue = getDefaultProjectPath()
-    private var projectIdValue = "org.example.project"
-    private var composeVersionValue = DEFAULT_COMPOSE_VERSION
-    private var initGit = true
-    private var includeTests = false
-    private var targetDesktop = true
-    private var targetAndroid = true
-    private var targetIOS = true
-    private var targetWeb = true
-    private var enableDevVersions = false
+    // Store values - all from WizardDefaults for consistency
+    // Note: Use PROJECT_NAME (no spaces) for suggestUniqueName to avoid file system issues
+    private var projectNameValue = suggestUniqueName(WizardDefaults.PROJECT_NAME, WizardDefaults.getDefaultProjectPath())
+    
+    // In Android Studio, projectPath includes project name; in IDEA it's just base path
+    private var projectPathValue = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+        WizardDefaults.findUniqueProjectLocation(WizardDefaults.PROJECT_NAME_DISPLAY, WizardDefaults.getDefaultProjectPath())
+    } else {
+        WizardDefaults.getDefaultProjectPath()
+    }
+    
+    private var projectIdValue = WizardDefaults.PACKAGE_NAME
+    
+    // Track if user manually edited location (to stop auto-sync)
+    private var isLocationSynced = true
+    private var composeVersionValue = WizardDefaults.COMPOSE_VERSION
+    private var initGit = WizardDefaults.INIT_GIT
+    private var includeTests = WizardDefaults.INCLUDE_TESTS
+    private var targetDesktop = WizardDefaults.TARGET_DESKTOP
+    private var targetAndroid = WizardDefaults.TARGET_ANDROID
+    private var targetIOS = WizardDefaults.TARGET_IOS
+    private var targetWeb = WizardDefaults.TARGET_WEB
+    private var enableDevVersions = WizardDefaults.ENABLE_DEV_VERSIONS
     
     // FUS: Track wizard start time
     private val wizardStartTime = System.currentTimeMillis()
@@ -636,14 +675,18 @@ class ComposeMultiplatformWizardStep(
         var projectName by remember { mutableStateOf(projectNameValue) }
         var projectPath by remember { mutableStateOf(projectPathValue) }
         var projectId by remember { mutableStateOf(projectIdValue) }
-        var composeVersion by remember { mutableStateOf(composeVersionValue) }
+        // Initialize with latest version from cache (always up-to-date, loaded at IDE startup)
+        val cachedVersions = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance().getStableVersions()
+        val initialComposeVersion = if (cachedVersions.isNotEmpty()) cachedVersions.first() else composeVersionValue
+        var composeVersion by remember { mutableStateOf(initialComposeVersion) }
         var desktop by remember { mutableStateOf(targetDesktop) }
         var android by remember { mutableStateOf(targetAndroid) }
         var ios by remember { mutableStateOf(targetIOS) }
         var web by remember { mutableStateOf(targetWeb) }
         var git by remember { mutableStateOf(initGit) }
         var tests by remember { mutableStateOf(includeTests) }
-        var enableDevVersions by remember { mutableStateOf(io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions) }
+        val initialEnableDevVersions = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
+        var enableDevVersions by remember { mutableStateOf(initialEnableDevVersions) }
         
         // FUS: Track wizard opened
         LaunchedEffect(Unit) {
@@ -693,7 +736,17 @@ class ComposeMultiplatformWizardStep(
                 }
                 ComposeWizardUsageCollector.logValidationError("project_name", errorType)
             }
-            projectNameError = newError
+            
+            // In IntelliJ IDEA, location errors are also shown on Name field
+            // Don't overwrite location errors with name validation
+            if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                projectNameError = newError
+            } else {
+                // In IDEA, prioritize location errors over name errors
+                if (projectLocationWarning == null) {
+                    projectNameError = newError
+                }
+            }
         }
         
         // Validate Project Path on change
@@ -721,7 +774,15 @@ class ComposeMultiplatformWizardStep(
                 }
                 ComposeWizardUsageCollector.logValidationError("project_location", errorType)
             }
-            projectLocationWarning = newWarning
+            
+            // In IntelliJ IDEA, show location errors on Name field (since location doesn't include name)
+            // In Android Studio, show location errors on Location field (since it includes full path)
+            if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                projectLocationWarning = newWarning
+            } else {
+                projectNameError = newWarning
+                projectLocationWarning = null
+            }
         }
         
         // Validate Project ID on change
@@ -744,8 +805,16 @@ class ComposeMultiplatformWizardStep(
             projectIdError = newError
         }
         
-        var availableVersions by remember { mutableStateOf<List<String>>(emptyList()) }
+        // Initialize versions from appropriate cache based on mode (pre-loaded at IDE startup, TTL 12h)
+        val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+        val initialVersions = if (initialEnableDevVersions) {
+            cache.getDevVersions()
+        } else {
+            cache.getStableVersions()
+        }
+        var availableVersions by remember { mutableStateOf<List<String>>(initialVersions) }
         var versionsExpanded by remember { mutableStateOf(false) }
+        var isLoadingVersions by remember { mutableStateOf(false) }
 
         val hasNoTargets = !desktop && !android && !ios && !web
         
@@ -756,14 +825,39 @@ class ComposeMultiplatformWizardStep(
             }
         }
         
-        // Load available versions from Maven when enableDevVersions changes
-        // and auto-select the latest version from the new source
+        // Load available versions from cache when enableDevVersions changes
+        // Show loader if cache is loading, with timeout fallback to hardcoded versions
         LaunchedEffect(enableDevVersions) {
-            val newVersions = loadComposeVersionsFromMaven(enableDevVersions)
-            availableVersions = newVersions
+            // Check if appropriate cache is loading
+            val isLoading = if (enableDevVersions) {
+                cache.isLoadingDevVersions()
+            } else {
+                cache.isLoadingStableVersions()
+            }
+            
+            if (isLoading) {
+                // Cache is loading - show empty list + loader
+                isLoadingVersions = true
+                availableVersions = emptyList()
+                
+                // Wait for cache with timeout (5 seconds)
+                val newVersions = loadComposeVersionsFromMaven(enableDevVersions, timeoutMs = 5000)
+                
+                availableVersions = newVersions
+                isLoadingVersions = false
+            } else {
+                // Cache ready - use it immediately
+                val newVersions = if (enableDevVersions) {
+                    cache.getDevVersions()
+                } else {
+                    cache.getStableVersions()
+                }
+                availableVersions = newVersions
+            }
+            
             // Auto-select the latest (first) version from the new source
-            if (newVersions.isNotEmpty()) {
-                composeVersion = newVersions.first()
+            if (availableVersions.isNotEmpty()) {
+                composeVersion = availableVersions.first()
             }
         }
 
@@ -812,9 +906,24 @@ class ComposeMultiplatformWizardStep(
                         Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
                                 value = projectName,
-                                onValueChange = { 
-                                    projectName = it
-                                    ComposeWizardUsageCollector.logFieldEdited("project_name", it.isNotEmpty())
+                                onValueChange = { newName ->
+                                    projectName = newName
+                                    
+                                    // In Android Studio, auto-update location when name changes (if not manually edited)
+                                    if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && isLocationSynced) {
+                                        // Extract base path (without project name)
+                                        val basePath = if (projectPath.contains(java.io.File.separator)) {
+                                            projectPath.substringBeforeLast(java.io.File.separator)
+                                        } else {
+                                            projectPath
+                                        }
+                                        
+                                        // Find unique location with new name
+                                        val uniqueLocation = WizardDefaults.findUniqueProjectLocation(newName, basePath)
+                                        projectPath = uniqueLocation
+                                    }
+                                    
+                                    ComposeWizardUsageCollector.logFieldEdited("project_name", newName.isNotEmpty())
                                 },
                                 label = { Text("Project Name", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 modifier = Modifier.fillMaxWidth(),
@@ -835,14 +944,31 @@ class ComposeMultiplatformWizardStep(
                             }
                         }
                         Column(
-                            modifier = Modifier.width(190.dp),
+                            modifier = Modifier.width(260.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            ExposedDropdownMenuBox(
+                            // Refresh button state
+                            var isRefreshing by remember { mutableStateOf(false) }
+                            var isHoveringRefreshIcon by remember { mutableStateOf(false) }
+                            val coroutineScope = rememberCoroutineScope()
+                            
+                            // Label with right padding to make space for refresh icon
+                            @Composable
+                            fun ComposeVersionLabelWithSpace() {
+                                Row(
+                                    modifier = Modifier.padding(end = 20.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Compose Version")
+                                }
+                            }
+                            
+                            Box {
+                                ExposedDropdownMenuBox(
                                 expanded = versionsExpanded,
                                 onExpandedChange = { versionsExpanded = it }
                             ) {
-                                val showTooltip = composeVersion.length > 15
+                                val showTooltip = composeVersion.length > 26 && !isHoveringRefreshIcon
                                 
                                 if (showTooltip) {
                                     androidx.compose.foundation.TooltipArea(
@@ -860,12 +986,17 @@ class ComposeMultiplatformWizardStep(
                                                 )
                                             }
                                         },
-                                        delayMillis = 500
+                                        delayMillis = 500,
+                                        tooltipPlacement = androidx.compose.foundation.TooltipPlacement.ComponentRect(
+                                            anchor = androidx.compose.ui.Alignment.BottomCenter,
+                                            alignment = androidx.compose.ui.Alignment.TopCenter,
+                                            offset = androidx.compose.ui.unit.DpOffset(0.dp, 18.dp)
+                                        )
                                     ) {
                                         OutlinedTextField(
                                             value = composeVersion,
                                             onValueChange = { },
-                                            label = { Text("Compose Version") },
+                                            label = { ComposeVersionLabelWithSpace() },
                                             trailingIcon = { 
                                                 Box(
                                                     modifier = Modifier
@@ -886,7 +1017,7 @@ class ComposeMultiplatformWizardStep(
                                     OutlinedTextField(
                                         value = composeVersion,
                                         onValueChange = { },
-                                        label = { Text("Compose Version") },
+                                        label = { ComposeVersionLabelWithSpace() },
                                         trailingIcon = { 
                                             Box(
                                                 modifier = Modifier
@@ -919,9 +1050,25 @@ class ComposeMultiplatformWizardStep(
                                                 .fillMaxWidth()
                                                 .padding(end = 12.dp)
                                         ) {
-                                            if (availableVersions.isEmpty()) {
+                                            if (isLoadingVersions || availableVersions.isEmpty()) {
+                                                // Show loader when versions are being loaded
                                                 DropdownMenuItem(
-                                                    text = { Text("Loading...") },
+                                                    text = { 
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(16.dp),
+                                                                strokeWidth = 2.dp,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                            Text(
+                                                                "Loading versions...",
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                            )
+                                                        }
+                                                    },
                                                     onClick = { },
                                                     enabled = false
                                                 )
@@ -956,6 +1103,102 @@ class ComposeMultiplatformWizardStep(
                                                 hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                             )
                                         )
+                                    }
+                                }
+                            }
+                            
+                                // Refresh icon - positioned absolutely next to label text, at label level inside TextField
+                                // Higher zIndex to intercept clicks before ExposedDropdownMenuBox
+                                androidx.compose.foundation.TooltipArea(
+                                    tooltip = {
+                                        androidx.compose.material3.Surface(
+                                            color = MaterialTheme.colorScheme.surface,
+                                            shape = RoundedCornerShape(4.dp),
+                                            shadowElevation = 4.dp,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                                        ) {
+                                            Text(
+                                                text = "Refresh versions",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    },
+                                    delayMillis = 500,
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .offset(x = 124.dp, y = 0.dp)
+                                        .zIndex(1000f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .pointerInput(Unit) {
+                                                awaitPointerEventScope {
+                                                    while (true) {
+                                                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                                        when (event.type) {
+                                                            androidx.compose.ui.input.pointer.PointerEventType.Enter -> {
+                                                                isHoveringRefreshIcon = true
+                                                            }
+                                                            androidx.compose.ui.input.pointer.PointerEventType.Exit -> {
+                                                                isHoveringRefreshIcon = false
+                                                            }
+                                                            androidx.compose.ui.input.pointer.PointerEventType.Press -> {
+                                                                if (!isRefreshing) {
+                                                                    event.changes.forEach { it.consume() }
+                                                                    isRefreshing = true
+                                                                    coroutineScope.launch {
+                                                                        try {
+                                                                            val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+                                                                            if (enableDevVersions) {
+                                                                                cache.forceReloadDev()
+                                                                                delay(500)
+                                                                                val newVersions = cache.getDevVersionsBlocking(timeoutMs = 5000)
+                                                                                availableVersions = newVersions
+                                                                            } else {
+                                                                                cache.forceReloadStable()
+                                                                                delay(500)
+                                                                                val newVersions = cache.getStableVersionsBlocking(timeoutMs = 5000)
+                                                                                availableVersions = newVersions
+                                                                            }
+                                                                        } finally {
+                                                                            isRefreshing = false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            .pointerHoverIcon(
+                                                if (!isRefreshing) 
+                                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+                                                else
+                                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isRefreshing) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(12.dp),
+                                                strokeWidth = 1.5.dp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            val refreshIcon = remember {
+                                                loadSvgPainter("/icons/refresh-versions.svg")
+                                            }
+                                            if (refreshIcon != null) {
+                                                Icon(
+                                                    painter = refreshIcon,
+                                                    contentDescription = "Refresh versions",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1002,11 +1245,21 @@ class ComposeMultiplatformWizardStep(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
+                        // In Android Studio, projectPath already includes project name
+                        // In IntelliJ IDEA, show only base path
+                        // Always collapse home directory to ~ for display
+                        val displayedLocation = WizardDefaults.collapsePath(projectPath)
+                        
                         OutlinedTextField(
-                            value = projectPath,
-                            onValueChange = { 
-                                projectPath = it
-                                ComposeWizardUsageCollector.logFieldEdited("project_location", it.isNotEmpty())
+                            value = displayedLocation,
+                            onValueChange = { newValue ->
+                                // User manually edited location - stop auto-sync
+                                isLocationSynced = false
+                                
+                                // Expand ~ before processing
+                                projectPath = WizardDefaults.expandPath(newValue)
+                                
+                                ComposeWizardUsageCollector.logFieldEdited("project_location", projectPath.isNotEmpty())
                             },
                             label = { Text("Location") },
                             modifier = Modifier.fillMaxWidth(),
@@ -1452,16 +1705,31 @@ class ComposeMultiplatformWizardStep(
             return "Project name must not be empty"
         }
         
-        if (!namePattern.matches(name)) {
-            return "Project name can only contain letters, digits, spaces, '_', '.' and '-'"
-        }
-        
-        if (!firstSymbolNamePattern.matches(name)) {
-            return "Project name must start with a letter, digit or '_'"
-        }
-        
-        if (reservedWordsPattern.find(name) != null) {
-            return "Project name contains reserved words"
+        // Android Studio validation: check for banned symbols /\:<>"?*|
+        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            val bannedSymbols = "/\\:<>\"?*|"
+            val firstIllegalChar = name.firstOrNull { it in bannedSymbols }
+            if (firstIllegalChar != null) {
+                return "Illegal character in project name '$name': '$firstIllegalChar'"
+            }
+            
+            // Warning (not error) if name starts with lowercase
+            if (name.isNotEmpty() && !name[0].isUpperCase()) {
+                // This is just a warning in AS, not an error - we'll skip it for now
+            }
+        } else {
+            // IntelliJ IDEA validation: more permissive
+            if (!namePattern.matches(name)) {
+                return "Project name can only contain letters, digits, spaces, '_', '.' and '-'"
+            }
+            
+            if (!firstSymbolNamePattern.matches(name)) {
+                return "Project name must start with a letter, digit or '_'"
+            }
+            
+            if (reservedWordsPattern.find(name) != null) {
+                return "Project name contains reserved words"
+            }
         }
         
         return null
@@ -1499,7 +1767,15 @@ class ComposeMultiplatformWizardStep(
         }
         
         val expandedPath = expandPath(projectPath)
-        val fullPath = File(expandedPath, projectName)
+        
+        // In Android Studio, projectPath already includes project name
+        // In IntelliJ IDEA, we need to append project name
+        val fullPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            File(expandedPath)
+        } else {
+            val sanitizedName = WizardDefaults.sanitizeProjectName(projectName)
+            File(expandedPath, sanitizedName)
+        }
         
         if (fullPath.exists() && fullPath.isDirectory) {
             val entries = fullPath.listFiles()
@@ -1517,7 +1793,15 @@ class ComposeMultiplatformWizardStep(
         }
         
         val expandedPath = expandPath(projectPath)
-        val fullPath = File(expandedPath, projectName)
+        
+        // In Android Studio, projectPath already includes project name
+        // In IntelliJ IDEA, we need to append project name
+        val fullPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            File(expandedPath)
+        } else {
+            val sanitizedName = WizardDefaults.sanitizeProjectName(projectName)
+            File(expandedPath, sanitizedName)
+        }
         
         try {
             val existingProject = ProjectUtil.findProject(fullPath.toPath())
@@ -1581,7 +1865,42 @@ class ComposeMultiplatformWizardStep(
         
     fun getComposeVersion(): String = composeVersionValue
     
-    private suspend fun loadComposeVersionsFromMaven(includeDevVersions: Boolean = false): List<String> {
-        return io.github.heisiar.composewizard.shared.services.ComposeVersionService().fetchAvailableVersions(includeDevVersions)
+    /**
+     * Load Compose versions with timeout and fallback logic.
+     * 
+     * @param includeDevVersions Whether to load dev or stable versions
+     * @param timeoutMs Maximum time to wait for cache loading (default: 5000ms)
+     * @return List of versions (from cache or fallback)
+     */
+    private suspend fun loadComposeVersionsFromMaven(
+        includeDevVersions: Boolean = false,
+        timeoutMs: Long = 5000
+    ): List<String> = withContext(Dispatchers.IO) {
+        val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+        
+        return@withContext if (includeDevVersions) {
+            // Dev versions: use cache with TTL (12 hours)
+            cache.getDevVersionsBlocking(timeoutMs)
+        } else {
+            // Stable versions: use cache with TTL (12 hours)
+            cache.getStableVersionsBlocking(timeoutMs)
+        }
+    }
+    
+    /**
+     * Load SVG painter from plugin resources.
+     * Uses classloader to correctly load resources from the plugin JAR.
+     */
+    private fun loadSvgPainter(resourcePath: String): androidx.compose.ui.graphics.painter.Painter? {
+        return try {
+            val stream = javaClass.getResourceAsStream(resourcePath)
+            if (stream != null) {
+                androidx.compose.ui.res.loadSvgPainter(stream, androidx.compose.ui.unit.Density(1f))
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 }

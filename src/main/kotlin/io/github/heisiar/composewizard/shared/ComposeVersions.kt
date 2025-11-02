@@ -13,24 +13,38 @@ package io.github.heisiar.composewizard.shared
 object ComposeVersions {
     
     /**
-     * List of known stable Compose Multiplatform versions.
+     * List of stable Compose Multiplatform versions (fallback).
      * Ordered from newest to oldest.
+     * Top 10 most recent stable versions.
      * 
-     * This is the SINGLE SOURCE OF TRUTH for versions.
-     * To add/remove versions, simply edit this list.
+     * ⚠️ THIS IS THE SINGLE SOURCE OF TRUTH FOR FALLBACK VERSIONS ⚠️
+     * 
+     * Used by:
+     * - ComposeVersionService (fallback when Maven is unavailable)
+     * - ComposeVersionCache (fallback when Maven is unavailable)
+     * - Template API wizard (fallback in tooltip)
+     * - Compose UI wizard (fallback when Maven is unavailable)
+     * 
+     * To update versions, simply edit this list.
+     * Keep it updated with latest stable versions from:
+     * https://github.com/JetBrains/compose-multiplatform/releases
      */
-    val KNOWN_STABLE_VERSIONS = listOf(
+    val STABLE_VERSIONS = listOf(
         "1.9.2",
         "1.9.1",
         "1.9.0",
         "1.8.0",
         "1.7.1",
-        "1.7.0"
+        "1.7.0",
+        "1.6.11",
+        "1.6.10",
+        "1.6.2",
+        "1.6.1"
     )
     
     /**
      * Default version to use in wizards.
      */
-    val DEFAULT_VERSION: String = KNOWN_STABLE_VERSIONS.first()
+    val DEFAULT_VERSION: String = STABLE_VERSIONS.first()
 }
 

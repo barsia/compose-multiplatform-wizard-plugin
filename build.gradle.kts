@@ -33,8 +33,9 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         
         // Android plugin - needed for AS wizard API
-        // Always include for proper IDE resolution, even in IDEA
+        if (!runIntellijIdea) {
         bundledPlugin("org.jetbrains.android")
+        }
         
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)

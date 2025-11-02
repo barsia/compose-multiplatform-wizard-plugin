@@ -5,6 +5,7 @@ import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import io.github.heisiar.composewizard.shared.ValidationUtils
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 import java.io.File
 
 /**
@@ -18,12 +19,8 @@ val composeMultiplatformTemplate: Template
             override val name: String = "Compose Multiplatform"
             override val description: String = """
                 <html>
-                <b>Multiplatform project for Android, iOS, Desktop, and Web</b><br>
-                <br>
-                <b style="color: #E8850F;">⚠ Configuration:</b><br>
-                • <b>Build Language:</b> <b style="color: #389FD6;">Kotlin DSL</b> (Groovy ignored)<br>
-                • <b>Min SDK:</b> Android only<br>
-                • <b>Language:</b> Kotlin
+                <b>Create a Compose Multiplatform project for Android, iOS, Desktop, and Web</b><br><br>
+                <b>Note:</b> Only <span style="color: #E8850F;">Kotlin DSL</span> is supported for build configuration (Groovy is not supported).
                 </html>
             """.trimIndent()
             override val minSdk: Int = 24
@@ -38,48 +35,50 @@ val composeMultiplatformTemplate: Template
         
         val includeAndroid = BooleanParameter(
             name = "Android",
-            defaultValue = true,
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.TARGET_ANDROID,
             help = "Include Android target"
         )
         
         val includeIos = BooleanParameter(
             name = "iOS",
-            defaultValue = true,
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.TARGET_IOS,
             help = "Include iOS target"
         )
         
         val includeDesktop = BooleanParameter(
             name = "Desktop", 
-            defaultValue = true,
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.TARGET_DESKTOP,
             help = "Include Desktop (JVM) target"
         )
         
         val includeWeb = BooleanParameter(
             name = "Web",
-            defaultValue = true,
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.TARGET_WEB,
             help = "Include Web (Wasm) target"
+        )
+
+        val initGit = BooleanParameter(
+            name = "Create Git repository",
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.INIT_GIT,
+            help = "Create .git directory and initial commit"
         )
         
         val includeTests = BooleanParameter(
-            name = "Include sample tests",
-            defaultValue = true,
-            help = "Add example unit and UI tests"
-        )
-        
-        val initGit = BooleanParameter(
-            name = "Initialize Git repository",
-            defaultValue = true,
-            help = "Create .git directory and initial commit"
+            name = "Include tests",
+            defaultValue = io.github.heisiar.composewizard.shared.WizardDefaults.INCLUDE_TESTS,
+            help = "Add example tests"
         )
         
         val composeVersion = StringParameter(
             name = "Compose Multiplatform version",
             defaultValue = ComposeVersions.DEFAULT_VERSION,
-            help = "Enter version number",
+            help = buildVersionHelp(),
             constraints = listOf()
         )
         
         override val widgets: Collection<Widget<*>> = listOf(
+            TextFieldWidget(composeVersion),
+            Separator,
             LabelWidget("Target platforms:"),
             CheckBoxWidget(includeAndroid),
             CheckBoxWidget(includeIos),
@@ -87,11 +86,8 @@ val composeMultiplatformTemplate: Template
             CheckBoxWidget(includeWeb),
             Separator,
             LabelWidget("Additional options:"),
-            CheckBoxWidget(includeTests),
             CheckBoxWidget(initGit),
-            Separator,
-            TextFieldWidget(composeVersion),
-            LabelWidget("Available: ${ComposeVersions.KNOWN_STABLE_VERSIONS.joinToString(", ")}")
+            CheckBoxWidget(includeTests)
         )
         
         override fun thumb(): Thumb {
@@ -294,6 +290,42 @@ fun composeMultiplatformModuleRecipe(
         println("ERROR creating module: ${e.message}")
         e.printStackTrace()
         return false
+    }
+}
+
+/**
+ * Build help text with available Compose versions from Maven.
+ * 
+ * Loads versions from Maven (with 3s timeout) and shows them in tooltip.
+ * This is the best we can do in Template API - tooltip is not copyable,
+ * but at least shows fresh versions from Maven.
+ */
+private fun buildVersionHelp(): String {
+    return try {
+        val cache = ComposeVersionCache.getInstance()
+        // Wait for versions to load (max 3 seconds)
+        val versions = cache.getStableVersionsBlocking(timeoutMs = 3000)
+        
+        // Show all loaded versions in tooltip
+        buildString {
+            appendLine("Available versions (from Maven):")
+            appendLine()
+            versions.take(20).forEachIndexed { index, version ->
+                if (index == 0) {
+                    appendLine("  $version  ← Latest")
+                } else {
+                    appendLine("  $version")
+                }
+            }
+            if (versions.size > 20) {
+                appendLine()
+                appendLine("... and ${versions.size - 20} more versions")
+            }
+            appendLine()
+            appendLine("Type version manually (e.g., 1.9.2)")
+        }
+    } catch (e: Exception) {
+        "Enter Compose Multiplatform version (e.g., 1.9.2)"
     }
 }
 

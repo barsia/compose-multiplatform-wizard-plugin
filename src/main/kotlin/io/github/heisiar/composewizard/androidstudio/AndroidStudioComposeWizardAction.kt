@@ -51,17 +51,17 @@ class AndroidStudioComposeWizardAction : AnAction(
             override fun run(indicator: ProgressIndicator) {
                 indicator.text = "Creating project structure..."
                 indicator.isIndeterminate = false
-                
-                indicator.fraction = 0.2
-                indicator.text = "Copying template files..."
-                
+                    
+                    indicator.fraction = 0.2
+                    indicator.text = "Copying template files..."
+                    
                 // Use unified wizard integration
                 val integration = ASWizardIntegration()
                 val success = integration.createAndOpenProject(projectPath, projectName, builder)
                 
                 if (success) {
-                    println("=== Project created successfully! ===")
-                    indicator.fraction = 1.0
+                                println("=== Project created successfully! ===")
+                                indicator.fraction = 1.0
                 }
             }
         })

@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import io.github.heisiar.composewizard.androidstudio.composeMultiplatformModuleRecipe
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import java.io.File
 
@@ -25,17 +26,17 @@ class ComposeMultiplatformModuleModel(
 ) : WizardModel() {
     
     // Module settings
-    val moduleName: StringValueProperty = StringValueProperty("composeApp")
-    val packageName: StringValueProperty = StringValueProperty("com.example.composeapp")
+    val moduleName: StringValueProperty = StringValueProperty(WizardDefaults.PROJECT_NAME)
+    val packageName: StringValueProperty = StringValueProperty(WizardDefaults.PACKAGE_NAME)
     
     // Target platforms
-    val includeAndroid: BoolValueProperty = BoolValueProperty(true)
-    val includeIos: BoolValueProperty = BoolValueProperty(true)
-    val includeDesktop: BoolValueProperty = BoolValueProperty(true)
-    val includeWeb: BoolValueProperty = BoolValueProperty(true)
+    val includeAndroid: BoolValueProperty = BoolValueProperty(WizardDefaults.TARGET_ANDROID)
+    val includeIos: BoolValueProperty = BoolValueProperty(WizardDefaults.TARGET_IOS)
+    val includeDesktop: BoolValueProperty = BoolValueProperty(WizardDefaults.TARGET_DESKTOP)
+    val includeWeb: BoolValueProperty = BoolValueProperty(WizardDefaults.TARGET_WEB)
     
     // Additional options
-    val includeTests: BoolValueProperty = BoolValueProperty(true)
+    val includeTests: BoolValueProperty = BoolValueProperty(WizardDefaults.INCLUDE_TESTS)
     val composeVersion: StringValueProperty = StringValueProperty(ComposeVersions.DEFAULT_VERSION)
     
     // Build configuration - always Kotlin DSL for Compose Multiplatform

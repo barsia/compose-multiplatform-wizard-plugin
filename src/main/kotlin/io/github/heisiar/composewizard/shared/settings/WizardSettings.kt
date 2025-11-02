@@ -1,7 +1,6 @@
 package io.github.heisiar.composewizard.shared.settings
 
 import com.intellij.openapi.components.*
-import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @State(
@@ -13,6 +12,7 @@ class WizardSettings : PersistentStateComponent<WizardSettings> {
     
     var enableDevVersions: Boolean = false
     var devCheckboxVisibleByUser: Boolean = false
+    var welcomeTooltipShown: Boolean = false
     
     override fun getState(): WizardSettings {
         return this

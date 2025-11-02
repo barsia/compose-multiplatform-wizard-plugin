@@ -5,15 +5,16 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.WizardDefaults
 
 /**
  * State holder for Compose Multiplatform Wizard.
  * Manages all wizard configuration in a single data class.
  */
 data class WizardState(
-    var projectName: String = "ComposeProject",
-    var projectPath: String = "~/IdeaProjects",
-    var projectId: String = "org.example.project",
+    var projectName: String = WizardDefaults.PROJECT_NAME_DISPLAY,
+    var projectPath: String = WizardDefaults.getDefaultProjectPath(),
+    var projectId: String = WizardDefaults.PACKAGE_NAME,
     var composeVersion: String = ComposeVersions.DEFAULT_VERSION,
     var targetDesktop: Boolean = true,
     var targetAndroid: Boolean = true,
@@ -44,7 +45,9 @@ data class WizardState(
     }
     
     fun getFullProjectPath(): String {
-        return java.io.File(projectPath, projectName).absolutePath
+        // Sanitize project name for file system (remove spaces)
+        val sanitizedName = WizardDefaults.sanitizeProjectName(projectName)
+        return java.io.File(projectPath, sanitizedName).absolutePath
     }
 }
 
@@ -53,9 +56,9 @@ data class WizardState(
  */
 @Composable
 fun rememberWizardState(
-    projectName: String = "ComposeProject",
-    projectPath: String = "~/IdeaProjects",
-    projectId: String = "org.example.project",
+    projectName: String = WizardDefaults.PROJECT_NAME_DISPLAY,
+    projectPath: String = WizardDefaults.getDefaultProjectPath(),
+    projectId: String = WizardDefaults.PACKAGE_NAME,
     composeVersion: String = ComposeVersions.DEFAULT_VERSION
 ): MutableState<WizardState> {
     return remember {

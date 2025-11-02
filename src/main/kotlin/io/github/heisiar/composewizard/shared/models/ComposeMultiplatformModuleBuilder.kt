@@ -7,7 +7,7 @@ import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.util.IconLoader
-import io.github.heisiar.composewizard.shared.TemplateProcessor
+import io.github.heisiar.composewizard.shared.WizardDefaults
 import javax.swing.Icon
 
 // Forward declaration - avoid circular dependency
@@ -24,16 +24,16 @@ data class ValidationResult(
 
 class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
 
-    var projectName: String = "ComposeProject"
-    var projectId: String = "org.example.project"
-    var composeVersion: String = "1.7.1" // Default Compose version
-    var targetDesktop: Boolean = true
-    var targetAndroid: Boolean = true
-    var targetIOS: Boolean = true
-    var targetWeb: Boolean = true
-    var initGit: Boolean = true
-    var includeTests: Boolean = false
-    var enableDevVersions: Boolean = false
+    var projectName: String = WizardDefaults.PROJECT_NAME_DISPLAY
+    var projectId: String = WizardDefaults.PACKAGE_NAME
+    var composeVersion: String = WizardDefaults.COMPOSE_VERSION
+    var targetDesktop: Boolean = WizardDefaults.TARGET_DESKTOP
+    var targetAndroid: Boolean = WizardDefaults.TARGET_ANDROID
+    var targetIOS: Boolean = WizardDefaults.TARGET_IOS
+    var targetWeb: Boolean = WizardDefaults.TARGET_WEB
+    var initGit: Boolean = WizardDefaults.INIT_GIT
+    var includeTests: Boolean = WizardDefaults.INCLUDE_TESTS
+    var enableDevVersions: Boolean = WizardDefaults.ENABLE_DEV_VERSIONS
 
     override fun getModuleType(): ModuleType<*> = EmptyModuleType.getInstance()
 
@@ -89,11 +89,11 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     fun createProjectStructure(rootPath: String, projectName: String) {
         io.github.heisiar.composewizard.shared.ProjectCreator.createProjectStructure(
             projectPath = rootPath,
-            projectName = projectName,
+                projectName = projectName,
             builder = this
         )
     }
-
+    
     fun validateProjectId(id: String): ValidationResult {
         val errors = mutableListOf<String>()
         
