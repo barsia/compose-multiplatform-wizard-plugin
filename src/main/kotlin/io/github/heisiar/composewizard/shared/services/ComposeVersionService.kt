@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.shared.services
 
 import com.intellij.openapi.diagnostic.Logger
+import io.github.heisiar.composewizard.shared.ComposeVersions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -21,14 +22,6 @@ class ComposeVersionService {
     companion object {
         private const val STABLE_MAVEN_URL = "https://repo1.maven.org/maven2/org/jetbrains/compose/compose-gradle-plugin/"
         private const val DEV_MAVEN_URL = "https://maven.pkg.jetbrains.space/public/p/compose/dev/org/jetbrains/compose/org.jetbrains.compose.gradle.plugin/"
-        
-        val KNOWN_STABLE_VERSIONS = listOf(
-            "1.9.1",
-            "1.9.0",
-            "1.8.0",
-            "1.7.1",
-            "1.7.0"
-        )
     }
     
     suspend fun fetchAvailableVersions(includeDevVersions: Boolean): List<String> = withContext(Dispatchers.IO) {
@@ -38,7 +31,7 @@ class ComposeVersionService {
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
             // For dev versions without internet: fallback to stable versions
-            KNOWN_STABLE_VERSIONS
+            ComposeVersions.KNOWN_STABLE_VERSIONS
         }
     }
     
@@ -82,7 +75,7 @@ class ComposeVersionService {
             logger.warn("Failed to fetch versions from $mavenUrl: ${e.message}")
         }
         
-        return KNOWN_STABLE_VERSIONS
+        return ComposeVersions.KNOWN_STABLE_VERSIONS
     }
     
     private fun parseVersion(version: String): Comparable<*> {

@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.androidstudio
 
 import com.android.tools.idea.wizard.template.*
+import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import io.github.heisiar.composewizard.shared.ValidationUtils
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
@@ -11,27 +12,14 @@ import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageColle
  */
 val composeMultiplatformTemplate: Template
     get() {
-        // Available Compose versions
-        // Note: Native AS wizard doesn't support async initialization,
-        // so we use a predefined list instead of fetching from Maven dynamically.
-        // The Compose UI action wizard (File → New) uses dynamic version fetching.
-        val availableVersions = listOf(
-            "1.7.1",
-            "1.7.0", 
-            "1.6.11",
-            "1.6.10",
-            "1.6.2",
-            "1.6.1",
-            "1.6.0"
-        )
         
         return object : Template {
             override val name: String = "Compose Multiplatform"
             override val description: String = "Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
             override val minSdk: Int = 24
             override val category: Category = Category.Application
-            override val formFactor: FormFactor = FormFactor.Mobile
-            override val constraints: Collection<TemplateConstraint> = emptyList()
+            override val formFactor: FormFactor = FormFactor.Generic
+            override val constraints: Collection<TemplateConstraint> = listOf(TemplateConstraint.Kotlin)
             override val uiContexts: Collection<WizardUiContext> = listOf(
                 WizardUiContext.NewProject,
                 WizardUiContext.NewProjectExtraDetail
@@ -39,27 +27,27 @@ val composeMultiplatformTemplate: Template
             override val documentationUrl: String? = null
         
         val includeAndroid = BooleanParameter(
-            name = "🤖 Android",
+            name = "Android",
             defaultValue = true,
-            help = "Android module"
+            help = "Include Android target"
         )
         
         val includeIos = BooleanParameter(
-            name = "🍎 iOS",
+            name = "iOS",
             defaultValue = true,
-            help = "iOS module for cross-platform support"
+            help = "Include iOS target"
         )
         
         val includeDesktop = BooleanParameter(
-            name = "🖥️ Desktop (JVM)", 
+            name = "Desktop", 
             defaultValue = true,
-            help = "Desktop (JVM) module"
+            help = "Include Desktop (JVM) target"
         )
         
         val includeWeb = BooleanParameter(
-            name = "🌐 Web (Wasm)",
+            name = "Web",
             defaultValue = true,
-            help = "Web (Wasm) module"
+            help = "Include Web (Wasm) target"
         )
         
         val includeTests = BooleanParameter(
@@ -76,25 +64,24 @@ val composeMultiplatformTemplate: Template
         
         val composeVersion = StringParameter(
             name = "Compose Multiplatform version",
-            defaultValue = availableVersions.first(),
-            help = "Version of Compose Multiplatform to use",
-            constraints = emptyList()
+            defaultValue = ComposeVersions.DEFAULT_VERSION,
+            help = "Enter version number",
+            constraints = listOf()
         )
         
         override val widgets: Collection<Widget<*>> = listOf(
             LabelWidget("Target platforms:"),
-            Separator,
             CheckBoxWidget(includeAndroid),
             CheckBoxWidget(includeIos),
             CheckBoxWidget(includeDesktop),
             CheckBoxWidget(includeWeb),
             Separator,
             LabelWidget("Additional options:"),
-            Separator,
             CheckBoxWidget(includeTests),
             CheckBoxWidget(initGit),
             Separator,
-            TextFieldWidget(composeVersion)
+            TextFieldWidget(composeVersion),
+            LabelWidget("Available: ${ComposeVersions.KNOWN_STABLE_VERSIONS.joinToString(", ")}")
         )
         
         override fun thumb(): Thumb {
