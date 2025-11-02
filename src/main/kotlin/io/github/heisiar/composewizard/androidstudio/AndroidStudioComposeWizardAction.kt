@@ -2,16 +2,12 @@ package io.github.heisiar.composewizard.androidstudio
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.ui.Messages
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep
-import io.github.heisiar.composewizard.shared.TemplateProcessor
 import java.awt.Dimension
 import java.io.File
 import javax.swing.JComponent
@@ -56,61 +52,16 @@ class AndroidStudioComposeWizardAction : AnAction(
                 indicator.text = "Creating project structure..."
                 indicator.isIndeterminate = false
                 
-                try {
-                    // Create TemplateProcessor with builder's settings
-                    val processor = TemplateProcessor(
-                        projectName = projectName,
-                        projectId = builder.projectId,
-                        composeVersion = builder.composeVersion,
-                        includeTests = builder.includeTests,
-                        targetDesktop = builder.targetDesktop,
-                        targetAndroid = builder.targetAndroid,
-                        targetIOS = builder.targetIOS,
-                        targetWeb = builder.targetWeb,
-                        enableDevVersions = builder.enableDevVersions
-                    )
-                    
-                    indicator.fraction = 0.2
-                    indicator.text = "Copying template files..."
-                    
-                    // Create project from template
-                    processor.copyTemplateToProject(projectPath)
-                    
-                    indicator.fraction = 0.9
-                    indicator.text = "Finalizing project..."
-                    
-                    // Open the project
-                    ApplicationManager.getApplication().invokeLater {
-                        try {
-                            val projectManager = ProjectManager.getInstance()
-                            val newProject = projectManager.loadAndOpenProject(projectPath)
-                            
-                            if (newProject != null) {
-                                println("=== Project created successfully! ===")
-                                indicator.fraction = 1.0
-                            } else {
-                                Messages.showErrorDialog(
-                                    "Failed to open the created project",
-                                    "Project Creation Error"
-                                )
-                            }
-                        } catch (ex: Exception) {
-                            Messages.showErrorDialog(
-                                "Error opening project: ${ex.message}",
-                                "Project Creation Error"
-                            )
-                            ex.printStackTrace()
-                        }
-                    }
-                    
-                } catch (ex: Exception) {
-                    ApplicationManager.getApplication().invokeLater {
-                        Messages.showErrorDialog(
-                            "Error creating project: ${ex.message}",
-                            "Project Creation Error"
-                        )
-                    }
-                    ex.printStackTrace()
+                indicator.fraction = 0.2
+                indicator.text = "Copying template files..."
+                
+                // Use unified wizard integration
+                val integration = ASWizardIntegration()
+                val success = integration.createAndOpenProject(projectPath, projectName, builder)
+                
+                if (success) {
+                    println("=== Project created successfully! ===")
+                    indicator.fraction = 1.0
                 }
             }
         })

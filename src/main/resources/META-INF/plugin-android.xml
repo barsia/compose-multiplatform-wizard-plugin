@@ -13,6 +13,16 @@
     <wizardTemplateProvider implementation="io.github.heisiar.composewizard.androidstudio.ComposeMultiplatformTemplateProvider"/>
   </extensions>
   
+  <!-- Custom New Module wizard with full UI control (no Groovy, no Java, all params on one screen) -->
+  <extensions defaultExtensionNs="com.android">
+    <moduleDescriptionProvider implementation="io.github.heisiar.composewizard.androidstudio.module.ComposeMultiplatformModuleDescriptionProvider"/>
+  </extensions>
+  
+  <!-- Custom New Project wizard with Compose UI (appears in New Project dialog) -->
+  <extensions defaultExtensionNs="com.intellij">
+    <moduleBuilder builderClass="io.github.heisiar.composewizard.androidstudio.project.ComposeMultiplatformProjectBuilder" order="first"/>
+  </extensions>
+  
   <!-- 
     Additional actions for Android Studio
     These appear in:

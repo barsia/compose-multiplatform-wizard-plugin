@@ -5,6 +5,7 @@ import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.TemplateProcessor
 import io.github.heisiar.composewizard.shared.ValidationUtils
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import java.io.File
 
 /**
  * Compose Multiplatform wizard template for Android Studio.
@@ -70,6 +71,8 @@ val composeMultiplatformTemplate: Template
         )
         
         override val widgets: Collection<Widget<*>> = listOf(
+            LabelWidget("<html><b>Note:</b> Compose Multiplatform uses <b>Kotlin DSL</b> (build.gradle.kts). The <b>Minimum SDK</b> on the previous step applies only to Android target.</html>"),
+            Separator,
             LabelWidget("Target platforms:"),
             CheckBoxWidget(includeAndroid),
             CheckBoxWidget(includeIos),
@@ -178,15 +181,7 @@ fun composeMultiplatformProjectRecipe(
         
         // Initialize Git if requested
         if (initGit) {
-            try {
-                val projectDir = java.io.File(projectPath)
-                // Simple git init - could be enhanced with .gitignore and initial commit
-                Runtime.getRuntime().exec(arrayOf("git", "init"), null, projectDir).waitFor()
-                println("Git repository initialized")
-            } catch (e: Exception) {
-                println("WARNING: Could not initialize git: ${e.message}")
-                // Don't fail the whole project creation if git fails
-            }
+            io.github.heisiar.composewizard.shared.ProjectCreator.initializeGitRepository(projectPath)
         }
         
         // Log successful project creation (FUS)
@@ -209,6 +204,88 @@ fun composeMultiplatformProjectRecipe(
         // Log validation error for failed creation
         ComposeWizardUsageCollector.logValidationError("projectCreation", "exception")
         
+        return false
+    }
+}
+
+/**
+ * Recipe for creating Compose Multiplatform module in existing project.
+ * 
+ * This is a simplified version of composeMultiplatformProjectRecipe
+ * that creates a module instead of a full project.
+ */
+fun composeMultiplatformModuleRecipe(
+    moduleDir: File,
+    moduleName: String,
+    packageName: String,
+    includeAndroid: Boolean,
+    includeIos: Boolean,
+    includeDesktop: Boolean,
+    includeWeb: Boolean,
+    includeTests: Boolean,
+    composeVersion: String
+): Boolean {
+    println("=== Compose Multiplatform Module Recipe Started ===")
+    println("Module: $moduleName")
+    println("Package: $packageName")
+    println("Platforms: Android=$includeAndroid, iOS=$includeIos, Desktop=$includeDesktop, Web=$includeWeb")
+    
+    try {
+        // Create module directory structure
+        moduleDir.mkdirs()
+        
+        // Create basic build.gradle.kts
+        val buildGradle = File(moduleDir, "build.gradle.kts")
+        buildGradle.writeText("""
+            plugins {
+                kotlin("multiplatform") version "1.9.20"
+                ${if (includeAndroid) "id(\"com.android.library\")\n    " else ""}id("org.jetbrains.compose") version "$composeVersion"
+            }
+            
+            kotlin {
+                ${if (includeAndroid) "androidTarget()\n    " else ""}${if (includeIos) "iosX64()\n    iosArm64()\n    iosSimulatorArm64()\n    " else ""}${if (includeDesktop) "jvm(\"desktop\")\n    " else ""}${if (includeWeb) "js(IR) {\n        browser()\n    }\n    " else ""}
+                sourceSets {
+                    val commonMain by getting {
+                        dependencies {
+                            implementation(compose.runtime)
+                            implementation(compose.foundation)
+                            implementation(compose.material3)
+                        }
+                    }
+                    ${if (includeTests) """
+                    val commonTest by getting {
+                        dependencies {
+                            implementation(kotlin("test"))
+                        }
+                    }
+                    """ else ""}
+                }
+            }
+        """.trimIndent())
+        
+        // Create source directories
+        val srcCommonMain = File(moduleDir, "src/commonMain/kotlin/${packageName.replace('.', '/')}")
+        srcCommonMain.mkdirs()
+        
+        // Create simple App.kt
+        val appKt = File(srcCommonMain, "App.kt")
+        appKt.writeText("""
+            package $packageName
+            
+            import androidx.compose.material3.Text
+            import androidx.compose.runtime.Composable
+            
+            @Composable
+            fun App() {
+                Text("Hello from Compose Multiplatform!")
+            }
+        """.trimIndent())
+        
+        println("=== Module created successfully! ===")
+        return true
+    } catch (e: Exception) {
+        println("ERROR creating module: ${e.message}")
+        e.printStackTrace()
         return false
     }
 }
