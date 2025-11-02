@@ -33,9 +33,8 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         
         // Android plugin - needed for AS wizard API
-        if (!runIntellijIdea) {
-            bundledPlugin("org.jetbrains.android")
-        }
+        // Always include for proper IDE resolution, even in IDEA
+        bundledPlugin("org.jetbrains.android")
         
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
@@ -46,6 +45,8 @@ dependencies {
     if (!runIntellijIdea) {
         compileOnly("com.android.tools:sdk-common:31.7.2")
         compileOnly("com.android.tools.build:gradle-api:8.7.3")
+        // Template API is part of Android Studio, available at runtime
+        // We mark it as compileOnly because it's provided by AS
     }
     
     // Compose Multiplatform for wizard UI

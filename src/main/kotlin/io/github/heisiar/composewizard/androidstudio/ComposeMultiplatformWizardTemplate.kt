@@ -16,7 +16,16 @@ val composeMultiplatformTemplate: Template
         
         return object : Template {
             override val name: String = "Compose Multiplatform"
-            override val description: String = "Create a new Compose Multiplatform project for Android, iOS, Desktop, and Web"
+            override val description: String = """
+                <html>
+                <b>Multiplatform project for Android, iOS, Desktop, and Web</b><br>
+                <br>
+                <b style="color: #E8850F;">⚠ Configuration:</b><br>
+                • <b>Build Language:</b> <b style="color: #389FD6;">Kotlin DSL</b> (Groovy ignored)<br>
+                • <b>Min SDK:</b> Android only<br>
+                • <b>Language:</b> Kotlin
+                </html>
+            """.trimIndent()
             override val minSdk: Int = 24
             override val category: Category = Category.Application
             override val formFactor: FormFactor = FormFactor.Generic
@@ -25,7 +34,7 @@ val composeMultiplatformTemplate: Template
                 WizardUiContext.NewProject,
                 WizardUiContext.NewProjectExtraDetail
             )
-            override val documentationUrl: String? = null
+            override val documentationUrl: String? = "https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform-getting-started.html"
         
         val includeAndroid = BooleanParameter(
             name = "Android",
@@ -71,8 +80,6 @@ val composeMultiplatformTemplate: Template
         )
         
         override val widgets: Collection<Widget<*>> = listOf(
-            LabelWidget("<html><b>Note:</b> Compose Multiplatform uses <b>Kotlin DSL</b> (build.gradle.kts). The <b>Minimum SDK</b> on the previous step applies only to Android target.</html>"),
-            Separator,
             LabelWidget("Target platforms:"),
             CheckBoxWidget(includeAndroid),
             CheckBoxWidget(includeIos),
