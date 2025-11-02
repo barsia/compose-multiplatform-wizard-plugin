@@ -12,6 +12,7 @@ system/
 config/
 
 # IDE
+.idea/
 .idea/workspace.xml
 .idea/tasks.xml
 *.iml

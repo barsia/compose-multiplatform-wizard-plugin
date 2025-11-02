@@ -24,7 +24,7 @@
             class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project..."
             description="Create a new Compose Multiplatform project with advanced Compose UI"
-            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+            icon="/META-INF/compose.svg">
       <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewProject"/>
     </action>
     
@@ -32,7 +32,7 @@
             class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project"
             description="Create a new Compose Multiplatform project with advanced Compose UI"
-            icon="StudioIcons.Compose.Editor.COMPOSABLE_FUNCTION">
+            icon="/META-INF/compose.svg">
       <add-to-group group-id="WelcomeScreen.QuickStart" anchor="after" relative-to-action="WelcomeScreen.CreateNewProject"/>
     </action>
   </actions>
