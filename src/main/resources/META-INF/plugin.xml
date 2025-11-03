@@ -1,4 +1,4 @@
-<idea-plugin>
+<idea-plugin allow-bundled-update="true">
   <id>io.github.heisiar.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
   <vendor email="your-email@example.com" url="https://github.com/heisiar">heisiar</vendor>
@@ -34,6 +34,7 @@
   
   <!-- Extensions for IntelliJ IDEA (always loaded) -->
   <extensions defaultExtensionNs="com.intellij">
+    <!-- New Project Wizard generator - supports dynamic plugin loading! -->
     <newProjectWizard.generator 
       implementation="io.github.heisiar.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
     

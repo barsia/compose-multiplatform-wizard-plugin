@@ -708,6 +708,7 @@ class ComposeMultiplatformWizardStep(
         // Triple-click detector state for toggling checkbox visibility
         var clickCount by remember { mutableStateOf(0) }
         var lastClickTime by remember { mutableStateOf(0L) }
+        var devVisibilityToggleCount by remember { mutableStateOf(0) } // Count how many times user toggled visibility
         
         // Validation state for each field (like in platform)
         var projectNameError by remember { mutableStateOf<String?>(null) }
@@ -971,7 +972,13 @@ class ComposeMultiplatformWizardStep(
                             Box {
                                 ExposedDropdownMenuBox(
                                 expanded = versionsExpanded,
-                                onExpandedChange = { versionsExpanded = it }
+                                onExpandedChange = { 
+                                    versionsExpanded = it
+                                    if (it) {
+                                        // Log when dropdown is opened
+                                        ComposeWizardUsageCollector.logVersionDropdownOpened()
+                                    }
+                                }
                             ) {
                                 val showTooltip = composeVersion.length > 26 && !isHoveringRefreshIcon
                                 
@@ -1152,6 +1159,8 @@ class ComposeMultiplatformWizardStep(
                                                             androidx.compose.ui.input.pointer.PointerEventType.Press -> {
                                                                 if (!isRefreshing) {
                                                                     event.changes.forEach { it.consume() }
+                                                                    // Log refresh button click
+                                                                    ComposeWizardUsageCollector.logVersionRefreshClicked()
                                                                     isRefreshing = true
                                                                     coroutineScope.launch {
                                                                         try {
@@ -1563,9 +1572,13 @@ class ComposeMultiplatformWizardStep(
                                     if (clickCount >= 3) {
                                         // Triple click: toggle dev checkbox visibility
                                         if (!devCheckboxVisibleByUser) {
+                                            // First time user discovers this feature
                                             ComposeWizardUsageCollector.logDevVersionsUnlocked()
                                         }
                                         devCheckboxVisibleByUser = !devCheckboxVisibleByUser
+                                        devVisibilityToggleCount++
+                                        // Log every visibility toggle (show/hide) with count
+                                        ComposeWizardUsageCollector.logDevVersionsVisibilityToggled(devCheckboxVisibleByUser, devVisibilityToggleCount)
                                         clickCount = 0
                                     }
                                 } else {

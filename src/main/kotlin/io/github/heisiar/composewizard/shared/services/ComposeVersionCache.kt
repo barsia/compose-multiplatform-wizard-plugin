@@ -1,5 +1,6 @@
 package io.github.heisiar.composewizard.shared.services
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -36,7 +37,7 @@ import kotlinx.coroutines.*
  * - Can be adjusted based on release frequency
  */
 @Service(Service.Level.APP)
-class ComposeVersionCache {
+class ComposeVersionCache : Disposable {
     
     private val logger = Logger.getInstance(ComposeVersionCache::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -131,24 +132,25 @@ class ComposeVersionCache {
     }
     
     /**
-     * Get stable versions, waiting for background loading to complete if necessary.
+     * Get stable versions, waiting for background loading to complete if necessary (suspend version).
      * 
-     * This method blocks until versions are loaded or timeout occurs.
-     * Use this for Template API wizard where we need versions synchronously.
+     * This method suspends until versions are loaded or timeout occurs.
+     * Prefer this over blocking version when in coroutine context.
      * 
      * @param timeoutMs Maximum time to wait in milliseconds (default: 3000ms)
      * @return List of stable versions (from Maven or fallback)
      */
-    fun getStableVersionsBlocking(timeoutMs: Long = 3000): List<String> {
+    suspend fun getStableVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingStable) {
-            return cachedStableVersions
+            return@withContext cachedStableVersions
         }
         
         logger.info("Waiting for stable Compose versions to load (timeout: ${timeoutMs}ms)...")
-        val startTime = System.currentTimeMillis()
         
-        while (isLoadingStable && (System.currentTimeMillis() - startTime) < timeoutMs) {
-            Thread.sleep(100)
+        withTimeoutOrNull(timeoutMs) {
+            while (isLoadingStable) {
+                delay(100)
+            }
         }
         
         if (isLoadingStable) {
@@ -157,28 +159,45 @@ class ComposeVersionCache {
             logger.info("Stable Compose versions loaded successfully")
         }
         
-        return cachedStableVersions
+        cachedStableVersions
     }
     
     /**
-     * Get dev versions, waiting for background loading to complete if necessary.
+     * Get stable versions, waiting for background loading to complete if necessary (blocking version).
      * 
      * This method blocks until versions are loaded or timeout occurs.
-     * Use this when you need dev versions synchronously.
+     * Use this only for Template API wizard or other synchronous contexts where coroutines cannot be used.
+     * Prefer getStableVersionsSuspend() when in coroutine context.
+     * 
+     * @param timeoutMs Maximum time to wait in milliseconds (default: 3000ms)
+     * @return List of stable versions (from Maven or fallback)
+     */
+    fun getStableVersionsBlocking(timeoutMs: Long = 3000): List<String> {
+        return runBlocking {
+            getStableVersionsSuspend(timeoutMs)
+        }
+    }
+    
+    /**
+     * Get dev versions, waiting for background loading to complete if necessary (suspend version).
+     * 
+     * This method suspends until versions are loaded or timeout occurs.
+     * Prefer this over blocking version when in coroutine context.
      * 
      * @param timeoutMs Maximum time to wait in milliseconds (default: 3000ms)
      * @return List of dev versions (from Maven or fallback)
      */
-    fun getDevVersionsBlocking(timeoutMs: Long = 3000): List<String> {
+    suspend fun getDevVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingDev) {
-            return cachedDevVersions
+            return@withContext cachedDevVersions
         }
         
         logger.info("Waiting for dev Compose versions to load (timeout: ${timeoutMs}ms)...")
-        val startTime = System.currentTimeMillis()
         
-        while (isLoadingDev && (System.currentTimeMillis() - startTime) < timeoutMs) {
-            Thread.sleep(100)
+        withTimeoutOrNull(timeoutMs) {
+            while (isLoadingDev) {
+                delay(100)
+            }
         }
         
         if (isLoadingDev) {
@@ -187,7 +206,23 @@ class ComposeVersionCache {
             logger.info("Dev Compose versions loaded successfully")
         }
         
-        return cachedDevVersions
+        cachedDevVersions
+    }
+    
+    /**
+     * Get dev versions, waiting for background loading to complete if necessary (blocking version).
+     * 
+     * This method blocks until versions are loaded or timeout occurs.
+     * Use this only for Template API wizard or other synchronous contexts where coroutines cannot be used.
+     * Prefer getDevVersionsSuspend() when in coroutine context.
+     * 
+     * @param timeoutMs Maximum time to wait in milliseconds (default: 3000ms)
+     * @return List of dev versions (from Maven or fallback)
+     */
+    fun getDevVersionsBlocking(timeoutMs: Long = 3000): List<String> {
+        return runBlocking {
+            getDevVersionsSuspend(timeoutMs)
+        }
     }
     
     /**
@@ -261,14 +296,28 @@ class ComposeVersionCache {
         
         scope.launch {
             try {
+                if (!isActive) {
+                    logger.info("Coroutine cancelled before loading stable versions")
+                    return@launch
+                }
+                
                 val versions = versionService.fetchAvailableVersions(includeDevVersions = false)
+                
+                if (!isActive) {
+                    logger.info("Coroutine cancelled after loading stable versions")
+                    return@launch
+                }
+                
                 cachedStableVersions = versions
                 stableLastLoadTime = System.currentTimeMillis()
                 logger.info("Successfully loaded ${versions.size} stable Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
+            } catch (e: CancellationException) {
+                logger.info("Stable version loading cancelled due to plugin unload")
+                throw e
             } catch (e: Exception) {
                 logger.warn("Failed to load stable Compose versions, using fallback: ${e.message}")
                 cachedStableVersions = ComposeVersions.STABLE_VERSIONS
-                stableLastLoadTime = System.currentTimeMillis() // Set time even on failure to avoid constant retries
+                stableLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingStable = false
             }
@@ -286,18 +335,37 @@ class ComposeVersionCache {
         
         scope.launch {
             try {
+                if (!isActive) {
+                    logger.info("Coroutine cancelled before loading dev versions")
+                    return@launch
+                }
+                
                 val versions = versionService.fetchAvailableVersions(includeDevVersions = true)
+                
+                if (!isActive) {
+                    logger.info("Coroutine cancelled after loading dev versions")
+                    return@launch
+                }
+                
                 cachedDevVersions = versions
                 devLastLoadTime = System.currentTimeMillis()
                 logger.info("Successfully loaded ${versions.size} dev Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
+            } catch (e: CancellationException) {
+                logger.info("Dev version loading cancelled due to plugin unload")
+                throw e
             } catch (e: Exception) {
                 logger.warn("Failed to load dev Compose versions, using fallback: ${e.message}")
                 cachedDevVersions = ComposeVersions.STABLE_VERSIONS
-                devLastLoadTime = System.currentTimeMillis() // Set time even on failure to avoid constant retries
+                devLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingDev = false
             }
         }
+    }
+    
+    override fun dispose() {
+        logger.info("Disposing ComposeVersionCache, cancelling all background tasks")
+        scope.cancel()
     }
 }
 

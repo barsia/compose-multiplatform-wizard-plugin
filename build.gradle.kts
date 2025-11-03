@@ -64,6 +64,9 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("org.jetbrains.kotlin:kotlin-test:2.1.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.0")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 }
 
 intellijPlatform {
@@ -119,13 +122,19 @@ tasks {
     }
     
     runIde {
-        jvmArgs("-Xmx2048m")
+        // Enable FUS (Feature Usage Statistics) for local testing
+        jvmArgs(
+            "-Xmx2048m",
+            "-Dfus.internal.test.mode=true",  // Enable local FUS event logging (no data sent to JetBrains)
+            "-Didea.is.internal=true"          // Enable internal mode (access to FUS Event Log viewer)
+        )
         autoReload = true
         
         doFirst {
             val platform = if (runIntellijIdea) "IntelliJ IDEA" else "Android Studio"
             println("==============================================")
             println("  Running plugin in: $platform ($platformType $platformVersion)")
+            println("  FUS Test Mode: ENABLED (events logged locally)")
             println("==============================================")
         }
     }
