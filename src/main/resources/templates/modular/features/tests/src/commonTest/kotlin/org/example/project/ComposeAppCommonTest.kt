@@ -1,4 +1,4 @@
-package org.example.project
+package $PACKAGE_ID$
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

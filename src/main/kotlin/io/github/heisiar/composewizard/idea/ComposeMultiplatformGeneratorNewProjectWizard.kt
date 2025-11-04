@@ -6,7 +6,7 @@ import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep
+import io.github.heisiar.composewizard.shared.ui.ComposeWizardStep
 import javax.swing.Icon
 
 class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard {
@@ -21,7 +21,7 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
     private class ComposeMultiplatformWizardNewStep(parent: NewProjectWizardStep) 
         : AbstractNewProjectWizardStep(parent) {
         
-        private val composeStep = ComposeMultiplatformWizardStep(ComposeMultiplatformModuleBuilder())
+        private val composeStep = ComposeWizardStep(ComposeMultiplatformModuleBuilder())
 
         override fun setupUI(builder: com.intellij.ui.dsl.builder.Panel) {
             with(builder) {

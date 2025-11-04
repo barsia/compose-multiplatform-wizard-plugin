@@ -52,8 +52,9 @@ class ModularTemplateProcessor(
         
         updateLibraryVersions(targetPath)
         
-        copyResourceFile("$basePath/gradlew", "$targetPath/gradlew")
-        copyResourceFile("$basePath/gradlew.bat", "$targetPath/gradlew.bat")
+        // Use shared gradlew scripts from templates root
+        copyResourceFile("templates/gradlew", "$targetPath/gradlew")
+        copyResourceFile("templates/gradlew.bat", "$targetPath/gradlew.bat")
         copyResourceFile("$basePath/gradle.properties", "$targetPath/gradle.properties")
         copyResourceFile("$basePath/local.properties", "$targetPath/local.properties")
         
@@ -123,7 +124,7 @@ class ModularTemplateProcessor(
     
     private fun copyModuleSrcFromJar(jarUrl: URL, modulePath: String, targetPath: String) {
         val splitJarPath = splitJarPath(jarUrl.file)
-        val mayBeEscapedFile = URL(splitJarPath.first).file
+        val mayBeEscapedFile = java.net.URI(splitJarPath.first).toURL().file
         val file = URLUtil.unescapePercentSequences(mayBeEscapedFile)
         val jarFile = java.util.jar.JarFile(file)
         val prefix = if (splitJarPath.second.endsWith("/")) splitJarPath.second else "${splitJarPath.second}/"
@@ -317,7 +318,7 @@ class ModularTemplateProcessor(
     
     private fun copyFromJar(jarUrl: URL, resourcePath: String, targetPath: String) {
         val splitJarPath = splitJarPath(jarUrl.file)
-        val mayBeEscapedFile = URL(splitJarPath.first).file
+        val mayBeEscapedFile = java.net.URI(splitJarPath.first).toURL().file
         val file = URLUtil.unescapePercentSequences(mayBeEscapedFile)
         val jarFile = java.util.jar.JarFile(file)
         val prefix = splitJarPath.second

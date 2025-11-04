@@ -17,10 +17,10 @@ config/
 .idea/tasks.xml
 *.iml
 
-# Gradle wrapper (optional)
-gradle/
-gradlew
-gradlew.bat
+# Gradle wrapper (optional) - only root level
+/gradle/
+/gradlew
+/gradlew.bat
 
 # macOS
 .DS_Store
@@ -31,3 +31,10 @@ gradlew.bat
 !gradle-wrapper.jar
 
 local.properties
+
+# Test fixtures (moved to src/test/resources/fixtures/)
+ProjectDesktop/
+ProjectWeb/
+ProjectIos/
+ProjectAndroid/
+ProjectAndroid/

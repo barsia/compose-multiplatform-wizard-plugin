@@ -117,7 +117,7 @@ class ComposeLibraryVersionService {
         val (major, minor) = parseVersion(targetVersion)
         
         val releasesUrl = "$GITHUB_API/releases?per_page=50"
-        val connection = URL(releasesUrl).openConnection() as HttpURLConnection
+        val connection = java.net.URI(releasesUrl).toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = 5000
         connection.readTimeout = 5000
         connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
@@ -176,7 +176,7 @@ class ComposeLibraryVersionService {
     
     private fun fetchFromRelease(tag: String, composeVersion: String): Map<String, String> {
         val url = "$GITHUB_API/releases/tags/$tag"
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = 5000
         connection.readTimeout = 5000
         connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
@@ -203,7 +203,7 @@ class ComposeLibraryVersionService {
     
     private fun fetchFromTagMessage(tag: String, composeVersion: String): Map<String, String> {
         val tagRefUrl = "$GITHUB_API/git/refs/tags/$tag"
-        val connection = URL(tagRefUrl).openConnection() as HttpURLConnection
+        val connection = java.net.URI(tagRefUrl).toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = 5000
         connection.readTimeout = 5000
         connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
@@ -216,7 +216,7 @@ class ComposeLibraryVersionService {
             if (urlMatch != null) {
                 val tagUrl = urlMatch.groupValues[1]
                 
-                val tagConnection = URL(tagUrl).openConnection() as HttpURLConnection
+                val tagConnection = java.net.URI(tagUrl).toURL().openConnection() as HttpURLConnection
                 tagConnection.connectTimeout = 5000
                 tagConnection.readTimeout = 5000
                 tagConnection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")

@@ -24,13 +24,23 @@
     </ul>
   ]]></description>
   
-  <!-- Base dependency - available everywhere -->
+  <!-- Base platform module - available in both IntelliJ IDEA and Android Studio -->
   <depends>com.intellij.modules.platform</depends>
-  <depends>org.jetbrains.plugins.gradle</depends>
+  
+  <!-- Base dependency - available everywhere -->
+  <depends>org.jetbrains.kotlin</depends>
+  
+  <!-- OPTIONAL: Compose Desktop UI (only available in IntelliJ IDEA) -->
+  <depends optional="true">com.intellij.modules.compose</depends>
   
   <!-- OPTIONAL: Android Studio support -->
   <!-- This config file is loaded ONLY when org.jetbrains.android is available -->
   <depends optional="true" config-file="plugin-android.xml">org.jetbrains.android</depends>
+  
+  <!-- K2 Kotlin compiler support -->
+  <extensions defaultExtensionNs="org.jetbrains.kotlin">
+    <supportsKotlinPluginMode supportsK2="true"/>
+  </extensions>
   
   <!-- Extensions for IntelliJ IDEA (always loaded) -->
   <extensions defaultExtensionNs="com.intellij">

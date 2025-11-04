@@ -1,14 +1,16 @@
 package io.github.heisiar.composewizard.shared
 
 /**
- * Central source of truth for Compose Multiplatform versions.
+ * Central source of truth for Compose Multiplatform and Kotlin versions.
  * 
  * This file is used by:
  * - Android Studio Template wizard (StringParameter in dropdown)
  * - Compose UI wizard (list for dynamic fetching fallback)
+ * - Project generation (versions in libs.versions.toml)
  * 
  * Keep this list updated with latest stable versions from:
  * https://github.com/JetBrains/compose-multiplatform/releases
+ * https://kotlinlang.org/docs/releases.html
  */
 object ComposeVersions {
     
@@ -43,8 +45,20 @@ object ComposeVersions {
     )
     
     /**
-     * Default version to use in wizards.
+     * Default Compose Multiplatform version to use in wizards.
      */
     val DEFAULT_VERSION: String = STABLE_VERSIONS.first()
+    
+    /**
+     * Default Kotlin version compatible with Compose Multiplatform.
+     * 
+     * Version compatibility:
+     * - Compose 1.9.x requires Kotlin 2.0+
+     * - Kotlin 2.2.x is the latest stable version
+     * 
+     * Update this when updating DEFAULT_VERSION to ensure compatibility.
+     * See: https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html
+     */
+    const val DEFAULT_KOTLIN_VERSION = "2.2.20"
 }
 

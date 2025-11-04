@@ -1,18 +1,25 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
+    id("org.jetbrains.intellij.platform") version "2.10.2"
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.10.3"
-    id("org.jetbrains.compose") version "1.7.1"
+}
+
+// Configure Java toolchain for the entire project (required for Jewel)
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 group = "io.github.heisiar"
 version = "1.0.0"
 
-// Platform configuration: AS by default (needed for wizard API), IDEA for testing
+// Platform configuration: Build against AS 251.x for maximum compatibility
+// Compose Compiler generates code for specific runtime version - use oldest supported
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.2.1.7"
+val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.1.1.14"  // AS for prod, IDEA for testing
 
 repositories {
     mavenCentral()
@@ -20,7 +27,6 @@ repositories {
     intellijPlatform {
         defaultRepositories()
     }
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
 }
 
 dependencies {
@@ -29,36 +35,38 @@ dependencies {
         create(platformType, platformVersion)
         
         // Gradle support
-        bundledPlugin("org.jetbrains.plugins.gradle")
+        bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.kotlin")
         
-        // Android plugin - needed for AS wizard API
+        // Android plugin - only when building against AS
         if (!runIntellijIdea) {
-        bundledPlugin("org.jetbrains.android")
+            bundledPlugin("org.jetbrains.android")
         }
         
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        
+        // Compose UI - provides compile-time APIs
+        composeUI()
+        
+        // Jewel UI library for SwingBridgeTheme
+        bundledModule("intellij.platform.jewel.foundation")
+        bundledModule("intellij.platform.jewel.ui")
+        bundledModule("intellij.platform.jewel.ideLafBridge")
+        bundledModule("intellij.platform.jewel.markdown.core")
+        bundledModule("intellij.platform.jewel.markdown.ideLafBridgeStyling")
+        bundledModule("intellij.libraries.compose.foundation.desktop")
+        bundledModule("intellij.libraries.skiko")
     }
     
-    // Android Studio API - only for compilation, available at runtime in AS
-    // These are needed for AS wizard template integration
+    // All Compose and Skiko dependencies are provided by platform via bundledModule() above
+    // No need to include them explicitly to avoid ClassLoader conflicts
+    
+    // Android Studio API - only for compilation when building against AS
     if (!runIntellijIdea) {
         compileOnly("com.android.tools:sdk-common:31.7.2")
         compileOnly("com.android.tools.build:gradle-api:8.7.3")
-        // Template API is part of Android Studio, available at runtime
-        // We mark it as compileOnly because it's provided by AS
     }
-    
-    // Compose Multiplatform for wizard UI
-    implementation(compose.desktop.macos_arm64)
-    implementation(compose.desktop.macos_x64)
-    implementation(compose.desktop.linux_x64)
-    implementation(compose.desktop.windows_x64)
-    implementation(compose.material3)
-    implementation(compose.foundation)
-    implementation(compose.ui)
-    implementation(compose.runtime)
     
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
@@ -66,7 +74,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.0")
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    // kotlinx-coroutines-test excluded to use platform-provided version
 }
 
 intellijPlatform {
@@ -74,8 +82,8 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "242"
-            untilBuild = "253.*"
+            sinceBuild = "251"  // Support both AS 251.x and IDEA 252.x
+            untilBuild = "262.*"
         }
         
         name = "Compose Multiplatform Wizard"
@@ -108,10 +116,7 @@ sourceSets {
 }
 
 tasks {
-    withType<JavaCompile> {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
-    }
+    // Java toolchain is configured globally above, no need to set compatibility here
     
     test {
         useJUnitPlatform()

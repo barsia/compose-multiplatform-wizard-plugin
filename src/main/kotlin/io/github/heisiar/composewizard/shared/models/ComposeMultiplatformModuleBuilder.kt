@@ -11,9 +11,6 @@ import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.WizardStrings
 import javax.swing.Icon
 
-// Forward declaration - avoid circular dependency
-// ComposeMultiplatformWizardStep will import this class
-
 data class ValidationResult(
     val isValid: Boolean,
     val errors: List<String> = emptyList()
@@ -64,7 +61,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     }
 
     override fun getCustomOptionsStep(context: com.intellij.ide.util.projectWizard.WizardContext?, parentDisposable: com.intellij.openapi.Disposable?): com.intellij.ide.util.projectWizard.ModuleWizardStep {
-        return io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep(this)
+        return io.github.heisiar.composewizard.shared.ui.ComposeWizardStep(this)
     }
 
     override fun createWizardSteps(context: com.intellij.ide.util.projectWizard.WizardContext, modulesProvider: com.intellij.openapi.roots.ui.configuration.ModulesProvider): Array<com.intellij.ide.util.projectWizard.ModuleWizardStep> {

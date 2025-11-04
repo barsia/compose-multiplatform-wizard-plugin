@@ -38,7 +38,7 @@ class ComposeVersionService {
     private fun fetchVersionsFromMaven(mavenUrl: String, sortSemantrically: Boolean): List<String> {
         try {
             val metadataUrl = "${mavenUrl}maven-metadata.xml"
-            val connection = URL(metadataUrl).openConnection() as HttpURLConnection
+            val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = 2000  // Reduced from 5000ms to 2000ms
             connection.readTimeout = 2000     // Reduced from 5000ms to 2000ms
             connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")

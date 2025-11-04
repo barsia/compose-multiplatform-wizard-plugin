@@ -6,7 +6,7 @@ package io.github.heisiar.composewizard.shared
  */
 object WizardStrings {
     // Field labels
-    const val PACKAGE_NAME_LABEL = "Package name"
+    const val PACKAGE_NAME_LABEL = "Package Name"
     
     // Validation messages - Package name
     const val PACKAGE_NAME_EMPTY = "Package name must not be empty"

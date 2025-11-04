@@ -7,7 +7,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.DialogWrapper
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.shared.ui.ComposeMultiplatformWizardStep
+import io.github.heisiar.composewizard.shared.ui.ComposeWizardStep
 import java.awt.Dimension
 import java.io.File
 import javax.swing.JComponent
@@ -76,7 +76,7 @@ private class ComposeMultiplatformDialog(
     private val builder: ComposeMultiplatformModuleBuilder
 ) : DialogWrapper(null, true) {
     
-    private val wizardStep = ComposeMultiplatformWizardStep(builder)
+    private val wizardStep = ComposeWizardStep(builder)
     
     init {
         title = "New Compose Multiplatform Project"
