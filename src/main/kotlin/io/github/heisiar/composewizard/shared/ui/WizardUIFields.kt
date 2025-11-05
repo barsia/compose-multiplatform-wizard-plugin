@@ -3,8 +3,11 @@ package io.github.heisiar.composewizard.shared.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +40,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -249,31 +253,48 @@ fun ComposeVersionField(
             ) {
                 val coroutineScope = rememberCoroutineScope()
                 val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
+                val refreshInteractionSource = remember { MutableInteractionSource() }
+                val isRefreshFocused by refreshInteractionSource.collectIsFocusedAsState()
 
-                Icon(
-                    key = WizardIconKeys.RefreshVersions,
-                    contentDescription = "Refresh versions",
+                Box(
                     modifier = Modifier
-                        .size(16.dp)
-                        .graphicsLayer { rotationZ = rotation.value }
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) {
-                            coroutineScope.launch {
-                                rotation.snapTo(0f)
-                                rotation.animateTo(
-                                    targetValue = 360f,
-                                    animationSpec = androidx.compose.animation.core.tween(
-                                        durationMillis = 500,
-                                        easing = androidx.compose.animation.core.LinearEasing
+                        .size(20.dp)
+                        .background(
+                            color = if (isRefreshFocused) {
+                                JewelTheme.globalColors.outlines.focused.copy(alpha = 0.25f)
+                            } else {
+                                Color.Transparent
+                            },
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        key = WizardIconKeys.RefreshVersions,
+                        contentDescription = "Refresh versions",
+                        modifier = Modifier
+                            .size(16.dp)
+                            .graphicsLayer { rotationZ = rotation.value }
+                            .clickable(
+                                role = Role.Button,
+                                indication = null,
+                                interactionSource = refreshInteractionSource
+                            ) {
+                                coroutineScope.launch {
+                                    rotation.snapTo(0f)
+                                    rotation.animateTo(
+                                        targetValue = 360f,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 500,
+                                            easing = androidx.compose.animation.core.LinearEasing
+                                        )
                                     )
-                                )
-                            }
-                            onRefreshVersions()
-                        },
-                    tint = JewelTheme.globalColors.text.normal
-                )
+                                }
+                                onRefreshVersions()
+                            },
+                        tint = JewelTheme.globalColors.text.normal
+                    )
+                }
             }
         }
     }
@@ -325,15 +346,21 @@ fun ProjectLocationField(
 
         val interactionSource = remember { MutableInteractionSource() }
         val isHovered by interactionSource.collectIsHoveredAsState()
+        val isBrowseFocused by interactionSource.collectIsFocusedAsState()
 
         Box(
             modifier = Modifier
                 .background(
-                    color = if (isHovered) JewelTheme.globalColors.text.selected.copy(alpha = 0.08f) else Color.Transparent,
+                    color = when {
+                        isBrowseFocused -> JewelTheme.globalColors.outlines.focused.copy(alpha = 0.25f)
+                        isHovered -> JewelTheme.globalColors.text.selected.copy(alpha = 0.08f)
+                        else -> Color.Transparent
+                    },
                     shape = CircleShape
                 )
                 .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
                 .clickable(
+                    role = Role.Button,
                     indication = null,
                     interactionSource = interactionSource
                 ) {
@@ -346,7 +373,7 @@ fun ProjectLocationField(
                 imageVector = FolderIcon,
                 contentDescription = "Browse folder",
                 tint = JewelTheme.globalColors.text.normal.copy(
-                    alpha = if (isHovered) 0.85f else 0.75f
+                    alpha = if (isHovered || isBrowseFocused) 0.85f else 0.75f
                 ),
                 modifier = Modifier.size(32.dp)
             )
@@ -480,10 +507,6 @@ private fun PlatformItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onToggle() }
             .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
     ) {
         Checkbox(
@@ -492,12 +515,22 @@ private fun PlatformItem(
         )
         Box(
             modifier = Modifier
-                .size(width = 56.dp, height = 72.dp),
+                .size(width = 56.dp, height = 72.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures { onToggle() }
+                },
             contentAlignment = Alignment.Center
         ) {
             icon()
         }
-        Text(label, style = JewelTheme.defaultTextStyle)
+        Text(
+            text = label,
+            style = JewelTheme.defaultTextStyle,
+            modifier = Modifier
+                .pointerInput(Unit) {
+                    detectTapGestures { onToggle() }
+                }
+        )
     }
 }
 
@@ -537,38 +570,38 @@ private fun CheckboxOption(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onToggle() }
             .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = { onToggle() }
         )
-        Text(label, style = JewelTheme.defaultTextStyle)
+        Text(
+            text = label,
+            style = JewelTheme.defaultTextStyle,
+            modifier = Modifier
+                .pointerInput(Unit) {
+                    detectTapGestures { onToggle() }
+                }
+        )
     }
 }
 
 @Composable
 fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier = Modifier) {
-    SelectionContainer(
+    Text(
+        text = "Project will be created at: ${
+            WizardPathUtils.collapsePath(
+                File(
+                    WizardPathUtils.expandPath(
+                        projectPath
+                    ), projectName
+                ).absolutePath
+            )
+        }",
+        style = JewelTheme.defaultTextStyle,
+        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
         modifier = modifier
-    ) {
-        Text(
-            text = "Project will be created at: ${
-                WizardPathUtils.collapsePath(
-                    File(
-                        WizardPathUtils.expandPath(
-                            projectPath
-                        ), projectName
-                    ).absolutePath
-                )
-            }",
-            style = JewelTheme.defaultTextStyle,
-            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
-        )
-    }
+    )
 }
 

@@ -14,3 +14,4 @@ object WizardIconKeys {
     val Android: PathIconKey = PathIconKey("icons/android.svg", WizardIconKeys::class.java)
 }
 
+

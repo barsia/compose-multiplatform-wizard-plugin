@@ -93,7 +93,12 @@ class ComposeWizardStep(
             web = targetWeb
             git = initGit
             tests = includeTests
-            enableDevVersions = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
+            val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
+            enableDevVersions = settings.enableDevVersions
+            
+            val isInternalMode = com.intellij.openapi.application.ApplicationManager
+                .getApplication().isInternal
+            devCheckboxVisible = isInternalMode || settings.devCheckboxActivatedByUser
         }
         
         val projectNameInteractionSource = remember { MutableInteractionSource() }

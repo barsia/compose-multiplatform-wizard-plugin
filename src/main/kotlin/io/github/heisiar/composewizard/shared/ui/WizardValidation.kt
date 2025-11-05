@@ -84,6 +84,17 @@ object WizardValidation {
             File(expandedPath, sanitizedName)
         }
         
+        // Check if project is already taken (error) - more serious than non-empty directory
+        try {
+            val existingProject = ProjectUtil.findProject(fullPath.toPath())
+            if (existingProject != null) {
+                return "Project directory is already taken by project '${existingProject.name}'"
+            }
+        } catch (e: Exception) {
+            // In test environment or when Application is not initialized, skip this check
+        }
+        
+        // Check if directory is not empty (warning)
         if (fullPath.exists() && fullPath.isDirectory) {
             val entries = fullPath.listFiles()
             if (entries != null && entries.isNotEmpty()) {

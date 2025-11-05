@@ -25,7 +25,9 @@ class WizardState {
     var git by mutableStateOf(false)
     var tests by mutableStateOf(false)
     var enableDevVersions by mutableStateOf(false)
+    var devCheckboxVisible by mutableStateOf(false)
     var isLocationSynced by mutableStateOf(true)
+    var isNameEditedByUser by mutableStateOf(false)
     
     var projectNameError by mutableStateOf<String?>(null)
     var projectPathError by mutableStateOf<String?>(null)
@@ -73,13 +75,9 @@ fun SetupValidation(
             ComposeWizardUsageCollector.logValidationError("project_name", errorType)
         }
         
-        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            state.projectNameError = newError
-        } else {
-            if (state.projectLocationWarning == null) {
-                state.projectNameError = newError
-            }
-        }
+        // Store name validation error temporarily
+        // In IDEA, it will be overwritten by location errors if they exist (see LaunchedEffect below)
+        state.projectNameError = newError
     }
     
     LaunchedEffect(state.projectPath) {
@@ -99,7 +97,8 @@ fun SetupValidation(
         val newWarning = WizardValidation.validateProjectLocation(state.projectName, state.projectPath, WizardPathUtils::expandPath)
         if (newWarning != null && newWarning != state.projectLocationWarning) {
             val errorType = when {
-                newWarning.contains("already open", ignoreCase = true) -> "already_open"
+                newWarning.contains("already", ignoreCase = true) || 
+                newWarning.contains("taken", ignoreCase = true) -> "already_open"
                 newWarning.contains("not empty", ignoreCase = true) -> "directory_not_empty"
                 else -> "directory_not_empty"
             }
@@ -108,8 +107,12 @@ fun SetupValidation(
         
         if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
             state.projectLocationWarning = newWarning
+            // Don't touch projectNameError in AS
         } else {
-            state.projectNameError = newWarning
+            // In IDEA: location errors override name errors and show on Name field
+            if (newWarning != null) {
+                state.projectNameError = newWarning
+            }
             state.projectLocationWarning = null
         }
     }
@@ -161,6 +164,7 @@ fun SetupPathSynchronization(
     projectNameValue: String
 ) {
     LaunchedEffect(state.projectName) {
+        // Android Studio: auto-update location when name changes (if not manually edited)
         if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && 
             state.isLocationSynced && state.projectName != projectNameValue) {
             val basePath = if (state.projectPath.contains(File.separator)) {
@@ -173,6 +177,12 @@ fun SetupPathSynchronization(
             projectPathState.edit {
                 replace(0, length, uniqueLocation)
             }
+        }
+        
+        // IDEA: mark that user edited name manually (to stop auto-increment)
+        if (!io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && 
+            state.projectName != projectNameValue) {
+            state.isNameEditedByUser = true
         }
         
         if (state.projectName != projectNameValue) {
@@ -192,11 +202,26 @@ fun SetupPathSynchronization(
     LaunchedEffect(projectPathState.text.toString()) {
         val currentText = projectPathState.text.toString()
         if (currentText != WizardDefaults.collapsePath(state.projectPath)) {
-            state.isLocationSynced = false
-            
             val expandedPath = WizardDefaults.expandPath(currentText)
             if (expandedPath != state.projectPath) {
                 state.projectPath = expandedPath
+                
+                // Android Studio: user manually edited location - stop auto-sync
+                if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                    state.isLocationSynced = false
+                }
+                
+                // IDEA: auto-increment name if location/name exists (unless user edited name manually)
+                if (!io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && 
+                    !state.isNameEditedByUser) {
+                    val uniqueName = WizardPathUtils.suggestUniqueName(state.projectName, state.projectPath)
+                    if (uniqueName != state.projectName) {
+                        projectNameState.edit {
+                            replace(0, length, uniqueName)
+                        }
+                    }
+                }
+                
                 ComposeWizardUsageCollector.logFieldEdited("project_location", state.projectPath.isNotEmpty())
             }
         }
