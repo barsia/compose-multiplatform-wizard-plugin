@@ -225,7 +225,12 @@ class ModularTemplateProcessor(
     }
     
     private fun needsHotReload(): Boolean {
-        return targetDesktop || selectedPlatforms.size > 1
+        // Hot Reload is only needed as a separate plugin for Compose < 1.10.0
+        // For Compose 1.10.0+, Hot Reload is built-in
+        val needsPlugin = VersionUtils.needsHotReloadPlugin(composeVersion)
+        val hasDesktopOrMultiPlatform = targetDesktop || selectedPlatforms.size > 1
+        
+        return needsPlugin && hasDesktopOrMultiPlatform
     }
     
     private fun generateReadme(targetPath: String) {

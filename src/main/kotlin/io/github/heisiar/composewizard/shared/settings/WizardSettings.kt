@@ -11,7 +11,7 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 class WizardSettings : PersistentStateComponent<WizardSettings> {
     
     var enableDevVersions: Boolean = false
-    var devCheckboxActivatedByUser: Boolean = false
+    var devCheckboxVisible: Boolean = false
     var welcomeTooltipShown: Boolean = false
     
     override fun getState(): WizardSettings {

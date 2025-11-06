@@ -32,16 +32,49 @@ object WizardDefaults {
     const val PACKAGE_NAME = "com.example.myapplication"
     
     /**
+     * Get user home directory, avoiding Gradle cache paths
+     * 
+     * When IDE is launched via gradle runIde, System.getProperty("user.home") 
+     * points to .gradle/caches instead of the real user home.
+     * We detect this and fall back to HOME environment variable.
+     */
+    private fun getUserHome(): String {
+        val systemHome = com.intellij.util.SystemProperties.getUserHome()
+        val envHome = System.getenv("HOME")
+        
+        println("[WizardDefaults] System.getProperty('user.home') = $systemHome")
+        println("[WizardDefaults] System.getenv('HOME') = $envHome")
+        
+        // If user.home points to .gradle/caches, use HOME environment variable instead
+        val result = if (systemHome.contains(".gradle") || systemHome.contains("caches")) {
+            println("[WizardDefaults] Detected .gradle/caches in user.home, using HOME env var")
+            envHome ?: systemHome
+        } else {
+            println("[WizardDefaults] Using user.home as is")
+            systemHome
+        }
+        
+        println("[WizardDefaults] Final getUserHome() = $result")
+        return result
+    }
+    
+    /**
      * Default project location for Android Studio
+     * 
+     * Note: Use SystemProperties.getUserHome() instead of System.getProperty("user.home")
+     * because when IDE is launched from Gradle, user.home can point to .gradle/caches
      */
     val PROJECT_PATH_ANDROID_STUDIO: String
-        get() = System.getProperty("user.home") + "/AndroidStudioProjects"
+        get() = getUserHome() + "/AndroidStudioProjects"
     
     /**
      * Default project location for IntelliJ IDEA
+     * 
+     * Note: Use SystemProperties.getUserHome() instead of System.getProperty("user.home")
+     * because when IDE is launched from Gradle, user.home can point to .gradle/caches
      */
     val PROJECT_PATH_IDEA: String
-        get() = System.getProperty("user.home") + "/IdeaProjects"
+        get() = getUserHome() + "/IdeaProjects"
     
     /**
      * Get default project path based on current platform

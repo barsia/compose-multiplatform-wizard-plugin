@@ -126,5 +126,5 @@ This architecture ensures **one plugin distribution works universally** across b
 
 ## License
 
-Apache License 2.0
+Apache License 2.0 - See LICENSE file for details.
 

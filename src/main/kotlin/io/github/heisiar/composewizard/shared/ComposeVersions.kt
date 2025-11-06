@@ -60,5 +60,15 @@ object ComposeVersions {
      * See: https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html
      */
     const val DEFAULT_KOTLIN_VERSION = "2.2.20"
+    
+    /**
+     * Compose Hot Reload plugin version.
+     * 
+     * Hot Reload is only needed as a separate plugin for Compose < 1.10.0.
+     * For Compose 1.10.0+, Hot Reload is built-in.
+     * 
+     * See: https://github.com/JetBrains/compose-hot-reload
+     */
+    const val HOT_RELOAD_VERSION = "1.0.0-rc02"
 }
 

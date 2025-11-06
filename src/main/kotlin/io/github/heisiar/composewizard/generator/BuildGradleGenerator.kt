@@ -11,7 +11,7 @@ class BuildGradleGenerator {
                 appendLine("    alias(libs.plugins.androidApplication) apply false")
                 appendLine("    alias(libs.plugins.androidLibrary) apply false")
             }
-            if (config.targetDesktop) {
+            if (config.needsHotReloadPlugin) {
                 appendLine("    alias(libs.plugins.composeHotReload) apply false")
             }
             appendLine("    alias(libs.plugins.composeMultiplatform) apply false")
@@ -50,7 +50,7 @@ class BuildGradleGenerator {
             }
             appendLine("    alias(libs.plugins.composeMultiplatform)")
             appendLine("    alias(libs.plugins.composeCompiler)")
-            if (config.targetDesktop) {
+            if (config.needsHotReloadPlugin) {
                 appendLine("    alias(libs.plugins.composeHotReload)")
             }
             appendLine("}")

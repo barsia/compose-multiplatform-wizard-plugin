@@ -21,14 +21,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
@@ -69,7 +68,7 @@ fun WizardMainContent(
                 .fillMaxWidth()
                 .widthIn(min = 220.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
         ) {
             ProjectInfoSection(
                 state = state,
@@ -167,6 +166,7 @@ private fun ProjectInfoSection(
         ProjectNameField(
             projectNameState = projectNameState,
             projectNameError = state.projectNameError,
+            projectNameWarning = state.projectNameWarning,
             projectNameFocused = projectNameFocused,
             projectNameInteractionSource = projectNameInteractionSource,
             mainPanel = mainPanel,
@@ -181,43 +181,37 @@ private fun ProjectInfoSection(
             ComposeVersionField(
                 cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
                 enableDevVersions = state.enableDevVersions,
-                onVersionSelected = { state.composeVersion = it },
-                onRefreshVersions = { }
+                onVersionSelected = { state.composeVersion = it }
             )
 
             if (state.devCheckboxVisible) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                ) {
-                    Checkbox(
-                        checked = state.enableDevVersions,
-                        onCheckedChange = {
-                            state.enableDevVersions = it
-                            val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
-                            settings.enableDevVersions = it
-                            if (it) {
-                                settings.devCheckboxActivatedByUser = true
-                            }
-                            ComposeWizardUsageCollector.logDevVersionsToggled(it)
-                        }
-                    )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+            ) {
+                Checkbox(
+                    checked = state.enableDevVersions,
+                    onCheckedChange = {
+                        state.enableDevVersions = it
+                            io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = it
+                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
+                    }
+                )
                     Text(
                         text = "Dev maven",
                         style = JewelTheme.defaultTextStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    state.enableDevVersions = !state.enableDevVersions
-                                    val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
-                                    settings.enableDevVersions = state.enableDevVersions
-                                    if (state.enableDevVersions) {
-                                        settings.devCheckboxActivatedByUser = true
-                                    }
-                                    ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
-                                }
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                state.enableDevVersions = !state.enableDevVersions
+                                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = state.enableDevVersions
+                                ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
                             }
                     )
                 }
@@ -286,28 +280,36 @@ private fun FooterSection(state: WizardState) {
             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.4f),
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastClickTime < 500) {
-                            clickCount++
-                            if (clickCount == 2) { // third click (0, 1, 2)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastClickTime < 500) {
+                        clickCount++
+                        if (clickCount == 2) { // third click (0, 1, 2)
+                            val isInternalMode = com.intellij.openapi.application.ApplicationManager
+                                .getApplication().isInternal
+                            
+                            // Easter egg only works in Regular Mode (not in Internal Mode)
+                            if (!isInternalMode) {
+                                val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
                                 if (state.devCheckboxVisible) {
-                                    state.enableDevVersions = false
+                                    // Hide (but keep current enabled/disabled state)
                                     state.devCheckboxVisible = false
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = false
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = false
+                                    settings.devCheckboxVisible = false
                                 } else {
+                                    // Show (with current enabled/disabled state)
                                     state.devCheckboxVisible = true
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = true
+                                    settings.devCheckboxVisible = true
                                 }
-                                clickCount = 0
                             }
-                        } else {
                             clickCount = 0
                         }
-                        lastClickTime = currentTime
+                    } else {
+                        clickCount = 0
                     }
+                    lastClickTime = currentTime
                 }
         )
 

@@ -98,7 +98,67 @@ object WizardValidation {
         if (fullPath.exists() && fullPath.isDirectory) {
             val entries = fullPath.listFiles()
             if (entries != null && entries.isNotEmpty()) {
-                return "Directory '${fullPath.name}' is not empty"
+                return "Directory ${fullPath.name} is not empty in this location"
+            }
+        }
+        
+        return null
+    }
+    
+    /**
+     * Validate project location for blocking errors only (e.g., "already taken").
+     * Returns error message or null.
+     */
+    fun validateProjectLocationError(projectName: String, projectPath: String, expandPath: (String) -> String): String? {
+        if (projectName.isEmpty() || projectPath.isEmpty()) {
+            return null
+        }
+        
+        val expandedPath = expandPath(projectPath)
+        
+        val fullPath = if (PlatformDetector.isAndroidStudio) {
+            File(expandedPath)
+        } else {
+            val sanitizedName = WizardDefaults.sanitizeProjectName(projectName)
+            File(expandedPath, sanitizedName)
+        }
+        
+        // Check if project is already taken (error)
+        try {
+            val existingProject = ProjectUtil.findProject(fullPath.toPath())
+            if (existingProject != null) {
+                return "Project directory is already taken by project '${existingProject.name}'"
+            }
+        } catch (e: Exception) {
+            // In test environment or when Application is not initialized, skip this check
+        }
+        
+        return null
+    }
+    
+    /**
+     * Validate project location for warnings only (e.g., "not empty").
+     * Returns warning message or null.
+     */
+    fun validateProjectLocationWarning(projectName: String, projectPath: String, expandPath: (String) -> String): String? {
+        if (projectName.isEmpty() || projectPath.isEmpty()) {
+            return null
+        }
+        
+        val expandedPath = expandPath(projectPath)
+        
+        val fullPath = if (PlatformDetector.isAndroidStudio) {
+            File(expandedPath)
+        } else {
+            val sanitizedName = WizardDefaults.sanitizeProjectName(projectName)
+            File(expandedPath, sanitizedName)
+        }
+        
+        // Check if directory is not empty (warning)
+        if (fullPath.exists() && fullPath.isDirectory) {
+            val entries = fullPath.listFiles()
+            if (entries != null && entries.isNotEmpty()) {
+                return "Directory ${fullPath.name} is not empty in this location"
             }
         }
         

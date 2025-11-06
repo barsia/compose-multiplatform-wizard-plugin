@@ -5,7 +5,7 @@ import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,16 +43,17 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.WizardStrings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -78,6 +82,7 @@ private object ResourceLoader {
 fun ProjectNameField(
     projectNameState: androidx.compose.foundation.text.input.TextFieldState,
     projectNameError: String?,
+    projectNameWarning: String?,
     projectNameFocused: Boolean,
     projectNameInteractionSource: MutableInteractionSource,
     mainPanel: androidx.compose.ui.awt.ComposePanel,
@@ -88,13 +93,22 @@ fun ProjectNameField(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Project Name", style = JewelTheme.defaultTextStyle)
+        Text(
+            "Project Name", 
+            style = JewelTheme.defaultTextStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
         LaunchedEffect(projectNameState.text.toString()) {
             onNameChanged(projectNameState.text.toString())
         }
 
         Box {
+            val warningColor = androidx.compose.ui.graphics.Color(0xFFE6A23C)
+            val hasWarning = projectNameWarning != null && projectNameError == null
+            val hasError = projectNameError != null
+            
             TextField(
                 state = projectNameState,
                 placeholder = {
@@ -105,7 +119,11 @@ fun ProjectNameField(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                outline = if (projectNameError != null) Outline.Error else Outline.None,
+                outline = when {
+                    hasError -> Outline.Error
+                    hasWarning -> Outline.Warning
+                    else -> Outline.None
+                },
                 interactionSource = projectNameInteractionSource
             )
 
@@ -115,6 +133,16 @@ fun ProjectNameField(
                         mainPanel = mainPanel,
                         message = projectNameError,
                         isWarning = false
+                    )
+                }
+            }
+            
+            if (projectNameWarning != null && projectNameFocused) {
+                androidx.compose.runtime.key(projectNameWarning, projectNameFocused) {
+                    ValidationPopupJB(
+                        mainPanel = mainPanel,
+                        message = projectNameWarning,
+                        isWarning = true
                     )
                 }
             }
@@ -128,35 +156,66 @@ fun ComposeVersionField(
     cache: io.github.heisiar.composewizard.shared.services.ComposeVersionCache,
     enableDevVersions: Boolean,
     onVersionSelected: (String) -> Unit,
-    onRefreshVersions: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Time for one full rotation (360 degrees) in milliseconds
+    val ROTATION_DURATION_MS = 400
+    
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Compose Version", style = JewelTheme.defaultTextStyle)
+        Text(
+            "Compose Version", 
+            style = JewelTheme.defaultTextStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-        val initialVersions =
-            if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
-        val initialVersion = if (initialVersions.isNotEmpty()) initialVersions.first() else ""
-
-        var availableVersions by remember(enableDevVersions) { mutableStateOf(initialVersions) }
-        var selectedVersion by remember(enableDevVersions) { mutableStateOf(initialVersion) }
+        var availableVersions by remember(enableDevVersions) { mutableStateOf<List<String>>(emptyList()) }
+        var selectedVersion by remember(enableDevVersions) { mutableStateOf("") }
+        var isLoading by remember(enableDevVersions) { mutableStateOf(false) }
 
         LaunchedEffect(selectedVersion) {
-            onVersionSelected(selectedVersion)
+            if (selectedVersion.isNotEmpty()) {
+                onVersionSelected(selectedVersion)
+            }
         }
 
         LaunchedEffect(enableDevVersions) {
+            val isToggling = selectedVersion.isNotEmpty() // Toggle if version already selected
+            
+            var loaderShownTime = 0L
+            
+            // Delay showing loader by 150ms (only show if loading takes longer)
+            val loaderJob = launch {
+                delay(150)
+                loaderShownTime = System.currentTimeMillis()
+                isLoading = true
+            }
+            
+            // Wait for versions to load from Maven (or use cached)
             availableVersions = if (enableDevVersions) {
-                cache.getDevVersions()
+                cache.getDevVersionsSuspend(timeoutMs = 3000)
             } else {
-                cache.getStableVersions()
+                cache.getStableVersionsSuspend(timeoutMs = 3000)
             }
             if (availableVersions.isNotEmpty()) {
                 selectedVersion = availableVersions.first()
             }
+            
+            loaderJob.cancel()
+            
+            if (isLoading) {
+                // Loader is visible - ensure at least one full rotation from when loader appeared
+                val loaderElapsed = System.currentTimeMillis() - loaderShownTime
+                if (loaderElapsed < ROTATION_DURATION_MS) {
+                    delay(ROTATION_DURATION_MS - loaderElapsed)
+                }
+            }
+            
+            // Stop loading AFTER ensuring minimum rotation time
+            isLoading = false
         }
 
         Row(
@@ -180,31 +239,19 @@ fun ComposeVersionField(
                         alignment = Alignment.TopCenter,
                         offset = DpOffset(0.dp, (-4).dp)
                     ),
-                    enabled = isTextTruncated
+                    enabled = isTextTruncated && !isLoading && selectedVersion.isNotEmpty()
                 ) {
                     Dropdown(
                         menuContent = {
-                            if (availableVersions.isEmpty()) {
+                            availableVersions.forEach { version ->
                                 selectableItem(
-                                    selected = false,
+                                    selected = version == selectedVersion,
                                     iconKey = null,
                                     keybinding = null,
-                                    onClick = {},
+                                    onClick = { selectedVersion = version },
                                     enabled = true
                                 ) {
-                                    Text("Loading...")
-                                }
-                            } else {
-                                availableVersions.forEach { version ->
-                                    selectableItem(
-                                        selected = version == selectedVersion,
-                                        iconKey = null,
-                                        keybinding = null,
-                                        onClick = { selectedVersion = version },
-                                        enabled = true
-                                    ) {
-                                        Text(version)
-                                    }
+                                    Text(version)
                                 }
                             }
                         },
@@ -234,14 +281,16 @@ fun ComposeVersionField(
                             }
                             .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
                     ) {
-                        Text(
-                            text = selectedVersion,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            onTextLayout = { layoutResult ->
-                                isTextTruncated = layoutResult.hasVisualOverflow
-                            }
-                        )
+                        if (selectedVersion.isNotEmpty()) {
+                            Text(
+                                text = selectedVersion,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                onTextLayout = { layoutResult ->
+                                    isTextTruncated = layoutResult.hasVisualOverflow
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -255,6 +304,26 @@ fun ComposeVersionField(
                 val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
                 val refreshInteractionSource = remember { MutableInteractionSource() }
                 val isRefreshFocused by refreshInteractionSource.collectIsFocusedAsState()
+                
+                // Auto-rotate icon while loading versions - rotate exactly while isLoading is true
+                LaunchedEffect(isLoading) {
+                    if (isLoading) {
+                        rotation.snapTo(0f)
+                        rotation.animateTo(
+                            targetValue = 360f,
+                            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                animation = androidx.compose.animation.core.tween(
+                                    durationMillis = ROTATION_DURATION_MS,
+                                    easing = androidx.compose.animation.core.LinearEasing
+                                ),
+                                repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+                            )
+                        )
+                    } else {
+                        rotation.stop()
+                        rotation.snapTo(0f)
+                    }
+                }
 
                 Box(
                     modifier = Modifier
@@ -280,17 +349,32 @@ fun ComposeVersionField(
                                 indication = null,
                                 interactionSource = refreshInteractionSource
                             ) {
-                                coroutineScope.launch {
-                                    rotation.snapTo(0f)
-                                    rotation.animateTo(
-                                        targetValue = 360f,
-                                        animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 500,
-                                            easing = androidx.compose.animation.core.LinearEasing
-                                        )
-                                    )
+                                if (!isLoading) {
+                                    coroutineScope.launch {
+                                        val loaderShownTime = System.currentTimeMillis()
+                                        isLoading = true
+                                        
+                                        // Force reload versions from Maven
+                                        if (enableDevVersions) {
+                                            cache.forceReloadDev()
+                                            availableVersions = cache.getDevVersionsSuspend(timeoutMs = 3000)
+                                        } else {
+                                            cache.forceReloadStable()
+                                            availableVersions = cache.getStableVersionsSuspend(timeoutMs = 3000)
+                                        }
+                                        if (availableVersions.isNotEmpty()) {
+                                            selectedVersion = availableVersions.first()
+                                        }
+                                        
+                                        // Ensure loader is visible for at least one full rotation from when loader appeared
+                                        val loaderElapsed = System.currentTimeMillis() - loaderShownTime
+                                        if (loaderElapsed < ROTATION_DURATION_MS) {
+                                            delay(ROTATION_DURATION_MS - loaderElapsed)
+                                        }
+                                        
+                                        isLoading = false
+                                    }
                                 }
-                                onRefreshVersions()
                             },
                         tint = JewelTheme.globalColors.text.normal
                     )
@@ -433,7 +517,9 @@ fun PlatformsSection(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         PlatformItem(
@@ -455,11 +541,9 @@ fun PlatformsSection(
             onToggle = onIosToggle,
             icon = {
                 Icon(
-                    key = WizardIconKeys.Apple,
+                    key = WizardIconKeys.iOS,
                     contentDescription = "iOS",
-                    modifier = Modifier
-                        .size(92.dp)
-                        .offset(y = (-8).dp),
+                    modifier = Modifier.size(46.dp),
                     tint = JewelTheme.globalColors.text.normal
                 )
             },
@@ -505,7 +589,7 @@ private fun PlatformItem(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
     ) {
@@ -515,10 +599,11 @@ private fun PlatformItem(
         )
         Box(
             modifier = Modifier
-                .size(width = 56.dp, height = 72.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures { onToggle() }
-                },
+                .size(52.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() },
             contentAlignment = Alignment.Center
         ) {
             icon()
@@ -526,10 +611,13 @@ private fun PlatformItem(
         Text(
             text = label,
             style = JewelTheme.defaultTextStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .pointerInput(Unit) {
-                    detectTapGestures { onToggle() }
-                }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() }
         )
     }
 }
@@ -579,29 +667,41 @@ private fun CheckboxOption(
         Text(
             text = label,
             style = JewelTheme.defaultTextStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .pointerInput(Unit) {
-                    detectTapGestures { onToggle() }
-                }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() }
         )
     }
 }
 
 @Composable
 fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Project will be created at: ${
-            WizardPathUtils.collapsePath(
-                File(
-                    WizardPathUtils.expandPath(
-                        projectPath
-                    ), projectName
-                ).absolutePath
-            )
-        }",
-        style = JewelTheme.defaultTextStyle,
-        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
+    val displayPath = if (projectPath.isNotBlank() && projectName.isNotBlank()) {
+        try {
+            val expandedPath = WizardPathUtils.expandPath(projectPath)
+            // projectPath is the base directory, projectName is added to form full path
+            // This matches the logic in updateDataModel(): File(expandedPath, projectNameValue)
+            val fullPath = java.io.File(expandedPath, projectName).absolutePath
+            WizardPathUtils.collapsePath(fullPath)
+        } catch (e: Exception) {
+            "$projectPath/$projectName"
+        }
+    } else {
+        ""
+    }
+    
+    androidx.compose.foundation.text.selection.SelectionContainer(
         modifier = modifier
-    )
+    ) {
+        Text(
+            text = "Project will be created at: $displayPath",
+            style = JewelTheme.defaultTextStyle,
+            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
+        )
+    }
 }
 

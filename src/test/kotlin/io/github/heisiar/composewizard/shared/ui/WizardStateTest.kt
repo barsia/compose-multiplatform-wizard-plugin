@@ -6,51 +6,57 @@ import kotlin.test.*
 class WizardStateTest {
 
     @Test
-    fun `WizardState data class exists`() {
-        // Verify WizardState class exists and is accessible
+    fun `WizardState class exists and is accessible`() {
         assertNotNull(WizardState::class)
     }
 
-    
     @Test
-    fun `WizardState has all required properties`() {
-        // Verify WizardState has all expected properties via reflection
-        val properties = WizardState::class.java.declaredFields.map { it.name }.filter { !it.startsWith("$") }
+    fun `WizardState can be instantiated`() {
+        val state = WizardState()
+        assertNotNull(state)
+    }
+
+    @Test
+    fun `WizardState has mutable properties with default values`() {
+        val state = WizardState()
         
-        val expectedProperties = listOf(
-            "projectName", "projectPath", "projectId", "composeVersion",
-            "targetDesktop", "targetAndroid", "targetIOS", "targetWeb",
-            "initGit", "includeTests", "enableDevVersions"
-        )
+        assertEquals("", state.projectName)
+        assertEquals("", state.projectPath)
+        assertEquals("", state.projectId)
+        assertEquals("", state.composeVersion)
+        assertEquals(false, state.desktop)
+        assertEquals(false, state.android)
+        assertEquals(false, state.ios)
+        assertEquals(false, state.web)
+        assertEquals(false, state.git)
+        assertEquals(false, state.tests)
+        assertEquals(false, state.enableDevVersions)
+    }
+
+    @Test
+    fun `WizardState properties can be modified`() {
+        val state = WizardState()
         
-        expectedProperties.forEach { property ->
-            assertTrue(properties.contains(property), "WizardState should have property: $property")
-        }
+        state.projectName = "TestProject"
+        state.desktop = true
+        state.android = true
+        
+        assertEquals("TestProject", state.projectName)
+        assertEquals(true, state.desktop)
+        assertEquals(true, state.android)
     }
-    
+
     @Test
-    fun `WizardState has toMap method`() {
-        val methods = WizardState::class.java.methods.map { it.name }
-        assertTrue(methods.contains("toMap"), "WizardState should have toMap method")
+    fun `WizardState hasNoTargets returns true when no platforms selected`() {
+        val state = WizardState()
+        assertTrue(state.hasNoTargets)
     }
-    
+
     @Test
-    fun `WizardState has getPlatformsCount method`() {
-        val methods = WizardState::class.java.methods.map { it.name }
-        assertTrue(methods.contains("getPlatformsCount"), "WizardState should have getPlatformsCount method")
-    }
-    
-    @Test
-    fun `WizardState has getFullProjectPath method`() {
-        val methods = WizardState::class.java.methods.map { it.name }
-        assertTrue(methods.contains("getFullProjectPath"), "WizardState should have getFullProjectPath method")
-    }
-    
-    @Test
-    fun `WizardState is a Kotlin data class`() {
-        // Verify it has copy method (characteristic of data classes)
-        val methods = WizardState::class.java.methods.map { it.name }
-        assertTrue(methods.contains("copy"), "WizardState should have copy method (data class)")
+    fun `WizardState hasNoTargets returns false when at least one platform selected`() {
+        val state = WizardState()
+        state.desktop = true
+        assertFalse(state.hasNoTargets)
     }
 }
 

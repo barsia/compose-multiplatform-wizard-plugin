@@ -1,7 +1,7 @@
 <idea-plugin allow-bundled-update="true">
   <id>io.github.heisiar.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
-  <vendor email="your-email@example.com" url="https://github.com/heisiar">heisiar</vendor>
+  <vendor email="heisiar@example.com">heisiar</vendor>
   
   <description><![CDATA[
     <strong>Universal Compose Multiplatform Project Wizard</strong><br><br>
@@ -22,6 +22,9 @@
       <li>iOS: Native iOS apps (via Kotlin/Native)</li>
       <li>Web: Browser-based apps (via Kotlin/Wasm & Kotlin/JS)</li>
     </ul>
+    
+    <br>
+    <p>For support, please use the plugin's page on JetBrains Marketplace.</p>
   ]]></description>
   
   <!-- Base platform module - available in both IntelliJ IDEA and Android Studio -->

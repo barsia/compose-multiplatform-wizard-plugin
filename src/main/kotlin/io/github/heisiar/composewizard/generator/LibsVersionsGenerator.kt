@@ -1,5 +1,7 @@
 package io.github.heisiar.composewizard.generator
 
+import io.github.heisiar.composewizard.shared.ComposeVersions
+
 class LibsVersionsGenerator {
     
     fun generate(config: ProjectConfig): String {
@@ -20,8 +22,8 @@ class LibsVersionsGenerator {
                 appendLine("androidx-lifecycle = \"2.9.5\"")
             }
             
-            if (config.targetDesktop) {
-                appendLine("composeHotReload = \"1.0.0-rc02\"")
+            if (config.needsHotReloadPlugin) {
+                appendLine("composeHotReload = \"${ComposeVersions.HOT_RELOAD_VERSION}\"")
             }
             
             appendLine("composeMultiplatform = \"${config.composeVersion}\"")
@@ -69,7 +71,7 @@ class LibsVersionsGenerator {
                 appendLine("androidLibrary = { id = \"com.android.library\", version.ref = \"agp\" }")
             }
             
-            if (config.targetDesktop) {
+            if (config.needsHotReloadPlugin) {
                 appendLine("composeHotReload = { id = \"org.jetbrains.compose.hot-reload\", version.ref = \"composeHotReload\" }")
             }
             
