@@ -15,19 +15,23 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
     override val icon: Icon = IconLoader.getIcon("/META-INF/compose.svg", ComposeMultiplatformGeneratorNewProjectWizard::class.java)
 
     override fun createStep(context: WizardContext): NewProjectWizardStep {
-        println("===== ComposeMultiplatformGeneratorNewProjectWizard: createStep() called =====")
-        println("===== Using IntelliJ IDEA New Project Wizard (GeneratorNewProjectWizard) =====")
-        return RootNewProjectWizardStep(context)
-            .nextStep(::ComposeMultiplatformWizardNewStep)
-    }
-
-    private class ComposeMultiplatformWizardNewStep(parent: NewProjectWizardStep)
-        : AbstractNewProjectWizardStep(parent) {
+        System.err.println("!!!!! ComposeMultiplatformGeneratorNewProjectWizard: createStep() START !!!!!")
+        System.err.println("!!!!! NEW APPROACH - Using RootNewProjectWizardStep like EmptyProject !!!!!")
+        System.err.println("!!!!! context.projectBuilder: ${context.projectBuilder} !!!!!")
         
-        private val composeStep = ComposeWizardStep(ComposeMultiplatformModuleBuilder())
+        // Use RootNewProjectWizardStep like EmptyProject does
+        // Must include newProjectWizardBaseStepWithoutGap for project name/location
+        return RootNewProjectWizardStep(context)
+            .nextStep(::newProjectWizardBaseStepWithoutGap)
+            .nextStep(::ComposeMultiplatformWizardStep)
+    }
+    
+    private class ComposeMultiplatformWizardStep(parent: NewProjectWizardStep) : AbstractNewProjectWizardStep(parent) {
+        private val builder = ComposeMultiplatformModuleBuilder()
+        private val composeStep = ComposeWizardStep(builder)
 
-        override fun setupUI(builder: com.intellij.ui.dsl.builder.Panel) {
-            with(builder) {
+        override fun setupUI(panelBuilder: com.intellij.ui.dsl.builder.Panel) {
+            with(panelBuilder) {
                 row {
                     cell(composeStep.component)
                         .align(com.intellij.ui.dsl.builder.AlignX.FILL)
@@ -42,7 +46,7 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
                 val showingChanged = java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong()
                 if ((e.changeFlags.toLong() and showingChanged) != 0L) {
                     if (composeStep.component.isShowing) {
-                        println("ComposeMultiplatformWizardNewStep: component is now showing, triggering re-validation...")
+                        println("ComposeMultiplatformWizardStep: component is now showing, triggering re-validation...")
                         javax.swing.SwingUtilities.invokeLater {
                             composeStep.triggerRevalidation()
                         }
@@ -52,8 +56,17 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
         }
 
         override fun setupProject(project: Project) {
-            println("ComposeMultiplatformWizardNewStep: setupProject() called")
+            System.err.println("!!!!! ComposeMultiplatformWizardStep: setupProject() START !!!!!")
+            System.err.println("!!!!!   project.name: ${project.name}")
+            System.err.println("!!!!!   project.basePath: ${project.basePath}")
+            
+            // Update builder with UI values
             composeStep.updateDataModel()
+            
+            // Use setupProjectFromBuilder like EmptyProject does
+            System.err.println("!!!!! Calling setupProjectFromBuilder !!!!!")
+            setupProjectFromBuilder(project, builder)
+            System.err.println("!!!!! setupProjectFromBuilder completed !!!!!")
         }
     }
 }

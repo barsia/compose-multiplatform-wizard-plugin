@@ -44,12 +44,52 @@ object ProjectCreator {
             
             processor.copyTemplateToProject(projectPath)
             
+            // Create .gitignore file
+            createGitignoreFile(projectPath)
+            
             println("=== ProjectCreator: Project structure created successfully ===")
             true
         } catch (e: Exception) {
             println("ERROR in ProjectCreator: ${e.message}")
             e.printStackTrace()
             false
+        }
+    }
+    
+    /**
+     * Creates .gitignore file in the project directory.
+     * 
+     * @param projectPath Path to the project directory
+     */
+    private fun createGitignoreFile(projectPath: String) {
+        try {
+            val gitignoreContent = """
+                *.iml
+                .kotlin
+                .gradle
+                **/build/
+                xcuserdata
+                !src/**/build/
+                local.properties
+                .idea
+                .DS_Store
+                captures
+                .externalNativeBuild
+                .cxx
+                *.xcodeproj/*
+                !*.xcodeproj/project.pbxproj
+                !*.xcodeproj/xcshareddata/
+                !*.xcodeproj/project.xcworkspace/
+                !*.xcworkspace/contents.xcworkspacedata
+                **/xcshareddata/WorkspaceSettings.xcsettings
+                node_modules/
+            """.trimIndent()
+            
+            val gitignoreFile = File(projectPath, ".gitignore")
+            gitignoreFile.writeText(gitignoreContent)
+            println("Created .gitignore file")
+        } catch (e: Exception) {
+            println("WARNING: Could not create .gitignore: ${e.message}")
         }
     }
     

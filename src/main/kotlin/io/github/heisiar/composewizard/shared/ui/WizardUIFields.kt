@@ -526,16 +526,16 @@ fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier
     SelectionContainer(
         modifier = modifier
     ) {
+        val finalPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            // In Android Studio, projectPath already includes projectName
+            WizardPathUtils.expandPath(projectPath)
+        } else {
+            // In IntelliJ IDEA, projectPath is just the parent directory
+            File(WizardPathUtils.expandPath(projectPath), projectName).absolutePath
+        }
+        
         Text(
-            text = "Project will be created at: ${
-                WizardPathUtils.collapsePath(
-                    File(
-                        WizardPathUtils.expandPath(
-                            projectPath
-                        ), projectName
-                    ).absolutePath
-                )
-            }",
+            text = "Project will be created at: ${WizardPathUtils.collapsePath(finalPath)}",
             style = JewelTheme.defaultTextStyle,
             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
         )
