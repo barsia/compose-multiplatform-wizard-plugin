@@ -65,6 +65,9 @@ class ComposeWizardStep(
     private var enableDevVersions = WizardDefaults.ENABLE_DEV_VERSIONS
     
     private val wizardStartTime = System.currentTimeMillis()
+    
+    // Trigger for re-validation when component becomes visible
+    private var revalidationTrigger = androidx.compose.runtime.mutableIntStateOf(0)
 
     private val mainPanel: ComposePanel by lazy {
         ComposePanel().apply {
@@ -109,7 +112,14 @@ class ComposeWizardStep(
         val projectPathFocused by projectPathInteractionSource.collectIsFocusedAsState()
         val projectIdFocused by projectIdInteractionSource.collectIsFocusedAsState()
         
-        SetupValidation(state, projectNameState, projectPathState, projectIdState, builder) { isValid ->
+        SetupValidation(
+            state = state, 
+            projectNameState = projectNameState, 
+            projectPathState = projectPathState, 
+            projectIdState = projectIdState, 
+            builder = builder,
+            revalidationTrigger = revalidationTrigger.intValue
+        ) { isValid ->
             projectNameValue = state.projectName
             projectPathValue = state.projectPath
             projectIdValue = state.projectId
@@ -145,6 +155,11 @@ class ComposeWizardStep(
     }
     
     override fun getComponent(): JComponent = mainPanel
+    
+    fun triggerRevalidation() {
+        println("ComposeWizardStep: triggerRevalidation() called, incrementing trigger")
+        revalidationTrigger.intValue++
+    }
 
     private fun browseForFolder(): String? {
         val descriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor().apply {

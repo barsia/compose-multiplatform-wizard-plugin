@@ -181,6 +181,9 @@ fun ComposeVersionField(
                     .widthIn(min = 200.dp)
                     .weight(1f)
             ) {
+                val currentIndex = if (availableVersions.isEmpty()) 0 else availableVersions.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
+                val items = if (availableVersions.isEmpty()) listOf("Loading...") else availableVersions
+                
                 val defaultStyle = JewelTheme.comboBoxStyle
                 val transparentStyle = remember(defaultStyle) {
                     val colors = org.jetbrains.jewel.ui.component.styling.ComboBoxColors(
@@ -204,29 +207,19 @@ fun ComposeVersionField(
                     ComboBoxStyle(colors, defaultStyle.metrics, defaultStyle.icons)
                 }
                 
-                if (availableVersions.isEmpty()) {
-                    ListComboBox(
-                        items = listOf("Loading..."),
-                        selectedIndex = 0,
-                        onSelectedItemChange = {},
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = false,
-                        style = transparentStyle
-                    )
-                } else {
-                    val currentIndex = availableVersions.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
-                    ListComboBox(
-                        items = availableVersions,
-                        selectedIndex = currentIndex,
-                        onSelectedItemChange = { index ->
+                ListComboBox(
+                    items = items,
+                    selectedIndex = currentIndex,
+                    onSelectedItemChange = { index ->
+                        if (availableVersions.isNotEmpty()) {
                             selectedVersion = availableVersions[index]
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                        style = transparentStyle
-                    )
-                }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                    style = transparentStyle
+                )
             }
 
             Box(

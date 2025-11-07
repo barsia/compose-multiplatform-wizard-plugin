@@ -36,6 +36,19 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
                 }.resizableRow()
                     .topGap(com.intellij.ui.dsl.builder.TopGap.NONE)
             }
+            
+            // Add hierarchy listener to re-validate when step becomes showing
+            composeStep.component.addHierarchyListener { e ->
+                val showingChanged = java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong()
+                if ((e.changeFlags.toLong() and showingChanged) != 0L) {
+                    if (composeStep.component.isShowing) {
+                        println("ComposeMultiplatformWizardNewStep: component is now showing, triggering re-validation...")
+                        javax.swing.SwingUtilities.invokeLater {
+                            composeStep.triggerRevalidation()
+                        }
+                    }
+                }
+            }
         }
 
         override fun setupProject(project: Project) {

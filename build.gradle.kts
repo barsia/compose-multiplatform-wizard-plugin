@@ -19,7 +19,7 @@ version = "1.0.0"
 // Compose Compiler generates code for specific runtime version - use oldest supported
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.1.1.14"  // AS for prod, IDEA for testing
+val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.2.2.4"  // AS Otter 2025.2.2 Canary 4, IDEA for testing
 
 repositories {
     mavenCentral()
@@ -82,7 +82,7 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "251"  // Support both AS 251.x and IDEA 252.x
+            sinceBuild = "252"  // Support AS 2025.2+ (Otter) and IDEA 2025.2+
             untilBuild = "262.*"
         }
         

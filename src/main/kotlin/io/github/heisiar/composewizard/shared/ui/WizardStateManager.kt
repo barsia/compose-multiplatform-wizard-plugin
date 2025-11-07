@@ -51,6 +51,7 @@ fun SetupValidation(
     projectPathState: androidx.compose.foundation.text.input.TextFieldState,
     projectIdState: androidx.compose.foundation.text.input.TextFieldState,
     builder: ComposeMultiplatformModuleBuilder,
+    revalidationTrigger: Int = 0,
     onValidationChanged: (Boolean) -> Unit
 ) {
     LaunchedEffect(projectNameState.text.toString()) {
@@ -133,9 +134,9 @@ fun SetupValidation(
     LaunchedEffect(state.projectName, state.projectPath, state.projectId, state.composeVersion, 
         state.desktop, state.android, state.ios, state.web, state.git, state.tests, 
         state.enableDevVersions, state.projectNameError, state.projectPathError, 
-        state.projectIdError, state.projectLocationWarning) {
+        state.projectIdError, state.projectLocationWarning, revalidationTrigger) {
         
-        println("WizardStateManager: LaunchedEffect validation check")
+        println("WizardStateManager: LaunchedEffect validation check (trigger=$revalidationTrigger)")
         println("  hasNoTargets=${state.hasNoTargets}")
         println("  projectNameError=${state.projectNameError}")
         println("  projectPathError=${state.projectPathError}")
