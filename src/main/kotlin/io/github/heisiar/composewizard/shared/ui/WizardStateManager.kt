@@ -76,11 +76,9 @@ fun SetupValidation(
             ComposeWizardUsageCollector.logValidationError("project_name", errorType)
         }
         
-        // For Android Studio: set error directly
-        // For IDEA: will be handled in LaunchedEffect(state.projectName, state.projectPath)
-        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            state.projectNameError = newError
-        }
+        // Store name validation error temporarily
+        // In IDEA, it will be overwritten by location errors if they exist (see LaunchedEffect below)
+        state.projectNameError = newError
     }
     
     LaunchedEffect(state.projectPath) {
@@ -94,39 +92,97 @@ fun SetupValidation(
             ComposeWizardUsageCollector.logValidationError("project_location", errorType)
         }
         state.projectPathError = newError
+        // Clear location warning when setting path format error
+        if (newError != null) {
+            state.projectLocationWarning = null
+        }
     }
     
     LaunchedEffect(state.projectName, state.projectPath) {
+        // Check for blocking errors first (already open project)
         val locationError = WizardValidation.validateProjectLocationError(state.projectName, state.projectPath, WizardPathUtils::expandPath)
-        val locationWarning = WizardValidation.validateProjectLocationWarning(state.projectName, state.projectPath, WizardPathUtils::expandPath)
         
-        if (locationError != null && locationError != state.projectNameError) {
-            ComposeWizardUsageCollector.logValidationError("project_location", "already_open")
+        // Only check for warnings if no blocking errors
+        val locationWarning = if (locationError == null) {
+            WizardValidation.validateProjectLocationWarning(state.projectName, state.projectPath, WizardPathUtils::expandPath)
+        } else {
+            null
         }
-        if (locationWarning != null && locationWarning != state.projectLocationWarning) {
-            ComposeWizardUsageCollector.logValidationError("project_location", "directory_not_empty")
+        
+        // Log validation issues
+        if (locationError != null && locationError != state.projectPathError) {
+            val errorType = when {
+                locationError.contains("already", ignoreCase = true) || 
+                locationError.contains("taken", ignoreCase = true) -> "already_open"
+                else -> "invalid_location"
+            }
+            ComposeWizardUsageCollector.logValidationError("project_location", errorType)
+        } else if (locationWarning != null && locationWarning != state.projectLocationWarning) {
+            val errorType = when {
+                locationWarning.contains("not empty", ignoreCase = true) -> "directory_not_empty"
+                else -> "directory_not_empty"
+            }
+            ComposeWizardUsageCollector.logValidationError("project_location", errorType)
         }
         
         if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            // Android Studio: show warnings in Location field
-            state.projectLocationWarning = locationWarning ?: locationError
-        } else {
-            // IntelliJ IDEA: show location errors/warnings in Name field ONLY if no name validation error
-            val nameValidationError = WizardValidation.validateProjectName(state.projectName)
-            if (nameValidationError != null) {
-                // Priority: name validation errors first
-                state.projectNameError = nameValidationError
-                state.projectNameWarning = null
-            } else if (locationError != null) {
-                // Then location errors
-                state.projectNameError = locationError
-                state.projectNameWarning = null
+            // In AS: show errors on path field, warnings on path field
+            if (locationError != null) {
+                // Don't override path format errors (set by first LaunchedEffect)
+                val currentPathError = state.projectPathError
+                val isPathFormatError = currentPathError != null && 
+                    !currentPathError.contains("already", ignoreCase = true) && 
+                    !currentPathError.contains("taken", ignoreCase = true)
+                
+                if (!isPathFormatError) {
+                    state.projectPathError = locationError
+                }
+                state.projectLocationWarning = null
+            } else if (locationWarning != null) {
+                // Clear path error ONLY if it was a location error (not a path format error)
+                val currentPathError = state.projectPathError
+                if (currentPathError != null && 
+                    (currentPathError.contains("already", ignoreCase = true) ||
+                     currentPathError.contains("taken", ignoreCase = true))) {
+                    state.projectPathError = null
+                }
+                state.projectLocationWarning = locationWarning
             } else {
-                // Finally location warnings
-                state.projectNameError = null
-                state.projectNameWarning = locationWarning
+                // No location errors or warnings - clear location-related errors
+                val currentPathError = state.projectPathError
+                if (currentPathError != null && 
+                    (currentPathError.contains("already", ignoreCase = true) ||
+                     currentPathError.contains("taken", ignoreCase = true))) {
+                    state.projectPathError = null
+                }
+                state.projectLocationWarning = null
             }
-            state.projectLocationWarning = null
+        } else {
+            // In IDEA: location errors override name errors and show on Name field
+            if (locationError != null) {
+                state.projectNameError = locationError
+                state.projectLocationWarning = null
+            } else if (locationWarning != null) {
+                // Clear name error ONLY if it was a location error (not a name format error)
+                val currentNameError = state.projectNameError
+                if (currentNameError != null && 
+                    (currentNameError.contains("already", ignoreCase = true) ||
+                     currentNameError.contains("taken", ignoreCase = true) ||
+                     currentNameError.contains("not empty", ignoreCase = true))) {
+                    state.projectNameError = null
+                }
+                state.projectLocationWarning = locationWarning
+            } else {
+                // No location errors or warnings - clear location-related errors from name field
+                val currentNameError = state.projectNameError
+                if (currentNameError != null && 
+                    (currentNameError.contains("already", ignoreCase = true) ||
+                     currentNameError.contains("taken", ignoreCase = true) ||
+                     currentNameError.contains("not empty", ignoreCase = true))) {
+                    state.projectNameError = null
+                }
+                state.projectLocationWarning = null
+            }
         }
     }
     
@@ -155,50 +211,10 @@ fun SetupValidation(
         }
     }
 
-    // Initial validation on first composition
-    // Use state as key to re-trigger validation when wizard is reopened with new state instance
-    LaunchedEffect(state) {
-        // Run validation immediately to populate error states
-        val nameValidationError = WizardValidation.validateProjectName(state.projectName)
-        state.projectPathError = WizardValidation.validateProjectPath(state.projectPath, WizardPathUtils::expandPath)
-        state.projectIdError = builder.validateProjectId(state.projectId).errors.firstOrNull()
-        
-        val locationError = WizardValidation.validateProjectLocationError(state.projectName, state.projectPath, WizardPathUtils::expandPath)
-        val locationWarning = WizardValidation.validateProjectLocationWarning(state.projectName, state.projectPath, WizardPathUtils::expandPath)
-        
-        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            // Android Studio: show name errors and location warnings separately
-            state.projectNameError = nameValidationError
-            state.projectLocationWarning = locationWarning ?: locationError
-        } else {
-            // IntelliJ IDEA: show errors/warnings in Name field with priority
-            if (nameValidationError != null) {
-                state.projectNameError = nameValidationError
-                state.projectNameWarning = null
-            } else if (locationError != null) {
-                state.projectNameError = locationError
-                state.projectNameWarning = null
-            } else {
-                state.projectNameError = null
-                state.projectNameWarning = locationWarning
-            }
-            state.projectLocationWarning = null
-        }
-        
-        val isFormValid = !state.hasNoTargets && 
-                         state.projectNameError == null && 
-                         state.projectPathError == null && 
-                         state.projectIdError == null
-        
-        println("[LaunchedEffect(state)] isFormValid = $isFormValid, hasNoTargets = ${state.hasNoTargets}, projectNameError = '${state.projectNameError}', projectPathError = '${state.projectPathError}', projectIdError = '${state.projectIdError}'")
-        onValidationChanged(isFormValid)
-    }
-    
-    // Validation on any change
     LaunchedEffect(state.projectName, state.projectPath, state.projectId, state.composeVersion, 
         state.desktop, state.android, state.ios, state.web, state.git, state.tests, 
         state.enableDevVersions, state.projectNameError, state.projectPathError, 
-        state.projectIdError, state.projectNameWarning, state.projectLocationWarning) {
+        state.projectIdError, state.projectLocationWarning) {
         
         val isFormValid = !state.hasNoTargets && 
                          state.projectNameError == null && 
@@ -217,9 +233,20 @@ fun SetupPathSynchronization(
     projectNameValue: String
 ) {
     LaunchedEffect(state.projectName) {
-        // Android Studio: Location (projectPath) is the BASE directory and should NOT change when name changes
-        // Full path = projectPath + projectName (calculated in UI)
-        // So we do NOTHING here for Android Studio
+        // Android Studio: auto-update location when name changes (if not manually edited)
+        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && 
+            state.isLocationSynced && state.projectName != projectNameValue) {
+            val basePath = if (state.projectPath.contains(File.separator)) {
+                state.projectPath.substringBeforeLast(File.separator)
+            } else {
+                state.projectPath
+            }
+            
+            val uniqueLocation = WizardDefaults.findUniqueProjectLocation(state.projectName, basePath)
+            projectPathState.edit {
+                replace(0, length, uniqueLocation)
+            }
+        }
         
         // IDEA: mark that user edited name manually (to stop auto-increment)
         if (!io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio && 

@@ -60,9 +60,6 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
         root?.refresh(false, true)
     }
 
-    override fun getCustomOptionsStep(context: com.intellij.ide.util.projectWizard.WizardContext?, parentDisposable: com.intellij.openapi.Disposable?): com.intellij.ide.util.projectWizard.ModuleWizardStep {
-        return io.github.heisiar.composewizard.shared.ui.ComposeWizardStep(this)
-    }
 
     override fun createWizardSteps(context: com.intellij.ide.util.projectWizard.WizardContext, modulesProvider: com.intellij.openapi.roots.ui.configuration.ModulesProvider): Array<com.intellij.ide.util.projectWizard.ModuleWizardStep> {
         return emptyArray()

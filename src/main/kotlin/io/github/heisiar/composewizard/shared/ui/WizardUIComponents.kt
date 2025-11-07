@@ -1,18 +1,38 @@
 package io.github.heisiar.composewizard.shared.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,7 +41,10 @@ import androidx.compose.ui.window.PopupProperties
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.JBUI
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Checkbox
+import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
+import java.awt.Cursor
 import java.awt.Point
 import javax.swing.UIManager
 
@@ -34,116 +57,50 @@ fun isDarkTheme(): Boolean {
     return false
 }
 
-@Composable
-fun ValidationPopupJB(
-    mainPanel: ComposePanel,
-    message: String,
-    isWarning: Boolean
-) {
-    val errorColor = JewelTheme.globalColors.text.error
-    val warningColor = Color(0xFFE6A23C) // Softer orange/yellow for warnings
-    
-    val baseColor = if (isWarning) warningColor else errorColor
-    
-    val backgroundColor = java.awt.Color(
-        (baseColor.red * 255).toInt(),
-        (baseColor.green * 255).toInt(),
-        (baseColor.blue * 255).toInt(),
-        255  // Fully opaque
-    )
-    
-    val borderColor = java.awt.Color(
-        (baseColor.red * 255).toInt(),
-        (baseColor.green * 255).toInt(),
-        (baseColor.blue * 255).toInt(),
-        (0.8f * 255).toInt()
-    )
-    
-    val textColorAWT = java.awt.Color(255, 255, 255)
-    
-    DisposableEffect(message, isWarning) {
-        var popup: com.intellij.openapi.ui.popup.JBPopup? = null
-        
-        val tipComponent = javax.swing.JEditorPane().apply {
-            contentType = "text/html"
-            isEditable = false
-            
-            val hexColor = String.format("#%02x%02x%02x", textColorAWT.red, textColorAWT.green, textColorAWT.blue)
-            text = "<html><body style='color: $hexColor;'>$message</body></html>"
-            
-            isOpaque = true
-            background = backgroundColor
-            border = JBUI.Borders.empty(5, 9)
-            
-            if (caret is javax.swing.text.DefaultCaret) {
-                (caret as javax.swing.text.DefaultCaret).updatePolicy = javax.swing.text.DefaultCaret.NEVER_UPDATE
-            }
-            caretPosition = 0
-        }
-        
-        popup = com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(tipComponent, null)
-            .setCancelOnClickOutside(false)
-            .setCancelOnWindowDeactivation(false)
-            .setShowShadow(true)
-            .createPopup()
-        
-        val popupSize = tipComponent.preferredSize
-        val point = Point(
-            JBUI.scale(0) + 16,
-            -JBUI.scale(0) - popupSize.height/2
-        )
-
-        popup.show(RelativePoint(mainPanel, point))
-        
-        if (popup is com.intellij.ui.popup.AbstractPopup) {
-            try {
-                val window = popup.popupWindow
-                if (window != null && com.intellij.ui.WindowRoundedCornersManager.isAvailable()) {
-                    com.intellij.ui.WindowRoundedCornersManager.setRoundedCorners(
-                        window,
-                        borderColor
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        
-        onDispose {
-            popup?.cancel()
-        }
-    }
-}
 
 @Composable
 fun ValidationPopup(
     message: String,
-    isWarning: Boolean,
-    offset: IntOffset = IntOffset(0, -60)
+    isWarning: Boolean
 ) {
+    val surface = JewelTheme.globalColors.panelBackground
     val errorColor = JewelTheme.globalColors.text.error
-    val warningColor = Color(0xFFE6A23C) // Softer orange/yellow for warnings
     
-    val baseColor = if (isWarning) warningColor else errorColor
+    fun Color.red() = ((value shr 16) and 0xFFu).toFloat() / 255f
+    fun Color.green() = ((value shr 8) and 0xFFu).toFloat() / 255f
+    fun Color.blue() = (value and 0xFFu).toFloat() / 255f
     
     val backgroundColor = if (isWarning) {
-        baseColor.copy(alpha = 0.85f)
+        Color(
+            red = surface.red() * 0.85f + errorColor.red() * 0.15f,
+            green = surface.green() * 0.85f + errorColor.green() * 0.15f,
+            blue = surface.blue() * 0.85f + errorColor.blue() * 0.15f,
+            alpha = 0.95f
+        )
     } else {
-        baseColor.copy(alpha = 0.95f)
+        Color(
+            red = surface.red() * 0.7f + errorColor.red() * 0.3f,
+            green = surface.green() * 0.7f + errorColor.green() * 0.3f,
+            blue = surface.blue() * 0.7f + errorColor.blue() * 0.3f,
+            alpha = 0.95f
+        )
     }
     
     val borderColor = if (isWarning) {
-        baseColor.copy(alpha = 0.6f)
+        JewelTheme.globalColors.text.error.copy(alpha = 0.6f)
     } else {
-        baseColor.copy(alpha = 0.8f)
+        JewelTheme.globalColors.text.error.copy(alpha = 0.8f)
     }
     
-    val textColor = Color.White
+    val textColor = if (isDarkTheme()) {
+        Color.White
+    } else {
+        Color(0xFF1E1E1E)
+    }
     
     Popup(
         alignment = Alignment.TopStart,
-        offset = offset,
+        offset = IntOffset(0, -60),
         properties = PopupProperties(
             focusable = false,
             dismissOnBackPress = false,
@@ -163,6 +120,26 @@ fun ValidationPopup(
                 lineHeight = 16.sp
             )
         }
+    }
+}
+
+@Composable
+fun PlatformCheckbox(
+    checked: Boolean,
+    label: String,
+    onCheckedChange: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = {},
+            modifier = Modifier.size(20.dp),
+            enabled = false
+        )
+        Text(label)
     }
 }
 
@@ -309,4 +286,98 @@ val AppleIcon: ImageVector
             close()
         }
     }.build()
+
+@Composable
+fun BackgroundPlatformIcon(
+    active: Boolean,
+    icon: String,
+    color: Color,
+    isApple: Boolean = false,
+    isGlobe: Boolean = false
+) {
+    val targetBackgroundAlpha by animateFloatAsState(
+        targetValue = if (active && !isApple && !isGlobe) 0.25f else 0.04f,
+        animationSpec = tween(300),
+        label = "backgroundAlpha"
+    )
+    
+    val targetIconAlpha by animateFloatAsState(
+        targetValue = if (active) 0.9f else 0.15f,
+        animationSpec = tween(300),
+        label = "iconContentAlpha"
+    )
+    
+    val adaptiveIconColor = if (isApple || isGlobe) {
+        if (isDarkTheme()) Color(0xFFFFFFFF) else Color(0xFF000000)
+    } else {
+        color
+    }
+    
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .wrapContentHeight(Alignment.CenterVertically),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!isApple && !isGlobe) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .alpha(targetBackgroundAlpha)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                color.copy(alpha = 0.2f),
+                                color.copy(alpha = 0.1f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
+        Box(
+            modifier = Modifier
+                .width(52.dp)
+                .height(52.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isApple) {
+                Icon(
+                    imageVector = AppleIcon,
+                    contentDescription = "Apple",
+                    tint = adaptiveIconColor,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .alpha(targetIconAlpha)
+                )
+            } else if (isGlobe) {
+                Icon(
+                    imageVector = GlobeIcon,
+                    contentDescription = "Globe",
+                    tint = adaptiveIconColor,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .alpha(targetIconAlpha)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .offset(y = (-2).dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = icon,
+                        color = color,
+                        fontSize = 44.sp,
+                        modifier = Modifier
+                            .alpha(targetIconAlpha),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
 

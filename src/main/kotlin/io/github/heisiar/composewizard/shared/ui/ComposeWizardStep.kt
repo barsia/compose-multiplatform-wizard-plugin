@@ -40,16 +40,13 @@ import javax.swing.SwingUtilities
 class ComposeWizardStep(
     private val builder: ComposeMultiplatformModuleBuilder
 ) : ModuleWizardStep() {
-    
 
     private var projectNameValue = WizardPathUtils.suggestUniqueName(WizardDefaults.PROJECT_NAME, WizardDefaults.getDefaultProjectPath())
 
-    // In Android Studio, projectPathValue should be ONLY the base directory (without project name)
-    // Full path = projectPathValue + projectNameValue (calculated in updateDataModel)
-    private var projectPathValue = WizardDefaults.getDefaultProjectPath().also {
-        println("[ComposeWizardStep] Initial projectPathValue = $it")
-        println("[ComposeWizardStep] System.getProperty('user.home') = ${System.getProperty("user.home")}")
-        println("[ComposeWizardStep] System.getenv('HOME') = ${System.getenv("HOME")}")
+    private var projectPathValue = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+        WizardDefaults.findUniqueProjectLocation(WizardDefaults.PROJECT_NAME_DISPLAY, WizardDefaults.getDefaultProjectPath())
+    } else {
+        WizardDefaults.getDefaultProjectPath()
     }
     
     private var projectIdValue = WizardDefaults.PACKAGE_NAME
@@ -64,17 +61,77 @@ class ComposeWizardStep(
     
     private val wizardStartTime = System.currentTimeMillis()
 
-    private var componentAccessCount = 0
-    
-    private val mainPanel: ComposePanel by lazy {
-        ComposePanel().apply {
-            preferredSize = Dimension(500, 600)
-            setContent {
-                org.jetbrains.jewel.bridge.theme.SwingBridgeTheme {
-                    CreateComposeUI()
-                }
+    private val mainPanel: JComponent by lazy {
+        val wrapperPanel = object : javax.swing.JPanel(java.awt.BorderLayout()) {
+            private val maxDimension = 16384
+            
+            override fun getPreferredSize(): Dimension {
+                val size = super.getPreferredSize()
+                return Dimension(
+                    minOf(size.width, maxDimension),
+                    minOf(size.height, maxDimension)
+                )
+            }
+            
+            override fun getMaximumSize(): Dimension {
+                return Dimension(maxDimension, maxDimension)
+            }
+            
+            override fun getSize(): Dimension {
+                val size = super.getSize()
+                return Dimension(
+                    minOf(size.width, maxDimension),
+                    minOf(size.height, maxDimension)
+                )
+            }
+            
+            override fun getWidth(): Int = minOf(super.getWidth(), maxDimension)
+            override fun getHeight(): Int = minOf(super.getHeight(), maxDimension)
+            
+            override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
+                super.setBounds(
+                    x, y,
+                    minOf(width, maxDimension),
+                    minOf(height, maxDimension)
+                )
             }
         }
+        
+        val composePanel = ComposePanel().apply {
+            // Set size constraints to prevent Metal texture issues
+            minimumSize = Dimension(400, 300)
+            maximumSize = Dimension(16384, 16384)
+            
+            // Delay setContent until component has valid size
+            addComponentListener(object : java.awt.event.ComponentAdapter() {
+                override fun componentResized(e: java.awt.event.ComponentEvent) {
+                    val comp = e.component
+                    val w = comp.width
+                    val h = comp.height
+                    
+                    // Check if size is valid and within Metal limits
+                    if (w > 0 && h > 0 && w <= 16384 && h <= 16384) {
+                        removeComponentListener(this)
+                        SwingUtilities.invokeLater {
+                            setContent {
+                                org.jetbrains.jewel.bridge.theme.SwingBridgeTheme {
+                                    CreateComposeUI()
+                                }
+                            }
+                        }
+                    } else if (w > 16384 || h > 16384) {
+                        // Force size to safe values
+                        comp.setSize(
+                            minOf(w, 16384),
+                            minOf(h, 16384)
+                        )
+                    }
+                }
+            })
+        }
+        
+        wrapperPanel.add(composePanel, java.awt.BorderLayout.CENTER)
+        wrapperPanel
     }
 
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -103,11 +160,7 @@ class ComposeWizardStep(
             
             val isInternalMode = com.intellij.openapi.application.ApplicationManager
                 .getApplication().isInternal
-            devCheckboxVisible = if (isInternalMode) {
-                true // Always visible in Internal Mode
-            } else {
-                settings.devCheckboxVisible // Load saved visibility state
-            }
+            devCheckboxVisible = isInternalMode || settings.devCheckboxActivatedByUser
         }
         
         val projectNameInteractionSource = remember { MutableInteractionSource() }
@@ -117,14 +170,6 @@ class ComposeWizardStep(
         val projectNameFocused by projectNameInteractionSource.collectIsFocusedAsState()
         val projectPathFocused by projectPathInteractionSource.collectIsFocusedAsState()
         val projectIdFocused by projectIdInteractionSource.collectIsFocusedAsState()
-        
-        // Track when component becomes visible to re-validate
-        androidx.compose.runtime.DisposableEffect(Unit) {
-            println("[DisposableEffect] Component mounted/visible")
-            onDispose {
-                println("[DisposableEffect] Component disposed/hidden")
-            }
-        }
         
         SetupValidation(state, projectNameState, projectPathState, projectIdState, builder) { isValid ->
             projectNameValue = state.projectName
@@ -139,8 +184,6 @@ class ComposeWizardStep(
             targetWeb = state.web
             initGit = state.git
             includeTests = state.tests
-            
-            println("[SetupValidation callback] isValid = $isValid, projectNameValue = '$projectNameValue', state.projectNameError = '${state.projectNameError}'")
             updateButtonState(isValid)
         }
         
@@ -158,26 +201,11 @@ class ComposeWizardStep(
             projectNameInteractionSource = projectNameInteractionSource,
             projectPathInteractionSource = projectPathInteractionSource,
             projectIdInteractionSource = projectIdInteractionSource,
-            mainPanel = mainPanel,
             onBrowseFolder = ::browseForFolder
         )
     }
     
-    override fun getComponent(): JComponent {
-        componentAccessCount++
-        println("[ComposeWizardStep.getComponent] called, count = $componentAccessCount")
-        
-        // Re-validate when component is accessed (shown)
-        if (componentAccessCount > 1) {
-            SwingUtilities.invokeLater {
-                val isValid = validate()
-                updateButtonState(isValid)
-                println("[ComposeWizardStep.getComponent] Re-validated: isValid = $isValid, projectNameValue = '$projectNameValue'")
-            }
-        }
-        
-        return mainPanel
-    }
+    override fun getComponent(): JComponent = mainPanel
 
     private fun browseForFolder(): String? {
         val descriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor().apply {
@@ -194,22 +222,7 @@ class ComposeWizardStep(
         super._init()
         SwingUtilities.invokeLater {
             updateButtonText()
-            // Validate current state when returning to wizard
-            val isValid = validate()
-            updateButtonState(isValid)
-            
-            println("[ComposeWizardStep._init] isValid = $isValid, projectNameValue = '$projectNameValue'")
-        }
-    }
-    
-    override fun updateStep() {
-        super.updateStep()
-        SwingUtilities.invokeLater {
-            // This is called every time the step becomes visible
-            val isValid = validate()
-            updateButtonState(isValid)
-            
-            println("[ComposeWizardStep.updateStep] isValid = $isValid, projectNameValue = '$projectNameValue'")
+            updateButtonState(validate())
         }
     }
 
