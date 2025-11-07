@@ -54,6 +54,7 @@ fun WizardMainContent(
     projectNameInteractionSource: MutableInteractionSource,
     projectPathInteractionSource: MutableInteractionSource,
     projectIdInteractionSource: MutableInteractionSource,
+    mainPanel: ComposePanel,
     onBrowseFolder: () -> String?
 ) {
     Column(
@@ -73,7 +74,8 @@ fun WizardMainContent(
                 state = state,
                 projectNameState = projectNameState,
                 projectNameFocused = projectNameFocused,
-                projectNameInteractionSource = projectNameInteractionSource
+                projectNameInteractionSource = projectNameInteractionSource,
+                mainPanel = mainPanel
             )
 
             Spacer(
@@ -153,7 +155,8 @@ private fun ProjectInfoSection(
     state: WizardState,
     projectNameState: androidx.compose.foundation.text.input.TextFieldState,
     projectNameFocused: Boolean,
-    projectNameInteractionSource: MutableInteractionSource
+    projectNameInteractionSource: MutableInteractionSource,
+    mainPanel: ComposePanel
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -166,6 +169,7 @@ private fun ProjectInfoSection(
             projectNameWarning = state.projectNameWarning,
             projectNameFocused = projectNameFocused,
             projectNameInteractionSource = projectNameInteractionSource,
+            mainPanel = mainPanel,
             onNameChanged = { },
             modifier = Modifier.weight(2f)
         )
@@ -177,8 +181,7 @@ private fun ProjectInfoSection(
             ComposeVersionField(
                 cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
                 enableDevVersions = state.enableDevVersions,
-                onVersionSelected = { state.composeVersion = it },
-                onRefreshVersions = { }
+                onVersionSelected = { state.composeVersion = it }
             )
 
             if (state.devCheckboxVisible) {
@@ -264,7 +267,7 @@ private fun Modifier.compactVerticalSpacing(): Modifier = this.layout { measurab
 private fun FooterSection(state: WizardState) {
     var clickCount by remember { mutableStateOf(0) }
     var lastClickTime by remember { mutableStateOf(0L) }
-
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -285,14 +288,21 @@ private fun FooterSection(state: WizardState) {
                     if (currentTime - lastClickTime < 500) {
                         clickCount++
                         if (clickCount == 2) { // third click (0, 1, 2)
-                            if (state.devCheckboxVisible) {
-                                state.enableDevVersions = false
-                                state.devCheckboxVisible = false
-                                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = false
-                                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = false
-                            } else {
-                                state.devCheckboxVisible = true
-                                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = true
+                            val isInternalMode = com.intellij.openapi.application.ApplicationManager
+                                .getApplication().isInternal
+                            
+                            // Easter egg only works in Regular Mode (not in Internal Mode)
+                            if (!isInternalMode) {
+                                val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
+                                if (state.devCheckboxVisible) {
+                                    // Hide (but keep current enabled/disabled state)
+                                    state.devCheckboxVisible = false
+                                    settings.devCheckboxVisible = false
+                                } else {
+                                    // Show (with current enabled/disabled state)
+                                    state.devCheckboxVisible = true
+                                    settings.devCheckboxVisible = true
+                                }
                             }
                             clickCount = 0
                         }
@@ -309,13 +319,13 @@ private fun FooterSection(state: WizardState) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                Text(
-                    text = "At least one platform must be selected",
-                    color = JewelTheme.globalColors.text.error,
-                    style = JewelTheme.defaultTextStyle,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(
+                        text = "At least one platform must be selected",
+                        color = JewelTheme.globalColors.text.error,
+                        style = JewelTheme.defaultTextStyle
+                    )
+                }
                 Text(
                     text = "⚡",
                     fontSize = 14.sp,

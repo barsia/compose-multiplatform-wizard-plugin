@@ -49,7 +49,7 @@
   <extensions defaultExtensionNs="com.intellij">
     <!-- New Project Wizard generator - supports dynamic plugin loading! -->
     <newProjectWizard.generator 
-      implementation="io.github.heisiar.composewizard.idea.ComposeProjectWizard"/>
+      implementation="io.github.heisiar.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
     
     <!-- Application-level service for caching Compose versions -->
     <applicationService 
