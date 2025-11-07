@@ -80,10 +80,6 @@ dependencies {
 intellijPlatform {
     buildSearchableOptions = false
     
-    // Use separate sandbox directory to avoid Gradle cache conflicts
-    // This prevents "immutable workspace modified" errors when running runIde
-    sandboxContainer = layout.buildDirectory.dir("idea-sandbox")
-    
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "251"  // Support both AS 251.x and IDEA 252.x

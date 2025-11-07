@@ -82,13 +82,12 @@ class WelcomeScreenTooltipListener : AppLifecycleListener {
         
         val settings = WizardSettings.getInstance()
         
+        // Check if there are open projects to determine which button to find
+        val openProjects = ProjectManager.getInstance().openProjects
+        val hasOpenProjects = openProjects.isNotEmpty()
+        
         // Retry approach: button might not be ready yet
-        // Move all potentially slow operations to background thread
         ApplicationManager.getApplication().executeOnPooledThread {
-            // Check if there are open projects to determine which button to find
-            // This must be done in background thread as it may access file system
-            val openProjects = ProjectManager.getInstance().openProjects
-            val hasOpenProjects = openProjects.isNotEmpty()
             var attempts = 0
             val maxAttempts = 10
             var moreActionsButton: java.awt.Component? = null

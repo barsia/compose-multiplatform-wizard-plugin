@@ -18,6 +18,8 @@ cd /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin
 ./gradlew compileKotlin -PrunIntellijIdea=true
 ```
 
+**Both must succeed!** The plugin supports both platforms.
+
 ## Code Style
 
 - NO Russian text in code or comments

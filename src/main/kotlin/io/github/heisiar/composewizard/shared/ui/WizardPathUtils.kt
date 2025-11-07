@@ -8,29 +8,9 @@ import java.io.File
 
 object WizardPathUtils {
     
-    /**
-     * Get user home directory, avoiding Gradle cache paths
-     * 
-     * When IDE is launched via gradle runIde, System.getProperty("user.home") 
-     * points to .gradle/caches instead of the real user home.
-     * We detect this and fall back to HOME environment variable.
-     */
-    private fun getUserHome(): String {
-        val systemHome = com.intellij.util.SystemProperties.getUserHome()
-        
-        // If user.home points to .gradle/caches, use HOME environment variable instead
-        return if (systemHome.contains(".gradle") || systemHome.contains("caches")) {
-            System.getenv("HOME") ?: systemHome
-        } else {
-            systemHome
-        }
-    }
-    
     fun expandPath(path: String): String {
         return if (path.startsWith("~/")) {
-            // Use SystemProperties.getUserHome() to get the actual user's home directory
-            // System.getProperty("user.home") can return wrong path when IDE is launched from Gradle
-            val userHome = getUserHome()
+            val userHome = System.getProperty("user.home")
             FileUtil.toSystemIndependentName("$userHome/${path.substring(2)}")
         } else {
             path
@@ -38,9 +18,7 @@ object WizardPathUtils {
     }
     
     fun collapsePath(path: String): String {
-        // Use SystemProperties.getUserHome() to get the actual user's home directory
-        // System.getProperty("user.home") can return wrong path when IDE is launched from Gradle
-        val userHome = getUserHome()
+        val userHome = System.getProperty("user.home")
         val normalizedHome = FileUtil.toSystemIndependentName(userHome)
         val normalizedPath = FileUtil.toSystemIndependentName(path)
         return if (normalizedPath.startsWith(normalizedHome)) {

@@ -37,16 +37,8 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
                     val projectName = composeStep.getProjectName()
                     val projectPath = composeStep.getProjectPath()
                     
-                    // CRITICAL: Expand ~ before passing to Path.of()
-                    // Path.of() does NOT expand ~ and treats it as a literal directory name!
-                    val expandedPath = io.github.heisiar.composewizard.shared.ui.WizardPathUtils.expandPath(projectPath)
-                    
-                    println("[ComposeMultiplatformGeneratorNewProjectWizard] projectPath = $projectPath")
-                    println("[ComposeMultiplatformGeneratorNewProjectWizard] expandedPath = $expandedPath")
-                    println("[ComposeMultiplatformGeneratorNewProjectWizard] projectName = $projectName")
-                    
                     context.projectName = projectName
-                    context.setProjectFileDirectory(java.nio.file.Path.of(expandedPath).resolve(projectName), false)
+                    context.setProjectFileDirectory(java.nio.file.Path.of(projectPath).resolve(projectName), false)
                 }
             }
         }

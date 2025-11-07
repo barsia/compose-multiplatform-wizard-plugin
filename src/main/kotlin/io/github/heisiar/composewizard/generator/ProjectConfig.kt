@@ -1,7 +1,5 @@
 package io.github.heisiar.composewizard.generator
 
-import io.github.heisiar.composewizard.shared.VersionUtils
-
 data class ProjectConfig(
     val projectName: String,
     val projectId: String,
@@ -24,16 +22,6 @@ data class ProjectConfig(
     
     val projectIdPath: String
         get() = projectId.replace('.', '/')
-    
-    val needsHotReloadPlugin: Boolean
-        get() {
-            // Hot Reload is only needed as a separate plugin for Compose < 1.10.0
-            // For Compose 1.10.0+, Hot Reload is built-in
-            // Hot Reload is only useful for Desktop platform
-            val needsPlugin = VersionUtils.needsHotReloadPlugin(composeVersion)
-            
-            return needsPlugin && targetDesktop
-        }
 }
 
 enum class Platform {
