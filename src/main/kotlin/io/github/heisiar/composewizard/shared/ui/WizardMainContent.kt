@@ -17,17 +17,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +33,7 @@ import org.jetbrains.jewel.ui.component.Text
 import java.awt.Cursor
 
 private val SPACING_BETWEEN_SECTIONS = 16.dp
+private val SPACING_BEFORE_LOCATION = 0.dp
 private val LOCATION_SECTION_VERTICAL_OFFSET = 4.dp
 private val TEXTFIELD_VERTICAL_OFFSET = 8.dp
 private val TEXTFIELD_HEIGHT_REDUCTION = 16.dp
@@ -79,11 +75,7 @@ fun WizardMainContent(
                 mainPanel = mainPanel
             )
 
-            Spacer(
-                modifier = Modifier.height(
-                    if (state.devCheckboxVisible) 0.dp else 24.dp
-                )
-            )
+            Spacer(modifier = Modifier.height(SPACING_BEFORE_LOCATION))
 
             Box(modifier = Modifier.offset(y = (-LOCATION_SECTION_VERTICAL_OFFSET))) {
                 ProjectLocationSection(
@@ -185,42 +177,27 @@ private fun ProjectInfoSection(
                 onRefreshVersions = { }
             )
 
-            if (state.devCheckboxVisible) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                ) {
-                    Checkbox(
-                        checked = state.enableDevVersions,
-                        onCheckedChange = {
-                            state.enableDevVersions = it
-                            val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
-                            settings.enableDevVersions = it
-                            if (it) {
-                                settings.devCheckboxActivatedByUser = true
-                            }
-                            ComposeWizardUsageCollector.logDevVersionsToggled(it)
-                        }
-                    )
-                    Text(
-                        text = "Dev maven",
-                        style = JewelTheme.defaultTextStyle,
-                        modifier = Modifier
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    state.enableDevVersions = !state.enableDevVersions
-                                    val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
-                                    settings.enableDevVersions = state.enableDevVersions
-                                    if (state.enableDevVersions) {
-                                        settings.devCheckboxActivatedByUser = true
-                                    }
-                                    ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
-                                }
-                            }
-                    )
-                }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        state.enableDevVersions = !state.enableDevVersions
+                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
+                    }
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+            ) {
+                Checkbox(
+                    checked = state.enableDevVersions,
+                    onCheckedChange = {
+                        state.enableDevVersions = it
+                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
+                    }
+                )
+                Text("Dev maven", style = JewelTheme.defaultTextStyle)
             }
         }
     }
@@ -271,9 +248,6 @@ private fun Modifier.compactVerticalSpacing(): Modifier = this.layout { measurab
 
 @Composable
 private fun FooterSection(state: WizardState) {
-    var clickCount by remember { mutableStateOf(0) }
-    var lastClickTime by remember { mutableStateOf(0L) }
-    
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,31 +258,7 @@ private fun FooterSection(state: WizardState) {
             text = "v1.0.0",
             style = JewelTheme.defaultTextStyle,
             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.4f),
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastClickTime < 500) {
-                            clickCount++
-                            if (clickCount == 2) { // third click (0, 1, 2)
-                                if (state.devCheckboxVisible) {
-                                    state.enableDevVersions = false
-                                    state.devCheckboxVisible = false
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = false
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = false
-                                } else {
-                                    state.devCheckboxVisible = true
-                                    io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxActivatedByUser = true
-                                }
-                                clickCount = 0
-                            }
-                        } else {
-                            clickCount = 0
-                        }
-                        lastClickTime = currentTime
-                    }
-                }
+            modifier = Modifier.align(Alignment.CenterStart)
         )
 
         if (state.hasNoTargets) {
