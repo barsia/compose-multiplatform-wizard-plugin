@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +40,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -176,7 +178,7 @@ fun ComposeVersionField(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .widthIn(min = 200.dp)
                     .weight(1f)
@@ -207,53 +209,89 @@ fun ComposeVersionField(
                     ComboBoxStyle(colors, defaultStyle.metrics, defaultStyle.icons)
                 }
                 
-                ListComboBox(
-                    items = items,
-                    selectedIndex = currentIndex,
-                    onSelectedItemChange = { index ->
-                        if (availableVersions.isNotEmpty()) {
-                            selectedVersion = availableVersions[index]
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                    style = transparentStyle
-                )
+                val textMeasurer = rememberTextMeasurer()
+                val textStyle = JewelTheme.defaultTextStyle
+                val textWidth = remember(selectedVersion, textStyle) {
+                    textMeasurer.measure(selectedVersion, textStyle).size.width
+                }
+                val availableWidth = with(androidx.compose.ui.platform.LocalDensity.current) { 
+                    maxWidth.toPx() - 40.dp.toPx()
+                }
+                val isTextTruncated = textWidth > availableWidth
+                
+                val comboBox = @Composable {
+                    ListComboBox(
+                        items = items,
+                        selectedIndex = currentIndex,
+                        onSelectedItemChange = { index ->
+                            if (availableVersions.isNotEmpty()) {
+                                selectedVersion = availableVersions[index]
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                        style = transparentStyle
+                    )
+                }
+                
+                if (isTextTruncated) {
+                    Tooltip(
+                        tooltip = { Text(selectedVersion) },
+                        tooltipPlacement = TooltipPlacement.ComponentRect(
+                            anchor = Alignment.TopCenter,
+                            alignment = Alignment.TopCenter,
+                            offset = DpOffset(0.dp, -114.dp)
+                        )
+                    ) {
+                        comboBox()
+                    }
+                } else {
+                    comboBox()
+                }
             }
 
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+            Tooltip(
+                tooltip = { Text("Refresh versions") },
+                tooltipPlacement = TooltipPlacement.ComponentRect(
+                    anchor = androidx.compose.ui.Alignment.BottomCenter,
+                    alignment = androidx.compose.ui.Alignment.BottomCenter,
+                    offset = DpOffset(0.dp, 4.dp)
+                )
             ) {
-                val coroutineScope = rememberCoroutineScope()
-                val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
-
-                Icon(
-                    key = WizardIconKeys.RefreshVersions,
-                    contentDescription = "Refresh versions",
+                Box(
                     modifier = Modifier
                         .size(16.dp)
-                        .graphicsLayer { rotationZ = rotation.value }
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) {
-                            coroutineScope.launch {
-                                rotation.snapTo(0f)
-                                rotation.animateTo(
-                                    targetValue = 360f,
-                                    animationSpec = androidx.compose.animation.core.tween(
-                                        durationMillis = 500,
-                                        easing = androidx.compose.animation.core.LinearEasing
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                ) {
+                    val coroutineScope = rememberCoroutineScope()
+                    val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
+
+                    Icon(
+                        key = WizardIconKeys.RefreshVersions,
+                        contentDescription = "Refresh versions",
+                        modifier = Modifier
+                            .size(16.dp)
+                            .graphicsLayer { rotationZ = rotation.value }
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                coroutineScope.launch {
+                                    rotation.snapTo(0f)
+                                    rotation.animateTo(
+                                        targetValue = 360f,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 500,
+                                            easing = androidx.compose.animation.core.LinearEasing
+                                        )
                                     )
-                                )
-                            }
-                            onRefreshVersions()
-                        },
-                    tint = JewelTheme.globalColors.text.normal
-                )
+                                }
+                                onRefreshVersions()
+                            },
+                        tint = JewelTheme.globalColors.text.normal
+                    )
+                }
             }
         }
     }
@@ -486,7 +524,7 @@ fun OptionsSection(
         CheckboxOption(
             checked = git,
             onToggle = onGitToggle,
-            label = "Initialize Git repository"
+            label = "Create Git repository"
         )
 
         CheckboxOption(
@@ -523,21 +561,41 @@ private fun CheckboxOption(
 
 @Composable
 fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier = Modifier) {
-    SelectionContainer(
-        modifier = modifier
+    val finalPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+        WizardPathUtils.expandPath(projectPath)
+    } else {
+        File(WizardPathUtils.expandPath(projectPath), projectName).absolutePath
+    }
+    
+    val displayPath = WizardPathUtils.collapsePath(finalPath)
+    
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        val finalPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            // In Android Studio, projectPath already includes projectName
-            WizardPathUtils.expandPath(projectPath)
-        } else {
-            // In IntelliJ IDEA, projectPath is just the parent directory
-            File(WizardPathUtils.expandPath(projectPath), projectName).absolutePath
+        SelectionContainer(modifier = Modifier.weight(1f, fill = false)) {
+            Text(
+                text = "Project will be created at: $displayPath",
+                style = JewelTheme.defaultTextStyle,
+                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
+            )
         }
         
-        Text(
-            text = "Project will be created at: ${WizardPathUtils.collapsePath(finalPath)}",
-            style = JewelTheme.defaultTextStyle,
-            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
+        Icon(
+            key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
+            contentDescription = "Copy path",
+            modifier = Modifier
+                .size(16.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                    val stringSelection = java.awt.datatransfer.StringSelection(finalPath)
+                    clipboard.setContents(stringSelection, null)
+                }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
         )
     }
 }

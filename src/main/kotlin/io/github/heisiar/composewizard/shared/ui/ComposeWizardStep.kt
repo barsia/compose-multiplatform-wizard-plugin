@@ -90,6 +90,9 @@ class ComposeWizardStep(
         val cachedVersions = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance().getStableVersions()
         val initialComposeVersion = if (cachedVersions.isNotEmpty()) cachedVersions.first() else composeVersionValue
         
+        val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
+        val isInternalMode = com.intellij.openapi.application.ApplicationManager.getApplication().isInternal
+        
         val state = rememberWizardState().apply {
             projectName = projectNameValue
             projectPath = projectPathValue
@@ -101,7 +104,8 @@ class ComposeWizardStep(
             web = targetWeb
             git = initGit
             tests = includeTests
-            enableDevVersions = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
+            enableDevVersions = settings.enableDevVersions
+            devCheckboxVisible = isInternalMode || settings.devCheckboxVisibleByUser
         }
         
         val projectNameInteractionSource = remember { MutableInteractionSource() }
@@ -232,7 +236,14 @@ class ComposeWizardStep(
 
     override fun updateDataModel() {
         val expandedPath = WizardPathUtils.expandPath(projectPathValue)
-        val fullPath = File(expandedPath, projectNameValue).absolutePath
+        
+        // In Android Studio, projectPath already includes project name
+        // In IntelliJ IDEA, projectPath is just parent directory
+        val fullPath = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            expandedPath
+        } else {
+            File(expandedPath, projectNameValue).absolutePath
+        }
         
         builder.contentEntryPath = fullPath
         builder.name = projectNameValue
@@ -300,4 +311,9 @@ class ComposeWizardStep(
     fun getProjectPath(): String = projectPathValue
     fun getProjectId(): String = projectIdValue
     fun getComposeVersion(): String = composeVersionValue
+    
+    // Setter for syncing compose version from platform fields (IntelliJ IDEA only)
+    fun setComposeVersion(version: String) {
+        composeVersionValue = version
+    }
 }

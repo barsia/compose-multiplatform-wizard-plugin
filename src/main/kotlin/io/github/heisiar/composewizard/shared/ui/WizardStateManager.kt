@@ -26,6 +26,7 @@ class WizardState {
     var git by mutableStateOf(false)
     var tests by mutableStateOf(false)
     var enableDevVersions by mutableStateOf(false)
+    var devCheckboxVisible by mutableStateOf(false)
     var isLocationSynced by mutableStateOf(true)
     
     var projectNameError by mutableStateOf<String?>(null)

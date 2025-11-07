@@ -2,6 +2,7 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,12 +18,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,36 +73,134 @@ fun WizardMainContent(
                 .verticalScroll(rememberScrollState())
                 .padding(if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
         ) {
-            ProjectInfoSection(
-                state = state,
-                projectNameState = projectNameState,
-                projectNameFocused = projectNameFocused,
-                projectNameInteractionSource = projectNameInteractionSource,
-                projectLocationWarning = state.projectLocationWarning,
-                mainPanel = mainPanel
-            )
+            // In IntelliJ IDEA: Name and Location are provided by platform fields (with validation)
+            // Only show Name and Location in Android Studio
+            if (PlatformDetector.isAndroidStudio) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    ProjectNameField(
+                        projectNameState = projectNameState,
+                        projectNameError = state.projectNameError,
+                        projectLocationWarning = state.projectLocationWarning,
+                        projectNameFocused = projectNameFocused,
+                        projectNameInteractionSource = projectNameInteractionSource,
+                        mainPanel = mainPanel,
+                        onNameChanged = { },
+                        modifier = Modifier.weight(0.6f)
+                    )
+                    
+                    // Compose Version section on the right
+                    Column(
+                        modifier = Modifier.weight(0.4f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ComposeVersionField(
+                            cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
+                            enableDevVersions = state.enableDevVersions,
+                            onVersionSelected = { state.composeVersion = it },
+                            onRefreshVersions = { }
+                        )
 
-            Spacer(modifier = Modifier.height(SPACING_BEFORE_LOCATION))
+                        if (state.devCheckboxVisible) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
+                                        state.enableDevVersions = !state.enableDevVersions
+                                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
+                                    }
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                            ) {
+                                Checkbox(
+                                    checked = state.enableDevVersions,
+                                    onCheckedChange = {
+                                        state.enableDevVersions = it
+                                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
+                                    }
+                                )
+                                Text("Dev maven", style = JewelTheme.defaultTextStyle)
+                            }
+                        }
+                    }
+                }
 
-            Box(modifier = Modifier.offset(y = (-LOCATION_SECTION_VERTICAL_OFFSET))) {
-                ProjectLocationSection(
-                    state = state,
-                    projectPathState = projectPathState,
-                    projectPathFocused = projectPathFocused,
-                    projectPathInteractionSource = projectPathInteractionSource,
-                    onBrowseFolder = onBrowseFolder
-                )
+                Spacer(modifier = Modifier.height(SPACING_BEFORE_LOCATION))
+
+                Box(modifier = Modifier.offset(y = (-LOCATION_SECTION_VERTICAL_OFFSET))) {
+                    ProjectLocationSection(
+                        state = state,
+                        projectPathState = projectPathState,
+                        projectPathFocused = projectPathFocused,
+                        projectPathInteractionSource = projectPathInteractionSource,
+                        onBrowseFolder = onBrowseFolder
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
+            } else {
+                // In IntelliJ IDEA: Package name left, Compose Version right
+                // Name and Location are shown by platform fields above
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    PackageNameField(
+                        projectIdState = projectIdState,
+                        projectIdError = state.projectIdError,
+                        projectIdFocused = projectIdFocused,
+                        projectIdInteractionSource = projectIdInteractionSource,
+                        onIdChanged = { },
+                        modifier = Modifier.weight(0.6f)
+                    )
+                    
+                    Column(
+                        modifier = Modifier.weight(0.4f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ComposeVersionField(
+                            cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
+                            enableDevVersions = state.enableDevVersions,
+                            onVersionSelected = { state.composeVersion = it },
+                            onRefreshVersions = { }
+                        )
+
+                        if (state.devCheckboxVisible) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
+                                        state.enableDevVersions = !state.enableDevVersions
+                                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
+                                    }
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                            ) {
+                                Checkbox(
+                                    checked = state.enableDevVersions,
+                                    onCheckedChange = {
+                                        state.enableDevVersions = it
+                                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
+                                    }
+                                )
+                                Text("Dev maven", style = JewelTheme.defaultTextStyle)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
             }
-
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
-
-            PackageNameField(
-                projectIdState = projectIdState,
-                projectIdError = state.projectIdError,
-                projectIdFocused = projectIdFocused,
-                projectIdInteractionSource = projectIdInteractionSource,
-                onIdChanged = { }
-            )
 
             Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
 
@@ -146,69 +249,6 @@ fun WizardMainContent(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun ProjectInfoSection(
-    state: WizardState,
-    projectNameState: androidx.compose.foundation.text.input.TextFieldState,
-    projectNameFocused: Boolean,
-    projectNameInteractionSource: MutableInteractionSource,
-    projectLocationWarning: String?,
-    mainPanel: ComposePanel
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        ProjectNameField(
-            projectNameState = projectNameState,
-            projectNameError = state.projectNameError,
-            projectLocationWarning = projectLocationWarning,
-            projectNameFocused = projectNameFocused,
-            projectNameInteractionSource = projectNameInteractionSource,
-            mainPanel = mainPanel,
-            onNameChanged = { },
-            modifier = Modifier.weight(2f)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ComposeVersionField(
-                cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
-                enableDevVersions = state.enableDevVersions,
-                onVersionSelected = { state.composeVersion = it },
-                onRefreshVersions = { }
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        state.enableDevVersions = !state.enableDevVersions
-                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
-                    }
-                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-            ) {
-                Checkbox(
-                    checked = state.enableDevVersions,
-                    onCheckedChange = {
-                        state.enableDevVersions = it
-                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
-                    }
-                )
-                Text("Dev maven", style = JewelTheme.defaultTextStyle)
-            }
-        }
-    }
-}
-
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
 private fun ProjectLocationSection(
     state: WizardState,
     projectPathState: androidx.compose.foundation.text.input.TextFieldState,
@@ -251,6 +291,10 @@ private fun Modifier.compactVerticalSpacing(): Modifier = this.layout { measurab
 
 @Composable
 private fun FooterSection(state: WizardState) {
+    var clickCount by remember { mutableStateOf(0) }
+    var lastClickTime by remember { mutableStateOf(0L) }
+    val isInternalMode = remember { com.intellij.openapi.application.ApplicationManager.getApplication().isInternal }
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -261,7 +305,41 @@ private fun FooterSection(state: WizardState) {
             text = "v1.0.0",
             style = JewelTheme.defaultTextStyle,
             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.4f),
-            modifier = Modifier.align(Alignment.CenterStart)
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .let { modifier ->
+                    if (!isInternalMode) {
+                        modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    val currentTime = System.currentTimeMillis()
+                                    if (currentTime - lastClickTime < 600) {
+                                        clickCount++
+                                        if (clickCount >= 3) {
+                                            val wasVisible = state.devCheckboxVisible
+                                            val newVisibility = !wasVisible
+                                            if (newVisibility && !wasVisible) {
+                                                ComposeWizardUsageCollector.logDevVersionsUnlocked()
+                                            }
+                                            state.devCheckboxVisible = newVisibility
+                                            io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxVisibleByUser = newVisibility
+                                            if (!newVisibility) {
+                                                state.enableDevVersions = false
+                                                io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = false
+                                            }
+                                            clickCount = 0
+                                        }
+                                    } else {
+                                        clickCount = 1
+                                    }
+                                    lastClickTime = currentTime
+                                }
+                            )
+                        }
+                    } else {
+                        modifier
+                    }
+                }
         )
 
         if (state.hasNoTargets) {
