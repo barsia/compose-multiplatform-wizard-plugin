@@ -1,7 +1,7 @@
 package io.github.heisiar.composewizard.idea
 
 import com.intellij.ide.IdeBundle
-import com.intellij.ide.impl.TrustedPaths
+import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.GitRepositoryInitializer
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -65,9 +65,9 @@ class IdeaWizardIntegration(
         }
     }
     
+    @Suppress("UnstableApiUsage")
     private fun linkGradleProject(project: Project, projectPath: String) {
-        @Suppress("DEPRECATION")
-        TrustedPaths.getInstance().setProjectPathTrusted(Path.of(projectPath), true)
+        TrustedProjects.setProjectTrusted(Path.of(projectPath), true)
         
         val projectSettings = GradleProjectSettings()
         projectSettings.externalProjectPath = projectPath
@@ -104,6 +104,7 @@ class IdeaWizardIntegration(
     /**
      * Runs an action after the project is opened.
      */
+    @Suppress("UnstableApiUsage")
     private fun runAfterOpened(project: Project, action: (Project) -> Unit) {
         StartupManager.getInstance(project).runAfterOpened {
             action(project)

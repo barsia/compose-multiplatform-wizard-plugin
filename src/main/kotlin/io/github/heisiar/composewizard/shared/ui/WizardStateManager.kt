@@ -4,6 +4,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,8 +33,9 @@ class WizardState {
     var projectLocationWarning by mutableStateOf<String?>(null)
     var projectIdError by mutableStateOf<String?>(null)
     
-    val hasNoTargets: Boolean
-        get() = !desktop && !android && !ios && !web
+    val hasNoTargets by derivedStateOf { 
+        !desktop && !android && !ios && !web 
+    }
 }
 
 @Composable
@@ -73,13 +75,7 @@ fun SetupValidation(
             ComposeWizardUsageCollector.logValidationError("project_name", errorType)
         }
         
-        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            state.projectNameError = newError
-        } else {
-            if (state.projectLocationWarning == null) {
-                state.projectNameError = newError
-            }
-        }
+        state.projectNameError = newError
     }
     
     LaunchedEffect(state.projectPath) {
@@ -106,12 +102,7 @@ fun SetupValidation(
             ComposeWizardUsageCollector.logValidationError("project_location", errorType)
         }
         
-        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            state.projectLocationWarning = newWarning
-        } else {
-            state.projectNameError = newWarning
-            state.projectLocationWarning = null
-        }
+        state.projectLocationWarning = newWarning
     }
     
     LaunchedEffect(state.projectId) {
@@ -144,10 +135,32 @@ fun SetupValidation(
         state.enableDevVersions, state.projectNameError, state.projectPathError, 
         state.projectIdError, state.projectLocationWarning) {
         
+        println("WizardStateManager: LaunchedEffect validation check")
+        println("  hasNoTargets=${state.hasNoTargets}")
+        println("  projectNameError=${state.projectNameError}")
+        println("  projectPathError=${state.projectPathError}")
+        println("  projectIdError=${state.projectIdError}")
+        
         val isFormValid = !state.hasNoTargets && 
                          state.projectNameError == null && 
                          state.projectPathError == null && 
                          state.projectIdError == null
+        println("  isFormValid=$isFormValid")
+        onValidationChanged(isFormValid)
+    }
+    
+    androidx.compose.runtime.SideEffect {
+        println("WizardStateManager: SideEffect validation check")
+        println("  hasNoTargets=${state.hasNoTargets}")
+        println("  projectNameError=${state.projectNameError}")
+        println("  projectPathError=${state.projectPathError}")
+        println("  projectIdError=${state.projectIdError}")
+        
+        val isFormValid = !state.hasNoTargets && 
+                         state.projectNameError == null && 
+                         state.projectPathError == null && 
+                         state.projectIdError == null
+        println("  isFormValid=$isFormValid")
         onValidationChanged(isFormValid)
     }
 }

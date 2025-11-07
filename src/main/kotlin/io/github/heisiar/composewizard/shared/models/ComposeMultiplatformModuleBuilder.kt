@@ -3,6 +3,7 @@ package io.github.heisiar.composewizard.shared.models
 import com.intellij.ide.util.projectWizard.ModuleBuilder
 import com.intellij.openapi.module.EmptyModuleType
 import com.intellij.openapi.module.ModuleType
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -22,6 +23,7 @@ data class ValidationResult(
 
 class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
 
+    lateinit var upProject: Project
     var projectName: String = WizardDefaults.PROJECT_NAME_DISPLAY
     var projectId: String = WizardDefaults.PACKAGE_NAME
     var composeVersion: String = WizardDefaults.COMPOSE_VERSION

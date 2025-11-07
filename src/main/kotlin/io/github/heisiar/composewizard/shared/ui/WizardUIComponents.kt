@@ -63,79 +63,79 @@ fun ValidationPopupJB(
     message: String,
     isWarning: Boolean
 ) {
-    val surface = JewelTheme.globalColors.panelBackground
-    val errorColor = JewelTheme.globalColors.text.error
-    
-    fun Color.red() = ((value shr 16) and 0xFFu).toFloat() / 255f
-    fun Color.green() = ((value shr 8) and 0xFFu).toFloat() / 255f
-    fun Color.blue() = (value and 0xFFu).toFloat() / 255f
+    val isDark = isDarkTheme()
     
     val bgColor = if (isWarning) {
-        Color(
-            red = surface.red() * 0.85f + errorColor.red() * 0.15f,
-            green = surface.green() * 0.85f + errorColor.green() * 0.15f,
-            blue = surface.blue() * 0.85f + errorColor.blue() * 0.15f,
-            alpha = 0.95f
-        )
+        if (isDark) {
+            Color(0xFF3D3223)
+        } else {
+            Color(0xFFF5F0E6)
+        }
     } else {
-        Color(
-            red = surface.red() * 0.7f + errorColor.red() * 0.3f,
-            green = surface.green() * 0.7f + errorColor.green() * 0.3f,
-            blue = surface.blue() * 0.7f + errorColor.blue() * 0.3f,
-            alpha = 0.95f
-        )
+        if (isDark) {
+            Color(0xFF5E3838)
+        } else {
+            Color(0xFFFFF2F3)
+        }
     }
     
     val borderComposeColor = if (isWarning) {
-        JewelTheme.globalColors.text.error.copy(alpha = 0.6f)
+        if (isDark) {
+            Color(0xFF5E4D33)
+        } else {
+            Color(0xFFE0CEA8)
+        }
     } else {
-        JewelTheme.globalColors.text.error.copy(alpha = 0.8f)
+        if (isDark) {
+            Color(0xFFBD5757)
+        } else {
+            Color(0xFFED99A1)
+        }
     }
     
-    val textColor = if (isDarkTheme()) {
-        Color.White
+    val textColor = if (isDark) {
+        Color(0xFFFFFFFF) // White for dark theme
     } else {
-        Color(0xFF1E1E1E)
+        Color(0xFF000000) // Black for light theme
     }
+    
+    val bgColorInt = (bgColor.value shr 32).toInt()
+    val borderColorInt = (borderComposeColor.value shr 32).toInt()
     
     val backgroundColor = java.awt.Color(
-        ((bgColor.value shr 16) and 0xFFu).toInt(),
-        ((bgColor.value shr 8) and 0xFFu).toInt(),
-        (bgColor.value and 0xFFu).toInt(),
-        ((bgColor.value shr 24) and 0xFFu).toInt()
+        (bgColorInt shr 16) and 0xFF,
+        (bgColorInt shr 8) and 0xFF,
+        bgColorInt and 0xFF,
+        (bgColorInt shr 24) and 0xFF
     )
     
     val borderColor = java.awt.Color(
-        ((borderComposeColor.value shr 16) and 0xFFu).toInt(),
-        ((borderComposeColor.value shr 8) and 0xFFu).toInt(),
-        (borderComposeColor.value and 0xFFu).toInt(),
-        ((borderComposeColor.value shr 24) and 0xFFu).toInt()
+        (borderColorInt shr 16) and 0xFF,
+        (borderColorInt shr 8) and 0xFF,
+        borderColorInt and 0xFF,
+        (borderColorInt shr 24) and 0xFF
     )
     
+    val textColorInt = (textColor.value shr 32).toInt()
     val textColorAWT = java.awt.Color(
-        ((textColor.value shr 16) and 0xFFu).toInt(),
-        ((textColor.value shr 8) and 0xFFu).toInt(),
-        (textColor.value and 0xFFu).toInt()
+        (textColorInt shr 16) and 0xFF,
+        (textColorInt shr 8) and 0xFF,
+        textColorInt and 0xFF
     )
     
     DisposableEffect(message, isWarning) {
         var popup: com.intellij.openapi.ui.popup.JBPopup? = null
         
-        val tipComponent = javax.swing.JEditorPane().apply {
-            contentType = "text/html"
-            isEditable = false
-            
-            val hexColor = String.format("#%02x%02x%02x", textColorAWT.red, textColorAWT.green, textColorAWT.blue)
-            text = "<html><body style='color: $hexColor;'>$message</body></html>"
-            
+        val tipComponent = javax.swing.JLabel().apply {
+            text = message
+            foreground = textColorAWT
+            font = com.intellij.util.ui.JBUI.Fonts.label()
             isOpaque = true
             background = backgroundColor
-            border = JBUI.Borders.empty(5, 9)
-            
-            if (caret is javax.swing.text.DefaultCaret) {
-                (caret as javax.swing.text.DefaultCaret).updatePolicy = javax.swing.text.DefaultCaret.NEVER_UPDATE
-            }
-            caretPosition = 0
+            border = javax.swing.border.CompoundBorder(
+                javax.swing.border.LineBorder(borderColor, JBUI.scale(1), false),
+                JBUI.Borders.empty(5, 9)
+            )
         }
         
         popup = com.intellij.openapi.ui.popup.JBPopupFactory.getInstance()
@@ -143,12 +143,13 @@ fun ValidationPopupJB(
             .setCancelOnClickOutside(false)
             .setCancelOnWindowDeactivation(false)
             .setShowShadow(true)
+            .setShowBorder(false)
             .createPopup()
         
         val popupSize = tipComponent.preferredSize
         val point = Point(
             JBUI.scale(0),
-            -JBUI.scale(0) - popupSize.height
+            -JBUI.scale(0) - popupSize.height/2
         )
         
         popup?.show(RelativePoint(mainPanel, point))
@@ -178,39 +179,40 @@ fun ValidationPopup(
     message: String,
     isWarning: Boolean
 ) {
-    val surface = JewelTheme.globalColors.panelBackground
-    val errorColor = JewelTheme.globalColors.text.error
-    
-    fun Color.red() = ((value shr 16) and 0xFFu).toFloat() / 255f
-    fun Color.green() = ((value shr 8) and 0xFFu).toFloat() / 255f
-    fun Color.blue() = (value and 0xFFu).toFloat() / 255f
+    val isDark = isDarkTheme()
     
     val backgroundColor = if (isWarning) {
-        Color(
-            red = surface.red() * 0.85f + errorColor.red() * 0.15f,
-            green = surface.green() * 0.85f + errorColor.green() * 0.15f,
-            blue = surface.blue() * 0.85f + errorColor.blue() * 0.15f,
-            alpha = 0.95f
-        )
+        if (isDark) {
+            Color(0xFF3D3223)
+        } else {
+            Color(0xFFF5F0E6)
+        }
     } else {
-        Color(
-            red = surface.red() * 0.7f + errorColor.red() * 0.3f,
-            green = surface.green() * 0.7f + errorColor.green() * 0.3f,
-            blue = surface.blue() * 0.7f + errorColor.blue() * 0.3f,
-            alpha = 0.95f
-        )
+        if (isDark) {
+            Color(0xFF5E3838)
+        } else {
+            Color(0xFFFFF2F3)
+        }
     }
     
     val borderColor = if (isWarning) {
-        JewelTheme.globalColors.text.error.copy(alpha = 0.6f)
+        if (isDark) {
+            Color(0xFF5E4D33)
+        } else {
+            Color(0xFFE0CEA8)
+        }
     } else {
-        JewelTheme.globalColors.text.error.copy(alpha = 0.8f)
+        if (isDark) {
+            Color(0xFFBD5757)
+        } else {
+            Color(0xFFED99A1)
+        }
     }
     
-    val textColor = if (isDarkTheme()) {
-        Color.White
+    val textColor = if (isDark) {
+        Color(0xFFFFFFFF) // White for dark theme
     } else {
-        Color(0xFF1E1E1E)
+        Color(0xFF000000) // Black for light theme
     }
     
     Popup(
@@ -226,14 +228,15 @@ fun ValidationPopup(
             modifier = Modifier
                 .pointerInput(Unit) {}
                 .background(backgroundColor, RoundedCornerShape(8.dp))
-                .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
+                .border(1.dp, borderColor, RoundedCornerShape(8.dp))
         ) {
             Text(
                 text = message,
                 color = textColor,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
                 modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
-                lineHeight = 16.sp
+                lineHeight = 18.sp
             )
         }
     }

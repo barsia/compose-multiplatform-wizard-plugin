@@ -53,11 +53,13 @@ import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.Outline
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.Divider
-import org.jetbrains.jewel.ui.component.Dropdown
 import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.ListComboBox
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
 import org.jetbrains.jewel.ui.component.Tooltip
+import org.jetbrains.jewel.ui.component.styling.ComboBoxStyle
+import org.jetbrains.jewel.ui.theme.comboBoxStyle
 import java.awt.Cursor
 import java.io.File
 import java.io.InputStream
@@ -74,6 +76,7 @@ private object ResourceLoader {
 fun ProjectNameField(
     projectNameState: androidx.compose.foundation.text.input.TextFieldState,
     projectNameError: String?,
+    projectLocationWarning: String?,
     projectNameFocused: Boolean,
     projectNameInteractionSource: MutableInteractionSource,
     mainPanel: androidx.compose.ui.awt.ComposePanel,
@@ -101,7 +104,10 @@ fun ProjectNameField(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                outline = if (projectNameError != null) Outline.Error else Outline.None,
+                outline = Outline.of(
+                    warning = projectLocationWarning != null && projectNameError == null,
+                    error = projectNameError != null
+                ),
                 interactionSource = projectNameInteractionSource
             )
 
@@ -111,6 +117,16 @@ fun ProjectNameField(
                         mainPanel = mainPanel,
                         message = projectNameError,
                         isWarning = false
+                    )
+                }
+            }
+            
+            if (projectLocationWarning != null && projectNameFocused && projectNameError == null) {
+                androidx.compose.runtime.key(projectLocationWarning, projectNameFocused) {
+                    ValidationPopupJB(
+                        mainPanel = mainPanel,
+                        message = projectLocationWarning,
+                        isWarning = true
                     )
                 }
             }
@@ -160,85 +176,56 @@ fun ComposeVersionField(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Note: Dropdown is deprecated, but ComboBox/ListComboBox API is not yet stable in current Jewel version
-            @Suppress("DEPRECATION")
             Box(
                 modifier = Modifier
                     .widthIn(min = 200.dp)
                     .weight(1f)
             ) {
-                var isTextTruncated by remember { mutableStateOf(false) }
+                val defaultStyle = JewelTheme.comboBoxStyle
+                val transparentStyle = remember(defaultStyle) {
+                    val colors = org.jetbrains.jewel.ui.component.styling.ComboBoxColors(
+                        background = defaultStyle.colors.background,
+                        nonEditableBackground = Color.Transparent,
+                        backgroundDisabled = defaultStyle.colors.backgroundDisabled,
+                        backgroundFocused = defaultStyle.colors.backgroundFocused,
+                        backgroundPressed = defaultStyle.colors.backgroundPressed,
+                        backgroundHovered = defaultStyle.colors.backgroundHovered,
+                        content = defaultStyle.colors.content,
+                        contentDisabled = defaultStyle.colors.contentDisabled,
+                        contentFocused = defaultStyle.colors.contentFocused,
+                        contentPressed = defaultStyle.colors.contentPressed,
+                        contentHovered = defaultStyle.colors.contentHovered,
+                        border = defaultStyle.colors.border,
+                        borderDisabled = defaultStyle.colors.borderDisabled,
+                        borderFocused = defaultStyle.colors.borderFocused,
+                        borderPressed = defaultStyle.colors.borderPressed,
+                        borderHovered = defaultStyle.colors.borderHovered
+                    )
+                    ComboBoxStyle(colors, defaultStyle.metrics, defaultStyle.icons)
+                }
                 
-                Tooltip(
-                    tooltip = { Text(selectedVersion) },
-                    tooltipPlacement = TooltipPlacement.ComponentRect(
-                        anchor = Alignment.TopCenter,
-                        alignment = Alignment.TopCenter,
-                        offset = DpOffset(0.dp, (-4).dp)
-                    ),
-                    enabled = isTextTruncated
-                ) {
-                    Dropdown(
-                        menuContent = {
-                            if (availableVersions.isEmpty()) {
-                                selectableItem(
-                                    selected = false,
-                                    iconKey = null,
-                                    keybinding = null,
-                                    onClick = {},
-                                    enabled = true
-                                ) {
-                                    Text("Loading...")
-                                }
-                            } else {
-                                availableVersions.forEach { version ->
-                                    selectableItem(
-                                        selected = version == selectedVersion,
-                                        iconKey = null,
-                                        keybinding = null,
-                                        onClick = { selectedVersion = version },
-                                        enabled = true
-                                    ) {
-                                        Text(version)
-                                    }
-                                }
-                            }
+                if (availableVersions.isEmpty()) {
+                    ListComboBox(
+                        items = listOf("Loading..."),
+                        selectedIndex = 0,
+                        onSelectedItemChange = {},
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        style = transparentStyle
+                    )
+                } else {
+                    val currentIndex = availableVersions.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
+                    ListComboBox(
+                        items = availableVersions,
+                        selectedIndex = currentIndex,
+                        onSelectedItemChange = { index ->
+                            selectedVersion = availableVersions[index]
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown && availableVersions.isNotEmpty()) {
-                                    val currentIndex = availableVersions.indexOf(selectedVersion)
-                                    when (event.key) {
-                                        Key.DirectionUp -> {
-                                            if (currentIndex > 0) {
-                                                selectedVersion = availableVersions[currentIndex - 1]
-                                            }
-                                            true
-                                        }
-                                        Key.DirectionDown -> {
-                                            if (currentIndex < availableVersions.size - 1) {
-                                                selectedVersion = availableVersions[currentIndex + 1]
-                                            }
-                                            true
-                                        }
-                                        else -> false
-                                    }
-                                } else {
-                                    false
-                                }
-                            }
-                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                    ) {
-                        Text(
-                            text = selectedVersion,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            onTextLayout = { layoutResult ->
-                                isTextTruncated = layoutResult.hasVisualOverflow
-                            }
-                        )
-                    }
+                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                        style = transparentStyle
+                    )
                 }
             }
 
@@ -284,7 +271,6 @@ fun ComposeVersionField(
 fun ProjectLocationField(
     projectPathState: androidx.compose.foundation.text.input.TextFieldState,
     projectPathError: String?,
-    projectLocationWarning: String?,
     projectPathFocused: Boolean,
     projectPathInteractionSource: MutableInteractionSource,
     onPathChanged: (String) -> Unit,
@@ -313,12 +299,6 @@ fun ProjectLocationField(
                 ValidationPopup(
                     message = projectPathError,
                     isWarning = false
-                )
-            }
-            if (projectLocationWarning != null && projectPathFocused) {
-                ValidationPopup(
-                    message = projectLocationWarning,
-                    isWarning = true
                 )
             }
         }
@@ -430,9 +410,7 @@ fun PlatformsSection(
                 Icon(
                     key = WizardIconKeys.Apple,
                     contentDescription = "iOS",
-                    modifier = Modifier
-                        .size(92.dp)
-                        .offset(y = (-8).dp),
+                    modifier = Modifier.size(46.dp),
                     tint = JewelTheme.globalColors.text.normal
                 )
             },
@@ -478,7 +456,6 @@ private fun PlatformItem(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .clickable(
                 indication = null,

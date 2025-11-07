@@ -26,6 +26,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Checkbox
@@ -65,13 +66,14 @@ fun WizardMainContent(
                 .fillMaxWidth()
                 .widthIn(min = 220.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
         ) {
             ProjectInfoSection(
                 state = state,
                 projectNameState = projectNameState,
                 projectNameFocused = projectNameFocused,
                 projectNameInteractionSource = projectNameInteractionSource,
+                projectLocationWarning = state.projectLocationWarning,
                 mainPanel = mainPanel
             )
 
@@ -149,6 +151,7 @@ private fun ProjectInfoSection(
     projectNameState: androidx.compose.foundation.text.input.TextFieldState,
     projectNameFocused: Boolean,
     projectNameInteractionSource: MutableInteractionSource,
+    projectLocationWarning: String?,
     mainPanel: ComposePanel
 ) {
     Row(
@@ -159,6 +162,7 @@ private fun ProjectInfoSection(
         ProjectNameField(
             projectNameState = projectNameState,
             projectNameError = state.projectNameError,
+            projectLocationWarning = projectLocationWarning,
             projectNameFocused = projectNameFocused,
             projectNameInteractionSource = projectNameInteractionSource,
             mainPanel = mainPanel,
@@ -219,7 +223,6 @@ private fun ProjectLocationSection(
             ProjectLocationField(
                 projectPathState = projectPathState,
                 projectPathError = state.projectPathError,
-                projectLocationWarning = state.projectLocationWarning,
                 projectPathFocused = projectPathFocused,
                 projectPathInteractionSource = projectPathInteractionSource,
                 onPathChanged = { },
@@ -252,7 +255,7 @@ private fun FooterSection(state: WizardState) {
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
     ) {
         Text(
             text = "v1.0.0",

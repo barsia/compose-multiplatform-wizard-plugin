@@ -41,6 +41,11 @@ class ComposeWizardStep(
     private val builder: ComposeMultiplatformModuleBuilder
 ) : ModuleWizardStep() {
 
+    init {
+        println("===== ComposeWizardStep: init() called =====")
+        println("===== Using Android Studio Module Wizard (ModuleWizardStep) =====")
+    }
+
     private var projectNameValue = WizardPathUtils.suggestUniqueName(WizardDefaults.PROJECT_NAME, WizardDefaults.getDefaultProjectPath())
 
     private var projectPathValue = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
@@ -151,12 +156,26 @@ class ComposeWizardStep(
     }
 
     private var createButton: JButton? = null
+    private var lastButtonState: Boolean? = null
 
     override fun _init() {
         super._init()
+        println("ComposeWizardStep: _init() called")
         SwingUtilities.invokeLater {
             updateButtonText()
-            updateButtonState(validate())
+            val isValid = validate()
+            println("ComposeWizardStep: _init() - validate returned $isValid")
+            updateButtonState(isValid)
+        }
+    }
+    
+    override fun updateStep() {
+        super.updateStep()
+        println("ComposeWizardStep: updateStep() called - re-validating")
+        SwingUtilities.invokeLater {
+            val isValid = validate()
+            println("ComposeWizardStep: updateStep() - validate returned $isValid")
+            updateButtonState(isValid)
         }
     }
 
@@ -180,10 +199,18 @@ class ComposeWizardStep(
     }
 
     private fun updateButtonState(enabled: Boolean) {
+        if (lastButtonState == false && enabled == true) {
+            println("===== WARNING: Button transitioning from DISABLED to ENABLED =====")
+            println("ComposeWizardStep: This might be the problem - button should stay disabled!")
+            Thread.dumpStack()
+        }
+        println("ComposeWizardStep: updateButtonState called with enabled=$enabled (lastState=$lastButtonState)")
+        lastButtonState = enabled
         SwingUtilities.invokeLater {
             if (createButton == null) {
                 updateButtonText()
             }
+            println("ComposeWizardStep: Setting createButton.isEnabled=$enabled, button=${createButton?.text}")
             createButton?.isEnabled = enabled
         }
     }
@@ -218,30 +245,38 @@ class ComposeWizardStep(
     }
 
     override fun validate(): Boolean {
+        println("ComposeWizardStep: validate() called")
         val nameError = WizardValidation.validateProjectName(projectNameValue)
+        println("ComposeWizardStep: nameError=$nameError")
         if (nameError != null) {
             return false
         }
         
         val pathError = WizardValidation.validateProjectPath(projectPathValue, WizardPathUtils::expandPath)
+        println("ComposeWizardStep: pathError=$pathError")
         if (pathError != null) {
             return false
         }
         
         val locationError = WizardValidation.validateProjectLocationBlocking(projectNameValue, projectPathValue, WizardPathUtils::expandPath)
+        println("ComposeWizardStep: locationError=$locationError")
         if (locationError != null) {
             return false
         }
         
         val projectIdValidation = builder.validateProjectId(projectIdValue)
+        println("ComposeWizardStep: projectIdValidation.isValid=${projectIdValidation.isValid}")
         if (!projectIdValidation.isValid) {
             return false
         }
         
-        if (!targetDesktop && !targetAndroid && !targetIOS && !targetWeb) {
+        val hasTargets = targetDesktop || targetAndroid || targetIOS || targetWeb
+        println("ComposeWizardStep: hasTargets=$hasTargets")
+        if (!hasTargets) {
             return false
         }
         
+        println("ComposeWizardStep: validate() returning true")
         return true
     }
 
