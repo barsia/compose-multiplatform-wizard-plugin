@@ -89,11 +89,34 @@ class ComposeWizardStep(
         val projectPathState = androidx.compose.foundation.text.input.rememberTextFieldState(projectPathValue)
         val projectIdState = androidx.compose.foundation.text.input.rememberTextFieldState(projectIdValue)
         
-        val cachedVersions = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance().getStableVersions()
-        val initialComposeVersion = cachedVersions?.firstOrNull() ?: composeVersionValue
-        
         val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
         val isInternalMode = com.intellij.openapi.application.ApplicationManager.getApplication().isInternal
+        
+        // Determine dev checkbox visibility and enableDevVersions FIRST
+        val devCheckboxVisible = isInternalMode || settings.devCheckboxVisibleByUser
+        val enableDevVersions = if (devCheckboxVisible && !settings.enableDevVersionsSetByUser) {
+            true
+        } else {
+            settings.enableDevVersions
+        }
+        
+        // Now get versions from the correct list based on enableDevVersions
+        val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+        val cachedVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
+        
+        // Use saved value if it exists in current list, otherwise use first from list OR empty if cache is empty (will load from GitHub)
+        val initialComposeVersion = if (composeVersionValue.isNotEmpty() && cachedVersions?.contains(composeVersionValue) == true) {
+            // Saved value exists in current list - use it
+            composeVersionValue
+        } else if (cachedVersions != null) {
+            // Cache has versions - use first from list (synced with dropdown)
+            cachedVersions.firstOrNull() ?: ""
+        } else {
+            // Cache is empty - wait for GitHub loading (don't use DEFAULT_VERSION yet)
+            ""
+        }
+        
+        println("DEBUG ComposeWizardStep: devCheckboxVisible=$devCheckboxVisible, enableDevVersions=$enableDevVersions, composeVersionValue='$composeVersionValue', cachedVersions=${cachedVersions?.take(3)}, initialComposeVersion='$initialComposeVersion'")
         
         val state = rememberWizardState().apply {
             projectName = projectNameValue
@@ -106,8 +129,8 @@ class ComposeWizardStep(
             web = targetWeb
             git = initGit
             tests = includeTests
-            enableDevVersions = settings.enableDevVersions
-            devCheckboxVisible = isInternalMode || settings.devCheckboxVisibleByUser
+            this.devCheckboxVisible = devCheckboxVisible
+            this.enableDevVersions = enableDevVersions
         }
         
         val projectNameInteractionSource = remember { MutableInteractionSource() }

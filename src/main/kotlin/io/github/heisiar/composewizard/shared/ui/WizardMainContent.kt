@@ -97,12 +97,18 @@ fun WizardMainContent(
                     ComposeVersionField(
                         cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
                         enableDevVersions = state.enableDevVersions,
-                        onVersionSelected = { state.composeVersion = it },
+                        selectedVersion = state.composeVersion,
+                        onVersionSelected = { 
+                            println("DEBUG WizardMainContent [Desktop]: onVersionSelected called with '$it', old value='${state.composeVersion}'")
+                            state.composeVersion = it 
+                            println("DEBUG WizardMainContent [Desktop]: state.composeVersion updated to '${state.composeVersion}'")
+                        },
                         onRefreshVersions = { },
                         modifier = Modifier.weight(0.4f),
                         devCheckboxVisible = state.devCheckboxVisible,
                         onDevVersionsToggle = { 
                             state.enableDevVersions = it
+                            io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersionsSetByUser = true
                             ComposeWizardUsageCollector.logDevVersionsToggled(it)
                         }
                     )
@@ -141,12 +147,14 @@ fun WizardMainContent(
                     ComposeVersionField(
                         cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
                         enableDevVersions = state.enableDevVersions,
+                        selectedVersion = state.composeVersion,
                         onVersionSelected = { state.composeVersion = it },
                         onRefreshVersions = { },
                         modifier = Modifier.weight(0.4f),
                         devCheckboxVisible = state.devCheckboxVisible,
                         onDevVersionsToggle = { 
                             state.enableDevVersions = it
+                            io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersionsSetByUser = true
                             ComposeWizardUsageCollector.logDevVersionsToggled(it)
                         }
                     )
@@ -194,10 +202,55 @@ fun WizardMainContent(
                 }
             }
             
-            LaunchedEffect(state.desktop, state.composeVersion, shouldShowHotReload) {
-                println("DEBUG Hot Reload: desktop=${state.desktop}, version=${state.composeVersion}, shouldShow=$shouldShowHotReload, hotReloadVersion=$hotReloadVersion")
+            val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+            var lifecycleVersion by remember { mutableStateOf("") }
+            var isResolvingLifecycle by remember { mutableStateOf(false) }
+            
+            LaunchedEffect(state.composeVersion) {
+                println("DEBUG UI: Subscribing to Lifecycle version updates for Compose ${state.composeVersion}")
+                
+                // Initial check: get cached value or trigger resolution
+                val cachedLifecycle = cache.getLifecycleVersion(state.composeVersion)
+                println("DEBUG UI: cachedLifecycle = '$cachedLifecycle' (null=${cachedLifecycle == null}, empty=${cachedLifecycle?.isEmpty()})")
+                
+                if (cachedLifecycle != null && cachedLifecycle.isNotEmpty()) {
+                    println("DEBUG UI: ✅ Initial Lifecycle value from cache: $cachedLifecycle")
+                    lifecycleVersion = cachedLifecycle
+                    isResolvingLifecycle = false
+                } else {
+                    println("DEBUG UI: ⏳ No cached Lifecycle, resolving...")
+                    lifecycleVersion = ""
+                    isResolvingLifecycle = true
+                }
+                
+                // Subscribe to Flow updates (reactive, no polling!)
+                cache.lifecycleVersionUpdates.collect { (version, lifecycle) ->
+                    println("DEBUG UI: Flow event received: version=$version, lifecycle='$lifecycle', current=${state.composeVersion}")
+                    if (version == state.composeVersion) {
+                        println("DEBUG UI: ✅ Received Lifecycle update: '$lifecycle' for Compose $version")
+                        lifecycleVersion = lifecycle
+                        isResolvingLifecycle = false
+                    } else {
+                        println("DEBUG UI: ⚠️ Ignoring Lifecycle update for different version: $version != ${state.composeVersion}")
+                    }
+                }
             }
             
+            LaunchedEffect(state.desktop, state.composeVersion, shouldShowHotReload) {
+                println("DEBUG Hot Reload: desktop=${state.desktop}, version=${state.composeVersion}, shouldShow=$shouldShowHotReload, hotReloadVersion=$hotReloadVersion")
+                println("DEBUG Lifecycle: compose=${state.composeVersion}, lifecycle=$lifecycleVersion")
+            }
+            
+            val isFallback = remember { cache.isUsingFallbackVersions() }
+            val isLifecycleFallback = remember(state.composeVersion, lifecycleVersion) {
+                if (lifecycleVersion.isNotEmpty()) {
+                    cache.isLifecycleFallback(state.composeVersion)
+                } else {
+                    false
+                }
+            }
+            
+            // Show OptionsSection (it will update reactively when state.composeVersion is set)
             OptionsSection(
                 git = state.git,
                 tests = state.tests,
@@ -211,8 +264,11 @@ fun WizardMainContent(
                 },
                 composeVersion = state.composeVersion,
                 kotlinVersion = io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_KOTLIN_VERSION,
-                lifecycleVersion = io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION,
-                hotReloadVersion = hotReloadVersion
+                lifecycleVersion = lifecycleVersion,
+                hotReloadVersion = hotReloadVersion,
+                isResolvingLifecycle = isResolvingLifecycle,
+                isFallback = isFallback,
+                isLifecycleFallback = isLifecycleFallback
             )
         }
 

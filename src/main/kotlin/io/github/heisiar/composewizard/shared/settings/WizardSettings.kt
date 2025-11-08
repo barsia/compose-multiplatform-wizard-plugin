@@ -11,8 +11,22 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 class WizardSettings : PersistentStateComponent<WizardSettings> {
     
     var enableDevVersions: Boolean = false
+    var enableDevVersionsSetByUser: Boolean = false  // Track if user explicitly changed this
     var devCheckboxVisibleByUser: Boolean = false
     var welcomeTooltipShown: Boolean = false
+    
+    /**
+     * Optional GitHub Personal Access Token (fine-grained) for higher API rate limits.
+     * 
+     * Without token: 60 requests/hour (shared across all apps)
+     * With token: 5000 requests/hour
+     * 
+     * Token permissions needed: public_repo (read-only)
+     * Create token at: https://github.com/settings/tokens?type=beta
+     * 
+     * Leave empty to use anonymous access.
+     */
+    var githubToken: String = ""
     
     override fun getState(): WizardSettings {
         return this

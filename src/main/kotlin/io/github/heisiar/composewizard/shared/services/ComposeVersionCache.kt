@@ -9,13 +9,19 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 data class ComposeVersionCacheState(
+    var cacheVersion: Int = 0, // Cache version for invalidation
     var stableVersions: List<String> = emptyList(),
     var stableLastLoadTime: Long = 0L,
     var devVersions: List<String> = emptyList(),
-    var devLastLoadTime: Long = 0L
+    var devLastLoadTime: Long = 0L,
+    // LinkedHashMap preserves insertion order for FIFO cleanup
+    var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf()
 )
 
 /**
@@ -58,6 +64,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private val logger = Logger.getInstance(ComposeVersionCache::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val versionService = ComposeVersionService()
+    private val libraryVersionService = ComposeLibraryVersionService()
     
     private var persistentState = ComposeVersionCacheState()
     
@@ -70,12 +77,28 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     @Volatile
     private var initialized = false
     
+    private val lifecycleResolvingVersions = mutableSetOf<String>()
+    
+    private val _lifecycleVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val lifecycleVersionUpdates = _lifecycleVersionUpdates.asSharedFlow()
+    
     companion object {
-        // Cache TTL: 12 hours (in milliseconds)
+        // Cache version - increment ONLY when cache DATA STRUCTURE changes (e.g., new fields in ComposeVersionCacheState)
+        // DO NOT increment for version updates - TTL and Refresh button handle that!
+        // Current version 2: LinkedHashMap for lifecycle versions (FIFO cleanup)
+        private const val CURRENT_CACHE_VERSION = 2
+        
+        // Cache TTL: 24 hours (in milliseconds)
         // Compose stable versions are released every 2-3 weeks
-        // 12 hours is optimal balance: fresh twice a day, minimal Maven load
-        // Users can manually refresh via UI button anytime
-        private const val CACHE_TTL_MS = 12 * 60 * 60 * 1000L
+        // Dev versions may be released multiple times per day
+        // Check for new versions once per day to minimize Maven load
+        private const val CACHE_TTL_MS = 24 * 60 * 60 * 1000L
+        
+        // Maximum number of versions to keep in cache (hardcoded + dynamic new versions)
+        private const val MAX_CACHED_VERSIONS = 20
+        
+        // Maximum number of lifecycle version entries (FIFO cleanup when exceeded)
+        private const val MAX_LIFECYCLE_CACHE_SIZE = 200
         
         fun getInstance(): ComposeVersionCache {
             return ApplicationManager.getApplication().getService(ComposeVersionCache::class.java)
@@ -103,6 +126,18 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         }
         
         initialized = true
+        
+        // Check cache version and invalidate if outdated
+        if (persistentState.cacheVersion != CURRENT_CACHE_VERSION) {
+            println("DEBUG ComposeVersionCache: Cache version mismatch (${persistentState.cacheVersion} != $CURRENT_CACHE_VERSION), invalidating old cache")
+            persistentState.cacheVersion = CURRENT_CACHE_VERSION
+            persistentState.lifecycleVersions.clear()
+            persistentState.stableVersions = emptyList()
+            persistentState.devVersions = emptyList()
+            persistentState.stableLastLoadTime = 0L
+            persistentState.devLastLoadTime = 0L
+        }
+        
         println("DEBUG ComposeVersionCache: Initializing after state load, cached stable: ${persistentState.stableVersions.take(3)}")
         
         if (isStableCacheExpired()) {
@@ -116,8 +151,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     /**
      * Get cached stable versions (non-blocking).
+     * 
+     * Logic:
+     * 1. If cache exists → return cache
+     * 2. If no cache → return null (loading), trigger fetch
+     * 3. If fetch fails → fallback to hardcoded (handled in loadStableVersionsInBackground)
+     * 
      * Returns null if loading not yet completed.
-     * Returns cached versions (or fallback) if loading completed.
+     * Returns cached versions (or hardcoded fallback) if loading completed.
      * Automatically refreshes cache in background if TTL expired.
      */
     fun getStableVersions(): List<String>? {
@@ -126,15 +167,33 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             initializeCache()
         }
         
-        val versions = if (persistentState.stableVersions.isEmpty()) null else persistentState.stableVersions
-        println("DEBUG ComposeVersionCache.getStableVersions(): returning ${versions?.take(3)}, isLoading=$isLoadingStable")
+        // Check if cache is valid and not expired
+        if (persistentState.stableVersions.isNotEmpty() && !isStableCacheExpired()) {
+            // Always sort cached versions to fix old incorrectly sorted caches
+            val sorted = persistentState.stableVersions
+                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            println("DEBUG ComposeVersionCache.getStableVersions(): returning cached (sorted) ${sorted.take(3)}")
+            return sorted
+        }
         
-        if (!isLoadingStable && isStableCacheExpired()) {
-            logger.info("Stable cache expired (TTL: ${CACHE_TTL_MS}ms), refreshing in background")
-            println("DEBUG ComposeVersionCache: Starting stable version load because cache expired")
+        // No cache or expired → trigger loading (if not already loading)
+        if (!isLoadingStable) {
+            logger.info("Stable cache missing or expired, triggering background load")
+            println("DEBUG ComposeVersionCache: Starting stable version load (cache missing or expired)")
             loadStableVersionsInBackground()
         }
-        return versions
+        
+        // While loading → return null (UI will show loading indicator)
+        if (isLoadingStable) {
+            println("DEBUG ComposeVersionCache.getStableVersions(): loading in progress, returning null")
+            return null
+        }
+        
+        // Loading completed → return result (either from Maven or hardcoded fallback), sorted
+        val versions = persistentState.stableVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS_HARDCODED }
+        val sorted = versions.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+        println("DEBUG ComposeVersionCache.getStableVersions(): loading completed, returning (sorted) ${sorted.take(3)}")
+        return sorted
     }
     
     /**
@@ -164,10 +223,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
      */
     private fun isStableCacheExpired(): Boolean {
         if (persistentState.stableLastLoadTime == 0L || persistentState.stableVersions.isEmpty()) {
+            println("DEBUG isStableCacheExpired: Cache empty or never loaded, expired=true")
             return true
         }
-        val age = System.currentTimeMillis() - persistentState.stableLastLoadTime
-        return age > CACHE_TTL_MS
+        val currentTime = System.currentTimeMillis()
+        val age = currentTime - persistentState.stableLastLoadTime
+        val expired = age > CACHE_TTL_MS
+        println("DEBUG isStableCacheExpired: currentTime=$currentTime, lastLoad=${persistentState.stableLastLoadTime}, age=$age ms (${age / 1000 / 60 / 60} hours), TTL=${CACHE_TTL_MS} ms (24 hours), expired=$expired")
+        return expired
     }
     
     /**
@@ -290,6 +353,27 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     /**
+     * Check if using hardcoded fallback versions (no successful fetch from Maven yet).
+     * Returns true if stable versions are empty or haven't been loaded from Maven.
+     */
+    fun isUsingFallbackVersions(): Boolean {
+        // If never loaded from Maven (initial state with empty cache)
+        if (persistentState.stableLastLoadTime == 0L) {
+            return true
+        }
+        
+        // If cache is empty after failed load
+        if (persistentState.stableVersions.isEmpty()) {
+            return true
+        }
+        
+        // If all cached versions are from hardcoded list (no new versions from Maven)
+        val hardcoded = ComposeVersions.STABLE_VERSIONS_HARDCODED.toSet()
+        val cached = persistentState.stableVersions.toSet()
+        return cached.all { it in hardcoded }
+    }
+    
+    /**
      * Manually invalidate stable cache (reset TTL).
      * Next call to getStableVersions() will trigger background refresh.
      * Non-blocking - doesn't reload immediately.
@@ -351,17 +435,37 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                val versions = versionService.fetchAvailableVersions(includeDevVersions = false)
+                val versionsFromMaven = versionService.fetchAvailableVersions(includeDevVersions = false)
                 
                 if (!isActive) {
                     logger.info("Coroutine cancelled after loading stable versions")
                     return@launch
                 }
                 
-                persistentState.stableVersions = versions
+                // Incremental update: add only NEW versions to hardcoded baseline
+                val hardcoded = ComposeVersions.STABLE_VERSIONS_HARDCODED
+                val newVersions = versionsFromMaven.filterNot { it in hardcoded }
+                
+                // Combine without sorting - sorting happens on read (getStableVersions)
+                println("DEBUG ComposeVersionCache: Before combining - newVersions (${newVersions.size}): ${newVersions.take(5)}")
+                println("DEBUG ComposeVersionCache: Before combining - hardcoded (${hardcoded.size}): ${hardcoded.take(5)}")
+                
+                val combined = (newVersions + hardcoded).take(MAX_CACHED_VERSIONS)
+                
+                println("DEBUG ComposeVersionCache: After combining - combined (${combined.size}): ${combined.take(10)}")
+                
+                persistentState.stableVersions = combined
                 persistentState.stableLastLoadTime = System.currentTimeMillis()
-                println("DEBUG ComposeVersionCache: Successfully loaded ${versions.size} stable versions from Maven: ${versions.take(5).joinToString(", ")}")
-                logger.info("Successfully loaded ${versions.size} stable Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
+                
+                if (newVersions.isNotEmpty()) {
+                    println("DEBUG ComposeVersionCache: Found ${newVersions.size} NEW stable versions: ${newVersions.joinToString(", ")}")
+                    logger.info("Found ${newVersions.size} new stable versions: ${newVersions.joinToString(", ")}")
+                } else {
+                    println("DEBUG ComposeVersionCache: No new versions, using ${hardcoded.count()} hardcoded versions")
+                }
+                
+                println("DEBUG ComposeVersionCache: Total ${combined.size} stable versions cached (TTL: 24h)")
+                logger.info("Cached ${combined.size} stable Compose versions (${newVersions.size} new + ${hardcoded.count()} hardcoded, limited to ${MAX_CACHED_VERSIONS})")
             } catch (e: CancellationException) {
                 logger.info("Stable version loading cancelled due to plugin unload")
                 throw e
@@ -394,16 +498,32 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                val versions = versionService.fetchAvailableVersions(includeDevVersions = true)
+                val versionsFromMaven = versionService.fetchAvailableVersions(includeDevVersions = true)
                 
                 if (!isActive) {
                     logger.info("Coroutine cancelled after loading dev versions")
                     return@launch
                 }
                 
-                persistentState.devVersions = versions
+                // Incremental update: add only NEW dev versions to existing cache
+                val existingDevVersions = persistentState.devVersions
+                val newDevVersions = versionsFromMaven.filterNot { it in existingDevVersions }
+                
+                // Combine: new versions first, then existing, limited to MAX
+                val combined = (newDevVersions + existingDevVersions).take(MAX_CACHED_VERSIONS)
+                
+                persistentState.devVersions = combined
                 persistentState.devLastLoadTime = System.currentTimeMillis()
-                logger.info("Successfully loaded ${versions.size} dev Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
+                
+                if (newDevVersions.isNotEmpty()) {
+                    println("DEBUG ComposeVersionCache: Found ${newDevVersions.size} NEW dev versions: ${newDevVersions.take(3).joinToString(", ")}")
+                    logger.info("Found ${newDevVersions.size} new dev versions: ${newDevVersions.take(3).joinToString(", ")}")
+                } else {
+                    println("DEBUG ComposeVersionCache: No new dev versions, keeping ${existingDevVersions.size} existing")
+                }
+                
+                println("DEBUG ComposeVersionCache: Total ${combined.size} dev versions cached (TTL: 24h)")
+                logger.info("Cached ${combined.size} dev Compose versions (${newDevVersions.size} new + ${existingDevVersions.size} existing, limited to ${MAX_CACHED_VERSIONS})")
             } catch (e: CancellationException) {
                 logger.info("Dev version loading cancelled due to plugin unload")
                 throw e
@@ -415,6 +535,182 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                 persistentState.devLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingDev = false
+            }
+        }
+    }
+    
+    /**
+     * Get Lifecycle version for given Compose version.
+     * Returns cached value if available, triggers background resolution if not.
+     * Returns null while resolving (to show loading indicator in UI).
+     * Empty string in cache means "not found" - treated as null.
+     */
+    fun getLifecycleVersion(composeVersion: String): String? {
+        if (!initialized) {
+            initializeCache()
+        }
+        
+        val cached = persistentState.lifecycleVersions[composeVersion]
+        println("DEBUG getLifecycleVersion: composeVersion=$composeVersion, cached='$cached' (null=${cached == null}, empty=${cached?.isEmpty()})")
+        
+        // Empty string in cache means "not found" - don't return it, treat as null
+        if (cached != null && cached.isNotEmpty()) {
+            println("DEBUG getLifecycleVersion: Returning cached value: $cached")
+            return cached
+        }
+        
+        // Trigger background resolution if not already resolving
+        if (!isResolvingLifecycle(composeVersion)) {
+            println("DEBUG getLifecycleVersion: Starting background resolution for $composeVersion")
+            resolveLifecycleVersionInBackground(composeVersion)
+        } else {
+            println("DEBUG getLifecycleVersion: Already resolving $composeVersion")
+        }
+        
+        // Return null while resolving (UI should show loading indicator)
+        return null
+    }
+    
+    /**
+     * Check if Lifecycle version is currently being resolved for given Compose version.
+     */
+    fun isResolvingLifecycle(composeVersion: String): Boolean {
+        return synchronized(lifecycleResolvingVersions) {
+            lifecycleResolvingVersions.contains(composeVersion)
+        }
+    }
+    
+    /**
+     * Check if Lifecycle version for given Compose version is from fallback (bundle).
+     * Returns true if version is from predefined bundle, false if from GitHub API.
+     */
+    fun isLifecycleFallback(composeVersion: String): Boolean {
+        val cached = persistentState.lifecycleVersions[composeVersion]
+        if (cached.isNullOrEmpty()) {
+            return false
+        }
+        
+        // Check if version matches predefined bundle
+        val baseVersion = composeVersion.substringBefore("+dev")
+        val bundle = ComposeVersions.getLibraryBundle(baseVersion)
+        
+        return bundle?.lifecycleVersion == cached
+    }
+    
+    /**
+     * Add lifecycle version to cache with FIFO cleanup.
+     * If cache exceeds MAX_LIFECYCLE_CACHE_SIZE, removes oldest entries.
+     */
+    private fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String) {
+        synchronized(persistentState.lifecycleVersions) {
+            // Add new entry
+            persistentState.lifecycleVersions[composeVersion] = lifecycleVersion
+            
+            // FIFO cleanup: remove oldest entries if exceeds limit
+            while (persistentState.lifecycleVersions.size > MAX_LIFECYCLE_CACHE_SIZE) {
+                val oldestKey = persistentState.lifecycleVersions.keys.first()
+                persistentState.lifecycleVersions.remove(oldestKey)
+                println("DEBUG: Removed oldest lifecycle cache entry: $oldestKey (FIFO cleanup)")
+            }
+            
+            println("DEBUG: Cached lifecycle: $composeVersion → $lifecycleVersion (cache size: ${persistentState.lifecycleVersions.size}/$MAX_LIFECYCLE_CACHE_SIZE)")
+        }
+    }
+    
+    private fun resolveLifecycleVersionInBackground(composeVersion: String) {
+        synchronized(lifecycleResolvingVersions) {
+            if (lifecycleResolvingVersions.contains(composeVersion)) {
+                println("DEBUG: Already resolving Lifecycle for Compose $composeVersion")
+                return
+            }
+            lifecycleResolvingVersions.add(composeVersion)
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG: Resolving Lifecycle version for Compose $composeVersion in background")
+                
+                // Step 1: Direct GitHub Web UI request for full version
+                var lifecycleVersion = libraryVersionService.fetchLifecycleFromWebUI(composeVersion)
+                
+                if (lifecycleVersion != null) {
+                    println("DEBUG: ✅ Found lifecycle in GitHub for $composeVersion: $lifecycleVersion")
+                    cacheLifecycleVersion(composeVersion, lifecycleVersion)
+                    _lifecycleVersionUpdates.emit(composeVersion to lifecycleVersion)
+                    return@launch
+                }
+                
+                // Step 1.5: Fast-path for +dev versions
+                val baseVersion = composeVersion.substringBefore("+dev")
+                if (baseVersion != composeVersion) {
+                    println("DEBUG: Dev version detected, trying base version: $baseVersion")
+                    
+                    // Try GitHub for base version first (priority for freshness!)
+                    val baseLifecycle = libraryVersionService.fetchLifecycleFromWebUI(baseVersion)
+                    if (baseLifecycle != null) {
+                        println("DEBUG: ✅ Found base in GitHub: $baseVersion → $baseLifecycle")
+                        cacheLifecycleVersion(composeVersion, baseLifecycle)
+                        _lifecycleVersionUpdates.emit(composeVersion to baseLifecycle)
+                        return@launch
+                    }
+                    
+                    // If GitHub didn't respond - Bundle for base version (quick fallback)
+                    val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
+                    if (baseBundle?.lifecycleVersion != null) {
+                        println("DEBUG: 📦 Found base in Bundle (network fallback): $baseVersion → ${baseBundle.lifecycleVersion}")
+                        cacheLifecycleVersion(composeVersion, baseBundle.lifecycleVersion)
+                        _lifecycleVersionUpdates.emit(composeVersion to baseBundle.lifecycleVersion)
+                        return@launch
+                    }
+                }
+                
+                // Step 2: Fallback chain (Bundle → GitHub for each fallback version)
+                println("DEBUG: Lifecycle not found for $composeVersion, trying fallback chain")
+                val fallbackVersions = libraryVersionService.generateFallbackVersions(baseVersion)
+                var isRateLimited = false
+                
+                for ((index, fallbackVersion) in fallbackVersions.withIndex()) {
+                    println("DEBUG: Fallback [$index/${fallbackVersions.size}]: $fallbackVersion")
+                    
+                    // 2.1: Check Bundle first (fast, no network)
+                    val bundle = ComposeVersions.getLibraryBundle(fallbackVersion)
+                    if (bundle?.lifecycleVersion != null) {
+                        println("DEBUG: 📦 Found in Bundle: $fallbackVersion → ${bundle.lifecycleVersion}")
+                        cacheLifecycleVersion(composeVersion, bundle.lifecycleVersion)  // Cache for REQUESTED version!
+                        _lifecycleVersionUpdates.emit(composeVersion to bundle.lifecycleVersion)
+                        return@launch
+                    }
+                    
+                    // 2.2: Bundle not found → GitHub Web UI (if not rate limited)
+                    if (!isRateLimited) {
+                        delay(150) // Small delay between requests
+                        val result = libraryVersionService.fetchLifecycleFromWebUIWithStatus(fallbackVersion)
+                        
+                        if (result.isRateLimited) {
+                            isRateLimited = true
+                            println("DEBUG: ⚠️ Rate limited, switching to Bundle-only mode")
+                        } else if (result.lifecycle != null) {
+                            println("DEBUG: ✅ Found in GitHub: $fallbackVersion → ${result.lifecycle}")
+                            cacheLifecycleVersion(composeVersion, result.lifecycle)  // Cache for REQUESTED version!
+                            _lifecycleVersionUpdates.emit(composeVersion to result.lifecycle)
+                            return@launch
+                        }
+                    }
+                }
+                
+                // Step 3: Nothing found → use default fallback
+                println("DEBUG: ⚠️ Lifecycle not found, using default fallback: ${ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION}")
+                cacheLifecycleVersion(composeVersion, ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+                _lifecycleVersionUpdates.emit(composeVersion to ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+                
+            } catch (e: Exception) {
+                logger.warn("Failed to resolve Lifecycle version for Compose $composeVersion: ${e.message}")
+                cacheLifecycleVersion(composeVersion, ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+                _lifecycleVersionUpdates.emit(composeVersion to ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+            } finally {
+                synchronized(lifecycleResolvingVersions) {
+                    lifecycleResolvingVersions.remove(composeVersion)
+                }
             }
         }
     }

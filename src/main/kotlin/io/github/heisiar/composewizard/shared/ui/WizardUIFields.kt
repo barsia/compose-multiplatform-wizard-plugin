@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -143,6 +144,7 @@ fun ProjectNameField(
 fun ComposeVersionField(
     cache: io.github.heisiar.composewizard.shared.services.ComposeVersionCache,
     enableDevVersions: Boolean,
+    selectedVersion: String,
     onVersionSelected: (String) -> Unit,
     onRefreshVersions: () -> Unit,
     modifier: Modifier = Modifier,
@@ -176,17 +178,53 @@ fun ComposeVersionField(
         }
 
         val initialVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
-        val initialVersion = initialVersions?.firstOrNull() ?: ""
         val initialLoadingState = if (enableDevVersions) cache.isLoadingDevVersions() else cache.isLoadingStableVersions()
 
         var availableVersions by remember(enableDevVersions) { mutableStateOf(initialVersions) }
-        var selectedVersion by remember(enableDevVersions) { mutableStateOf(initialVersion) }
-        var isLoading by remember(enableDevVersions) { mutableStateOf(initialVersions == null || initialLoadingState) }
+        var isFirstRender by remember(enableDevVersions) { mutableStateOf(true) }
+        var currentSelectedVersion by remember(enableDevVersions) { 
+            val initialSelection = if (selectedVersion.isEmpty() || initialVersions?.contains(selectedVersion) == false) {
+                // No selection OR selectedVersion not in current list (e.g., switched dev↔stable) - use first from list
+                initialVersions?.firstOrNull() ?: ""
+            } else {
+                // selectedVersion exists in current list - keep it
+                selectedVersion
+            }
+            println("DEBUG ComposeVersionField: Initializing with enableDev=$enableDevVersions, selectedVersion='$selectedVersion', inList=${initialVersions?.contains(selectedVersion)}, initialSelection='$initialSelection'")
+            mutableStateOf(initialSelection)
+        }
+        // Show loading ONLY if no cached versions (background refresh shouldn't block UI)
+        var isLoading by remember(enableDevVersions) { mutableStateOf(initialVersions == null) }
         var minLoadingTimeElapsed by remember(enableDevVersions) { mutableStateOf(initialVersions != null) }
 
+        // Sync currentSelectedVersion with external selectedVersion
         LaunchedEffect(selectedVersion) {
-            if (selectedVersion.isNotEmpty()) {
-                onVersionSelected(selectedVersion)
+            if (selectedVersion.isNotEmpty() && selectedVersion != currentSelectedVersion) {
+                println("DEBUG ComposeVersionField: Syncing selectedVersion: '$currentSelectedVersion' -> '$selectedVersion'")
+                currentSelectedVersion = selectedVersion
+            }
+        }
+
+        LaunchedEffect(currentSelectedVersion) {
+            println("DEBUG ComposeVersionField: LaunchedEffect triggered - isFirstRender=$isFirstRender, currentSelectedVersion='$currentSelectedVersion', selectedVersion='$selectedVersion'")
+            
+            // On first render: notify parent if we auto-selected from dropdown (different from selectedVersion)
+            if (isFirstRender) {
+                isFirstRender = false
+                if (currentSelectedVersion.isNotEmpty() && currentSelectedVersion != selectedVersion) {
+                    println("DEBUG ComposeVersionField: ✅ First render with auto-selection from dropdown: '$currentSelectedVersion' (was: '$selectedVersion')")
+                    onVersionSelected(currentSelectedVersion)
+                } else {
+                    println("DEBUG ComposeVersionField: First render with matching selectedVersion='$selectedVersion', skipping notification")
+                }
+                return@LaunchedEffect
+            }
+            
+            if (currentSelectedVersion.isNotEmpty() && currentSelectedVersion != selectedVersion) {
+                println("DEBUG ComposeVersionField: ✅ Notifying parent about selection change: '$selectedVersion' -> '$currentSelectedVersion'")
+                onVersionSelected(currentSelectedVersion)
+            } else {
+                println("DEBUG ComposeVersionField: ❌ NOT notifying parent - condition not met (empty=${currentSelectedVersion.isEmpty()}, equal=${currentSelectedVersion == selectedVersion})")
             }
         }
 
@@ -227,8 +265,13 @@ fun ComposeVersionField(
                     if (minLoadingTimeElapsed) {
                         println("DEBUG: Loading complete and min time elapsed, updating UI with ${newVersions.take(3)}")
                         availableVersions = newVersions
-                        if (selectedVersion.isEmpty()) {
-                            selectedVersion = newVersions.firstOrNull() ?: ""
+                        // Reset selection if current version not in new list (e.g., loaded from empty cache with DEFAULT_VERSION)
+                        if (currentSelectedVersion.isNotEmpty() && !newVersions.contains(currentSelectedVersion)) {
+                            println("DEBUG: Current selection '$currentSelectedVersion' not in new list, resetting to first: ${newVersions.firstOrNull()}")
+                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
+                        } else if (currentSelectedVersion.isEmpty() && selectedVersion.isEmpty()) {
+                            // Only set selection if both are empty (initial state)
+                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
                         }
                         isLoading = false
                         break
@@ -252,9 +295,12 @@ fun ComposeVersionField(
                 val items = if (isLoading && availableVersions == null) {
                     listOf("")
                 } else {
-                    availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS
+                    println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
+                    val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS
+                    println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
+                    versions
                 }
-                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
+                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
                 
                 val defaultStyle = JewelTheme.comboBoxStyle
                 val transparentStyle = remember(defaultStyle) {
@@ -304,7 +350,9 @@ fun ComposeVersionField(
                             onSelectedItemChange = { index ->
                                 availableVersions?.let { versions ->
                                     if (versions.isNotEmpty() && index in versions.indices) {
-                                        selectedVersion = versions[index]
+                                        val newSelection = versions[index]
+                                        println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
+                                        currentSelectedVersion = newSelection
                                     }
                                 }
                             },
@@ -328,7 +376,9 @@ fun ComposeVersionField(
                         onSelectedItemChange = { index ->
                             availableVersions?.let { versions ->
                                 if (versions.isNotEmpty() && index in versions.indices) {
-                                    selectedVersion = versions[index]
+                                    val newSelection = versions[index]
+                                    println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
+                                    currentSelectedVersion = newSelection
                                 }
                             }
                         },
@@ -631,7 +681,10 @@ fun OptionsSection(
     composeVersion: String = "",
     kotlinVersion: String = "",
     lifecycleVersion: String = "",
-    hotReloadVersion: String = ""
+    hotReloadVersion: String = "",
+    isResolvingLifecycle: Boolean = false,
+    isFallback: Boolean = false,
+    isLifecycleFallback: Boolean = false
 ) {
     Column(
         modifier = modifier,
@@ -649,88 +702,126 @@ fun OptionsSection(
             label = "Add sample tests"
         )
         
-        if (composeVersion.isNotEmpty() && kotlinVersion.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Show versions section (with reduced opacity while loading)
+        val versionsReady = composeVersion.isNotEmpty() && kotlinVersion.isNotEmpty()
+        androidx.compose.foundation.text.selection.SelectionContainer {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(if (versionsReady) 1f else 0.3f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Title with fallback indicator
+                val titleText = if (isFallback) {
+                    "Versions will be used: 📦 (offline fallback)"
+                } else {
+                    "Versions will be used:"
+                }
                 Text(
-                    text = "Versions will be used:",
+                    text = titleText,
                     style = JewelTheme.defaultTextStyle,
                     color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f)
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Layout: label + version (for easy triple-click copy)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "• Kotlin:",
-                        style = JewelTheme.defaultTextStyle,
-                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = kotlinVersion,
-                        style = JewelTheme.defaultTextStyle,
-                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                        fontSize = 13.sp
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "• Compose Multiplatform:",
-                        style = JewelTheme.defaultTextStyle,
-                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = composeVersion,
-                        style = JewelTheme.defaultTextStyle,
-                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                        fontSize = 13.sp
-                    )
-                }
-                if (lifecycleVersion.isNotEmpty()) {
+                    // Kotlin version
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "• AndroidX Lifecycle:",
+                            text = "Kotlin:",
                             style = JewelTheme.defaultTextStyle,
                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
                             fontSize = 13.sp
                         )
                         Text(
-                            text = lifecycleVersion,
+                            text = kotlinVersion,
                             style = JewelTheme.defaultTextStyle,
                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
                             fontSize = 13.sp
                         )
                     }
-                }
-                if (hotReloadVersion.isNotEmpty()) {
+                    
+                    // Compose Multiplatform version
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "• Compose Hot Reload:",
+                            text = "Compose Multiplatform:",
                             style = JewelTheme.defaultTextStyle,
                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
                             fontSize = 13.sp
                         )
                         Text(
-                            text = hotReloadVersion,
+                            text = composeVersion,
                             style = JewelTheme.defaultTextStyle,
                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
                             fontSize = 13.sp
                         )
+                    }
+                    
+                    // AndroidX Lifecycle version
+                    if (isResolvingLifecycle || lifecycleVersion.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "AndroidX Lifecycle:",
+                                style = JewelTheme.defaultTextStyle,
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                fontSize = 13.sp
+                            )
+                            val lifecycleDisplayText = if (isResolvingLifecycle) {
+                                "resolving..."
+                            } else if (isLifecycleFallback) {
+                                "$lifecycleVersion 📦"
+                            } else {
+                                lifecycleVersion
+                            }
+                            Text(
+                                text = lifecycleDisplayText,
+                                style = JewelTheme.defaultTextStyle,
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                fontSize = 13.sp,
+                                fontStyle = if (isResolvingLifecycle) {
+                                    androidx.compose.ui.text.font.FontStyle.Italic
+                                } else {
+                                    androidx.compose.ui.text.font.FontStyle.Normal
+                                }
+                            )
+                        }
+                    }
+                    
+                    // Compose Hot Reload version
+                    if (hotReloadVersion.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Compose Hot Reload:",
+                                style = JewelTheme.defaultTextStyle,
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = hotReloadVersion,
+                                style = JewelTheme.defaultTextStyle,
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }

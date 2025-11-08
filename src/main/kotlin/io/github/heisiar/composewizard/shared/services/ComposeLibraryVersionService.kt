@@ -1,314 +1,172 @@
 package io.github.heisiar.composewizard.shared.services
 
 import com.intellij.openapi.diagnostic.Logger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import io.github.heisiar.composewizard.shared.ComposeVersions
 import java.net.HttpURLConnection
-import java.net.URL
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Service for fetching library versions for Compose Multiplatform from GitHub.
+ * Service for fetching Lifecycle versions from GitHub Web UI.
  * 
- * Strategy:
- * - For release versions: Git Tag → Release Notes (optional) → Previous stable release (fallback)
- * - For dev versions: Git Tag → Previous stable release (fallback)
- * 
- * Cache is permanent since git tags are immutable.
+ * Uses HTML scraping from compose-multiplatform-core release pages
+ * because this repository doesn't provide GitHub Releases API access.
  */
 class ComposeLibraryVersionService {
     
     private val logger = Logger.getInstance(ComposeLibraryVersionService::class.java)
     
     companion object {
-        private const val GITHUB_API = "https://api.github.com/repos/JetBrains/compose-multiplatform"
+        // compose-multiplatform-core Web UI URL for tags
+        private const val CORE_TAG_WEB_URL = "https://github.com/JetBrains/compose-multiplatform-core/releases/tag"
+        private const val TIMEOUT_MS = 5000
+        private const val MAX_FALLBACK_VERSIONS = 20  // Limit fallback depth
+        
+        // Captures full version including qualifiers (alpha, beta, rc) and dev suffix
+        // Examples: 2.10.0-alpha04+dev3224, 2.9.5, 2.10.0-beta01
+        private val LIFECYCLE_PATTERN = Regex("""lifecycle-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
     }
     
-    private val cache = ConcurrentHashMap<String, Map<String, String>>()
+    data class FetchResult(
+        val lifecycle: String? = null,
+        val isRateLimited: Boolean = false
+    )
     
     /**
-     * Fetch library versions for a specific Compose Multiplatform version.
-     * Returns a map of library identifiers to their versions.
+     * Fetch lifecycle version from GitHub Web UI for given Compose version.
+     * Returns null if not found or error occurred.
      */
-    suspend fun fetchLibraryVersions(composeVersion: String): Map<String, String> = withContext(Dispatchers.IO) {
-        cache[composeVersion]?.let {
-            logger.info("Using cached versions for $composeVersion")
-            return@withContext it
-        }
-        
-        try {
-            val isDevVersion = composeVersion.contains("+dev")
+    fun fetchLifecycleFromWebUI(composeVersion: String): String? {
+        return fetchLifecycleFromWebUIWithStatus(composeVersion).lifecycle
+    }
+    
+    /**
+     * Fetch lifecycle version from GitHub Web UI with rate limit status.
+     * Returns FetchResult with lifecycle (if found) and rate limit flag.
+     */
+    fun fetchLifecycleFromWebUIWithStatus(composeVersion: String): FetchResult {
+        return try {
+            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
+            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
             
-            val versions = if (isDevVersion) {
-                fetchVersionsForDevBuild(composeVersion)
+            println("DEBUG: 🌐 Fetching lifecycle from GitHub Web UI: $composeVersion")
+            println("DEBUG: URL: $url")
+            
+            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = TIMEOUT_MS
+            connection.readTimeout = TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
+            
+            val responseCode = connection.responseCode
+            println("DEBUG: Response code: $responseCode")
+            
+            if (responseCode == 403 || responseCode == 429) {
+                println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
+                return FetchResult(lifecycle = null, isRateLimited = true)
+            }
+            
+            if (responseCode != 200) {
+                println("DEBUG: ❌ Not found or error (code: $responseCode)")
+                return FetchResult(lifecycle = null, isRateLimited = false)
+            }
+            
+            val html = connection.inputStream.bufferedReader().use { it.readText() }
+            
+            // Parse lifecycle version from HTML
+            val match = LIFECYCLE_PATTERN.find(html)
+            val lifecycleVersion = match?.groups?.get(1)?.value
+            
+            if (lifecycleVersion != null) {
+                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion")
             } else {
-                fetchVersionsForRelease(composeVersion)
+                println("DEBUG: ❌ Lifecycle pattern not found in HTML")
             }
             
-            cache[composeVersion] = versions
-            versions
+            FetchResult(lifecycle = lifecycleVersion, isRateLimited = false)
         } catch (e: Exception) {
-            logger.warn("Failed to fetch library versions for $composeVersion: ${e.message}")
-            mapOf("compose-multiplatform" to composeVersion)
+            logger.info("Failed to fetch lifecycle from Web UI for $composeVersion: ${e.message}")
+            FetchResult(lifecycle = null, isRateLimited = false)
         }
     }
     
-    private suspend fun fetchVersionsForRelease(composeVersion: String): Map<String, String> {
-        val versions = mutableMapOf<String, String>()
+    /**
+     * Generate fallback versions for given base Compose version.
+     * 
+     * For "1.10.0-beta02" generates:
+     * - 1.10.0-beta01
+     * - 1.10.0-alpha08, alpha07, ..., alpha01
+     * - 1.9.3, 1.9.2, 1.9.1, ...
+     * - 1.8.0, 1.7.1, ...
+     */
+    fun generateFallbackVersions(baseVersion: String): List<String> {
+        val versions = mutableListOf<String>()
         
-        // 1. ALWAYS get tag (created immediately with release)
-        try {
-            val tagVersions = fetchFromTagMessage("v$composeVersion", composeVersion)
-            versions.putAll(tagVersions)
-            logger.info("Got ${tagVersions.size} versions from tag for $composeVersion")
-        } catch (e: Exception) {
-            logger.warn("Tag not found for $composeVersion: ${e.message}")
-        }
+        // Start with known Bundle versions (fast checks first!)
+        versions.addAll(ComposeVersions.LIBRARY_BUNDLES.keys)
         
-        // 2. Supplement from Release Notes (if already published)
-        try {
-            val releaseVersions = fetchFromRelease("v$composeVersion", composeVersion)
-            // Add only missing ones (tag has priority)
-            releaseVersions.forEach { (key, value) ->
-                if (key !in versions) {
-                    versions[key] = value
-                }
-            }
-            logger.info("Supplemented with Release Notes for $composeVersion")
-        } catch (e: Exception) {
-            logger.info("Release Notes not yet published for $composeVersion (normal for fresh releases)")
-        }
+        val parts = baseVersion.split(".")
         
-        // 3. Fallback: supplement missing from previous stable release
-        if (versions.size < 3) {
-            logger.info("Insufficient data (${versions.size} libraries), fetching from previous stable release")
-            val baseVersions = fetchFromPreviousStableRelease(composeVersion)
-            return baseVersions + versions
-        }
+        if (parts.size < 3) return versions.distinct().take(MAX_FALLBACK_VERSIONS)
         
-        return versions
-    }
-    
-    private suspend fun fetchVersionsForDevBuild(composeVersion: String): Map<String, String> {
-        val versions = mutableMapOf<String, String>()
+        val major = parts[0].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
+        val minor = parts[1].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
+        val patchWithQualifier = parts[2]
         
-        // 1. ALWAYS get tag (only source for dev)
-        try {
-            val tagVersions = fetchFromTagMessage("v$composeVersion", composeVersion)
-            versions.putAll(tagVersions)
-            logger.info("Got ${tagVersions.size} versions from dev tag for $composeVersion")
-        } catch (e: Exception) {
-            logger.warn("Dev tag not found for $composeVersion: ${e.message}")
-            throw e
-        }
+        // Extract patch number and qualifier (e.g., "0-beta02" → patch=0, qualifier="beta02")
+        val patchParts = patchWithQualifier.split("-")
+        val patch = patchParts[0].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
+        val qualifier = if (patchParts.size > 1) patchParts[1] else ""
         
-        // 2. Supplement missing from previous stable release
-        if (versions.size < 3) {
-            logger.info("Dev build has only ${versions.size} libraries, fetching base from stable release")
-            val baseVersion = extractBaseVersion(composeVersion)
-            val baseVersions = fetchFromPreviousStableRelease(baseVersion)
-            return baseVersions + versions
-        }
-        
-        return versions
-    }
-    
-    private suspend fun fetchFromPreviousStableRelease(targetVersion: String): Map<String, String> {
-        val (major, minor) = parseVersion(targetVersion)
-        
-        val releasesUrl = "$GITHUB_API/releases?per_page=50"
-        val connection = java.net.URI(releasesUrl).toURL().openConnection() as HttpURLConnection
-        connection.connectTimeout = 5000
-        connection.readTimeout = 5000
-        connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
-        
-        if (connection.responseCode != 200) {
-            return emptyMap()
-        }
-        
-        val json = connection.inputStream.bufferedReader().use { it.readText() }
-        
-        val releaseRegex = """"tag_name"\s*:\s*"v([^"]+)"""".toRegex()
-        val stableReleases = releaseRegex.findAll(json)
-            .map { it.groupValues[1] }
-            .filter { version ->
-                !version.contains("-alpha") && 
-                !version.contains("-beta") && 
-                !version.contains("-rc") && 
-                !version.contains("-dev") &&
-                !version.contains("+")
-            }
-            .filter { candidateVersion ->
-                val (candMajor, candMinor) = parseVersion(candidateVersion)
-                when {
-                    candMajor < major -> true
-                    candMajor == major && candMinor <= minor -> true
-                    else -> false
-                }
-            }
-            .toList()
-        
-        val previousStable = stableReleases.firstOrNull()
-        
-        if (previousStable != null) {
-            logger.info("Using $previousStable as base for $targetVersion")
-            return try {
-                fetchFromRelease("v$previousStable", previousStable)
-            } catch (e: Exception) {
-                logger.warn("Failed to fetch base from $previousStable")
-                emptyMap()
-            }
-        }
-        
-        return emptyMap()
-    }
-    
-    private fun extractBaseVersion(devVersion: String): String {
-        return devVersion.substringBefore("+dev")
-    }
-    
-    private fun parseVersion(version: String): Pair<Int, Int> {
-        val parts = version.split(".", "-", "+")
-        val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
-        val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
-        return major to minor
-    }
-    
-    private fun fetchFromRelease(tag: String, composeVersion: String): Map<String, String> {
-        val url = "$GITHUB_API/releases/tags/$tag"
-        val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-        connection.connectTimeout = 5000
-        connection.readTimeout = 5000
-        connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
-        
-        if (connection.responseCode == 200) {
-            val json = connection.inputStream.bufferedReader().use { it.readText() }
+        // If has qualifier (beta/alpha), add decreasing qualifiers for same patch
+        if (qualifier.isNotEmpty()) {
+            val (qualifierType, qualifierNum) = parseQualifier(qualifier)
             
-            // Simple regex parsing instead of JSON library
-            val bodyMatch = """"body"\s*:\s*"([^"]*(?:\\"[^"]*)*)"""".toRegex().find(json)
-            if (bodyMatch != null) {
-                val body = bodyMatch.groupValues[1]
-                    .replace("\\n", "\n")
-                    .replace("\\\"", "\"")
-                    .replace("\\t", "\t")
-                
-                if (body.contains("Dependencies") || body.contains("org.jetbrains")) {
-                    return parseVersionsFromReleaseNotes(body, composeVersion)
+            if (qualifierType.isNotEmpty() && qualifierNum > 0) {
+                // Add previous qualifiers of same type (beta02 → beta01, alpha05 → alpha04, ...)
+                for (i in (qualifierNum - 1) downTo 1) {
+                    versions.add("$major.$minor.$patch-$qualifierType${i.toString().padStart(2, '0')}")
                 }
-            }
-        }
-        
-        throw Exception("Release not found or has no body")
-    }
-    
-    private fun fetchFromTagMessage(tag: String, composeVersion: String): Map<String, String> {
-        val tagRefUrl = "$GITHUB_API/git/refs/tags/$tag"
-        val connection = java.net.URI(tagRefUrl).toURL().openConnection() as HttpURLConnection
-        connection.connectTimeout = 5000
-        connection.readTimeout = 5000
-        connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
-        
-        if (connection.responseCode == 200) {
-            val json = connection.inputStream.bufferedReader().use { it.readText() }
-            
-            // Simple regex parsing for nested "object": { "url": "..." }
-            val urlMatch = """"object"\s*:\s*\{[^}]*"url"\s*:\s*"([^"]+)"""".toRegex().find(json)
-            if (urlMatch != null) {
-                val tagUrl = urlMatch.groupValues[1]
                 
-                val tagConnection = java.net.URI(tagUrl).toURL().openConnection() as HttpURLConnection
-                tagConnection.connectTimeout = 5000
-                tagConnection.readTimeout = 5000
-                tagConnection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
-                
-                if (tagConnection.responseCode == 200) {
-                    val tagJson = tagConnection.inputStream.bufferedReader().use { it.readText() }
-                    
-                    // Parse message field
-                    val messageMatch = """"message"\s*:\s*"([^"]*(?:\\"[^"]*)*)"""".toRegex().find(tagJson)
-                    if (messageMatch != null) {
-                        val message = messageMatch.groupValues[1]
-                            .replace("\\n", "\n")
-                            .replace("\\\"", "\"")
-                            .replace("\\t", "\t")
-                        
-                        return parseVersionsFromTagMessage(message, composeVersion)
+                // If beta, add alphas for same patch
+                if (qualifierType == "beta") {
+                    for (i in 8 downTo 1) {
+                        versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
                     }
                 }
             }
         }
         
-        throw Exception("Tag not found")
-    }
-    
-    private fun parseVersionsFromReleaseNotes(body: String, composeVersion: String): Map<String, String> {
-        val versions = mutableMapOf("compose-multiplatform" to composeVersion)
-        
-        val versionRegex = """org\.jetbrains\.([\w.]+):([\w-]+)\*?:([^\s`]+)""".toRegex()
-        
-        versionRegex.findAll(body).forEach { match ->
-            val group = match.groupValues[1]
-            val artifact = match.groupValues[2]
-            val version = match.groupValues[3].trim('`', '.', ',', ')')
-            
-            val key = when {
-                group.contains("lifecycle") -> "androidx-lifecycle"
-                group.contains("navigation") && !group.contains("navigation3") -> "androidx-navigation"
-                group.contains("savedstate") -> "androidx-savedstate"
-                group.contains("window") -> "androidx-window"
-                group == "compose.material3" -> {
-                    when {
-                        artifact.contains("adaptive") -> "compose-material3-adaptive"
-                        else -> "compose-material3"
+        // Add ONLY previous patch versions (don't generate "future" versions!)
+        if (patch > 0) {
+            for (p in (patch - 1) downTo maxOf(0, patch - 2)) {  // Max 2 previous patches
+                // Add stable version first
+                versions.add("$major.$minor.$p")
+                // Add ONLY PREVIOUS qualifiers (don't generate beta08 if we're in beta02!)
+                for (q in listOf("rc", "beta", "alpha")) {
+                    for (num in 3 downTo 1) {  // Max 3 of each qualifier type
+                        versions.add("$major.$minor.$p-$q${num.toString().padStart(2, '0')}")
                     }
                 }
-                else -> null
-            }
-            
-            if (key != null && version.isNotBlank()) {
-                versions[key] = version
             }
         }
         
-        return versions
-    }
-    
-    private fun parseVersionsFromTagMessage(message: String, composeVersion: String): Map<String, String> {
-        val versions = mutableMapOf("compose-multiplatform" to composeVersion)
-        
-        val versionRegex = """org\.jetbrains\.([\w.]+):([\w-]+)\*?:(\S+)""".toRegex()
-        
-        versionRegex.findAll(message).forEach { match ->
-            val group = match.groupValues[1]
-            val artifact = match.groupValues[2]
-            val version = match.groupValues[3]
-            
-            val key = when {
-                group.contains("lifecycle") -> "androidx-lifecycle"
-                group.contains("navigation3") -> "androidx-navigation3"
-                group.contains("navigationevent") -> "androidx-navigationevent"
-                group.contains("navigation") -> "androidx-navigation"
-                group.contains("savedstate") -> "androidx-savedstate"
-                group.contains("window") -> "androidx-window"
-                group == "compose.material3" -> {
-                    when {
-                        artifact.contains("adaptive") -> "compose-material3-adaptive"
-                        else -> "compose-material3"
-                    }
-                }
-                else -> null
-            }
-            
-            if (key != null && version.isNotBlank()) {
-                versions[key] = version
+        // Add previous minor versions
+        for (m in (minor - 1) downTo 0) {
+            // Add few most recent patch versions for each minor
+            for (p in 3 downTo 0) {
+                versions.add("$major.$m.$p")
             }
         }
         
-        return versions
+        return versions.distinct().take(MAX_FALLBACK_VERSIONS)
     }
     
-    fun clearCache() {
-        cache.clear()
+    private fun parseQualifier(qualifier: String): Pair<String, Int> {
+        val match = Regex("""(beta|alpha|rc)(\d+)""").find(qualifier)
+        return if (match != null) {
+            val type = match.groupValues[1]
+            val num = match.groupValues[2].toIntOrNull() ?: 0
+            type to num
+        } else {
+            "" to 0
+        }
     }
 }
-
