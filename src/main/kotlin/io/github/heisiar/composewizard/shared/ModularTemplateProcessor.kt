@@ -225,7 +225,51 @@ class ModularTemplateProcessor(
     }
     
     private fun needsHotReload(): Boolean {
-        return targetDesktop || selectedPlatforms.size > 1
+        if (!targetDesktop) {
+            return false
+        }
+        
+        // Hot Reload becomes part of Compose starting from 1.10.0-beta01
+        // No need to add it as a separate dependency for versions >= 1.10.0-beta01
+        return isComposeVersionLessThan(composeVersion, "1.10.0-beta01")
+    }
+    
+    private fun isComposeVersionLessThan(version: String, threshold: String): Boolean {
+        // Parse version: "1.9.2" or "1.10.0-beta01" or "1.10.0-beta01+dev3194"
+        val versionBase = version.split("+").first() // Remove dev suffix
+        val thresholdBase = threshold.split("+").first()
+        
+        // Split into numeric and qualifier parts
+        val versionNumeric = versionBase.split("-").first()
+        val versionQualifier = versionBase.substringAfter("-", "")
+        
+        val thresholdNumeric = thresholdBase.split("-").first()
+        val thresholdQualifier = thresholdBase.substringAfter("-", "")
+        
+        // Compare numeric parts (1.9.2 vs 1.10.0)
+        val versionParts = versionNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+        val thresholdParts = thresholdNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+        
+        for (i in 0 until maxOf(versionParts.size, thresholdParts.size)) {
+            val v = versionParts.getOrNull(i) ?: 0
+            val t = thresholdParts.getOrNull(i) ?: 0
+            if (v < t) return true
+            if (v > t) return false
+        }
+        
+        // Numeric parts are equal, compare qualifiers
+        // If threshold has qualifier but version doesn't, version is greater (stable > beta)
+        if (thresholdQualifier.isNotEmpty() && versionQualifier.isEmpty()) {
+            return false
+        }
+        
+        // If version has qualifier but threshold doesn't, version is less (beta < stable)
+        if (versionQualifier.isNotEmpty() && thresholdQualifier.isEmpty()) {
+            return true
+        }
+        
+        // Both have qualifiers or both don't - compare lexicographically
+        return versionQualifier < thresholdQualifier
     }
     
     private fun generateReadme(targetPath: String) {

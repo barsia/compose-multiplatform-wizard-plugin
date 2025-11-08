@@ -2,16 +2,28 @@ package io.github.heisiar.composewizard.shared.services
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.State
+import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.ComposeVersions
 import kotlinx.coroutines.*
+
+data class ComposeVersionCacheState(
+    var stableVersions: List<String> = emptyList(),
+    var stableLastLoadTime: Long = 0L,
+    var devVersions: List<String> = emptyList(),
+    var devLastLoadTime: Long = 0L
+)
 
 /**
  * Application-level service that caches Compose Multiplatform versions with TTL.
  * 
  * Versions are loaded in background on IDE startup and cached with a Time To Live (TTL).
  * Cache is automatically refreshed when TTL expires (12 hours by default).
+ * Cache is persisted to disk between IDE restarts.
  * This allows Template API wizard (which is synchronous) to access pre-loaded versions.
  * 
  * ## Manual Cache Control
@@ -37,31 +49,26 @@ import kotlinx.coroutines.*
  * - Can be adjusted based on release frequency
  */
 @Service(Service.Level.APP)
-class ComposeVersionCache : Disposable {
+@State(
+    name = "ComposeVersionCache",
+    storages = [Storage("composeVersionCache.xml")]
+)
+class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionCacheState> {
     
     private val logger = Logger.getInstance(ComposeVersionCache::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val versionService = ComposeVersionService()
     
-    // Stable versions cache
-    @Volatile
-    private var cachedStableVersions: List<String> = ComposeVersions.STABLE_VERSIONS
-    
-    @Volatile
-    private var stableLastLoadTime: Long = 0L
+    private var persistentState = ComposeVersionCacheState()
     
     @Volatile
     private var isLoadingStable = false
     
-    // Dev versions cache
-    @Volatile
-    private var cachedDevVersions: List<String> = ComposeVersions.STABLE_VERSIONS // Same fallback
-    
-    @Volatile
-    private var devLastLoadTime: Long = 0L
-    
     @Volatile
     private var isLoadingDev = false
+    
+    @Volatile
+    private var initialized = false
     
     companion object {
         // Cache TTL: 12 hours (in milliseconds)
@@ -76,47 +83,90 @@ class ComposeVersionCache : Disposable {
     }
     
     init {
-        // Start loading both stable and dev versions in background on IDE startup
-        loadStableVersionsInBackground()
-        loadDevVersionsInBackground()
+        println("DEBUG ComposeVersionCache: Constructor called")
+    }
+    
+    override fun getState(): ComposeVersionCacheState {
+        return persistentState
+    }
+    
+    override fun loadState(state: ComposeVersionCacheState) {
+        XmlSerializerUtil.copyBean(state, persistentState)
+        println("DEBUG ComposeVersionCache: Loaded state from disk - stable: ${persistentState.stableVersions.take(3)}, lastLoad: ${persistentState.stableLastLoadTime}")
+        initializeCache()
+    }
+    
+    private fun initializeCache() {
+        if (initialized) {
+            println("DEBUG ComposeVersionCache: Already initialized, skipping")
+            return
+        }
+        
+        initialized = true
+        println("DEBUG ComposeVersionCache: Initializing after state load, cached stable: ${persistentState.stableVersions.take(3)}")
+        
+        if (isStableCacheExpired()) {
+            println("DEBUG ComposeVersionCache: Cache expired or empty, starting background loading...")
+            loadStableVersionsInBackground()
+            loadDevVersionsInBackground()
+        } else {
+            println("DEBUG ComposeVersionCache: Using cached versions, no need to reload")
+        }
     }
     
     /**
      * Get cached stable versions (non-blocking).
+     * Returns null if loading not yet completed.
+     * Returns cached versions (or fallback) if loading completed.
      * Automatically refreshes cache in background if TTL expired.
-     * Returns cached versions immediately (never blocks).
      */
-    fun getStableVersions(): List<String> {
-        // Check if cache expired and refresh in background if needed
-        if (isStableCacheExpired() && !isLoadingStable) {
+    fun getStableVersions(): List<String>? {
+        if (!initialized) {
+            println("DEBUG ComposeVersionCache.getStableVersions(): Not initialized yet, initializing now")
+            initializeCache()
+        }
+        
+        val versions = if (persistentState.stableVersions.isEmpty()) null else persistentState.stableVersions
+        println("DEBUG ComposeVersionCache.getStableVersions(): returning ${versions?.take(3)}, isLoading=$isLoadingStable")
+        
+        if (!isLoadingStable && isStableCacheExpired()) {
             logger.info("Stable cache expired (TTL: ${CACHE_TTL_MS}ms), refreshing in background")
+            println("DEBUG ComposeVersionCache: Starting stable version load because cache expired")
             loadStableVersionsInBackground()
         }
-        return cachedStableVersions
+        return versions
     }
     
     /**
      * Get cached dev versions (non-blocking).
+     * Returns null if loading not yet completed.
+     * Returns cached versions (or fallback) if loading completed.
      * Automatically refreshes cache in background if TTL expired.
-     * Returns cached versions immediately (never blocks).
      */
-    fun getDevVersions(): List<String> {
-        // Check if cache expired and refresh in background if needed
-        if (isDevCacheExpired() && !isLoadingDev) {
+    fun getDevVersions(): List<String>? {
+        if (!initialized) {
+            println("DEBUG ComposeVersionCache.getDevVersions(): Not initialized yet, initializing now")
+            initializeCache()
+        }
+        
+        val versions = if (persistentState.devVersions.isEmpty()) null else persistentState.devVersions
+        println("DEBUG ComposeVersionCache.getDevVersions(): returning ${versions?.take(3)}, isLoading=$isLoadingDev")
+        
+        if (!isLoadingDev && isDevCacheExpired()) {
             logger.info("Dev cache expired (TTL: ${CACHE_TTL_MS}ms), refreshing in background")
             loadDevVersionsInBackground()
         }
-        return cachedDevVersions
+        return versions
     }
     
     /**
      * Check if stable cache has expired based on TTL.
      */
     private fun isStableCacheExpired(): Boolean {
-        if (stableLastLoadTime == 0L) {
-            return true // Never loaded
+        if (persistentState.stableLastLoadTime == 0L || persistentState.stableVersions.isEmpty()) {
+            return true
         }
-        val age = System.currentTimeMillis() - stableLastLoadTime
+        val age = System.currentTimeMillis() - persistentState.stableLastLoadTime
         return age > CACHE_TTL_MS
     }
     
@@ -124,10 +174,10 @@ class ComposeVersionCache : Disposable {
      * Check if dev cache has expired based on TTL.
      */
     private fun isDevCacheExpired(): Boolean {
-        if (devLastLoadTime == 0L) {
-            return true // Never loaded
+        if (persistentState.devLastLoadTime == 0L || persistentState.devVersions.isEmpty()) {
+            return true
         }
-        val age = System.currentTimeMillis() - devLastLoadTime
+        val age = System.currentTimeMillis() - persistentState.devLastLoadTime
         return age > CACHE_TTL_MS
     }
     
@@ -142,7 +192,7 @@ class ComposeVersionCache : Disposable {
      */
     suspend fun getStableVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingStable) {
-            return@withContext cachedStableVersions
+            return@withContext if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.stableVersions
         }
         
         logger.info("Waiting for stable Compose versions to load (timeout: ${timeoutMs}ms)...")
@@ -159,7 +209,7 @@ class ComposeVersionCache : Disposable {
             logger.info("Stable Compose versions loaded successfully")
         }
         
-        cachedStableVersions
+        if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.stableVersions
     }
     
     /**
@@ -189,7 +239,7 @@ class ComposeVersionCache : Disposable {
      */
     suspend fun getDevVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingDev) {
-            return@withContext cachedDevVersions
+            return@withContext if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.devVersions
         }
         
         logger.info("Waiting for dev Compose versions to load (timeout: ${timeoutMs}ms)...")
@@ -206,7 +256,7 @@ class ComposeVersionCache : Disposable {
             logger.info("Dev Compose versions loaded successfully")
         }
         
-        cachedDevVersions
+        if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.devVersions
     }
     
     /**
@@ -246,7 +296,7 @@ class ComposeVersionCache : Disposable {
      */
     fun invalidateStableCache() {
         logger.info("Stable cache manually invalidated, will refresh on next access")
-        stableLastLoadTime = 0L
+        persistentState.stableLastLoadTime = 0L
     }
     
     /**
@@ -256,7 +306,7 @@ class ComposeVersionCache : Disposable {
      */
     fun invalidateDevCache() {
         logger.info("Dev cache manually invalidated, will refresh on next access")
-        devLastLoadTime = 0L
+        persistentState.devLastLoadTime = 0L
     }
     
     /**
@@ -268,7 +318,7 @@ class ComposeVersionCache : Disposable {
      */
     fun forceReloadStable() {
         logger.info("Force reload stable requested, invalidating cache and reloading")
-        stableLastLoadTime = 0L
+        persistentState.stableLastLoadTime = 0L
         loadStableVersionsInBackground()
     }
     
@@ -281,7 +331,7 @@ class ComposeVersionCache : Disposable {
      */
     fun forceReloadDev() {
         logger.info("Force reload dev requested, invalidating cache and reloading")
-        devLastLoadTime = 0L
+        persistentState.devLastLoadTime = 0L
         loadDevVersionsInBackground()
     }
     
@@ -308,16 +358,20 @@ class ComposeVersionCache : Disposable {
                     return@launch
                 }
                 
-                cachedStableVersions = versions
-                stableLastLoadTime = System.currentTimeMillis()
+                persistentState.stableVersions = versions
+                persistentState.stableLastLoadTime = System.currentTimeMillis()
+                println("DEBUG ComposeVersionCache: Successfully loaded ${versions.size} stable versions from Maven: ${versions.take(5).joinToString(", ")}")
                 logger.info("Successfully loaded ${versions.size} stable Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
             } catch (e: CancellationException) {
                 logger.info("Stable version loading cancelled due to plugin unload")
                 throw e
             } catch (e: Exception) {
+                println("DEBUG ComposeVersionCache: FAILED to load stable versions: ${e.message}, using fallback")
                 logger.warn("Failed to load stable Compose versions, using fallback: ${e.message}")
-                cachedStableVersions = ComposeVersions.STABLE_VERSIONS
-                stableLastLoadTime = System.currentTimeMillis()
+                if (persistentState.stableVersions.isEmpty()) {
+                    persistentState.stableVersions = ComposeVersions.STABLE_VERSIONS
+                }
+                persistentState.stableLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingStable = false
             }
@@ -347,16 +401,18 @@ class ComposeVersionCache : Disposable {
                     return@launch
                 }
                 
-                cachedDevVersions = versions
-                devLastLoadTime = System.currentTimeMillis()
+                persistentState.devVersions = versions
+                persistentState.devLastLoadTime = System.currentTimeMillis()
                 logger.info("Successfully loaded ${versions.size} dev Compose versions: ${versions.take(5).joinToString(", ")}... (TTL: ${CACHE_TTL_MS / 1000 / 60} minutes)")
             } catch (e: CancellationException) {
                 logger.info("Dev version loading cancelled due to plugin unload")
                 throw e
             } catch (e: Exception) {
                 logger.warn("Failed to load dev Compose versions, using fallback: ${e.message}")
-                cachedDevVersions = ComposeVersions.STABLE_VERSIONS
-                devLastLoadTime = System.currentTimeMillis()
+                if (persistentState.devVersions.isEmpty()) {
+                    persistentState.devVersions = ComposeVersions.STABLE_VERSIONS
+                }
+                persistentState.devLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingDev = false
             }

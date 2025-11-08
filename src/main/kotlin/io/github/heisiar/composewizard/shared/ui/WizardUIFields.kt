@@ -175,25 +175,67 @@ fun ComposeVersionField(
             }
         }
 
-        val initialVersions =
-            if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
-        val initialVersion = if (initialVersions.isNotEmpty()) initialVersions.first() else ""
+        val initialVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
+        val initialVersion = initialVersions?.firstOrNull() ?: ""
+        val initialLoadingState = if (enableDevVersions) cache.isLoadingDevVersions() else cache.isLoadingStableVersions()
 
         var availableVersions by remember(enableDevVersions) { mutableStateOf(initialVersions) }
         var selectedVersion by remember(enableDevVersions) { mutableStateOf(initialVersion) }
+        var isLoading by remember(enableDevVersions) { mutableStateOf(initialVersions == null || initialLoadingState) }
+        var minLoadingTimeElapsed by remember(enableDevVersions) { mutableStateOf(initialVersions != null) }
 
         LaunchedEffect(selectedVersion) {
-            onVersionSelected(selectedVersion)
+            if (selectedVersion.isNotEmpty()) {
+                onVersionSelected(selectedVersion)
+            }
         }
 
         LaunchedEffect(enableDevVersions) {
-            availableVersions = if (enableDevVersions) {
-                cache.getDevVersions()
-            } else {
-                cache.getStableVersions()
+            if (initialVersions == null) {
+                minLoadingTimeElapsed = false
+                println("DEBUG: No cached versions, starting min loading timer (1000ms)")
+                kotlinx.coroutines.delay(1000)
+                minLoadingTimeElapsed = true
+                println("DEBUG: Minimum loading time (1000ms) elapsed")
             }
-            if (availableVersions.isNotEmpty()) {
-                selectedVersion = availableVersions.first()
+        }
+
+        LaunchedEffect(enableDevVersions) {
+            println("DEBUG: Starting version loading check, enableDev=$enableDevVersions, initialVersions=${initialVersions?.take(3)}")
+            
+            if (initialVersions != null && !initialLoadingState) {
+                println("DEBUG: Versions already cached and not loading, no need to wait")
+                return@LaunchedEffect
+            }
+            
+            while (true) {
+                val isCurrentlyLoading = if (enableDevVersions) {
+                    cache.isLoadingDevVersions()
+                } else {
+                    cache.isLoadingStableVersions()
+                }
+                
+                val newVersions = if (enableDevVersions) {
+                    cache.getDevVersions()
+                } else {
+                    cache.getStableVersions()
+                }
+                
+                println("DEBUG: Polling - isLoading=$isCurrentlyLoading, versions: ${newVersions?.take(3)}, minTimeElapsed=$minLoadingTimeElapsed")
+                
+                if (!isCurrentlyLoading && newVersions != null) {
+                    if (minLoadingTimeElapsed) {
+                        println("DEBUG: Loading complete and min time elapsed, updating UI with ${newVersions.take(3)}")
+                        availableVersions = newVersions
+                        if (selectedVersion.isEmpty()) {
+                            selectedVersion = newVersions.firstOrNull() ?: ""
+                        }
+                        isLoading = false
+                        break
+                    }
+                }
+                
+                kotlinx.coroutines.delay(100)
             }
         }
 
@@ -207,8 +249,12 @@ fun ComposeVersionField(
                     .widthIn(min = 200.dp)
                     .weight(1f)
             ) {
-                val currentIndex = if (availableVersions.isEmpty()) 0 else availableVersions.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
-                val items = if (availableVersions.isEmpty()) listOf("Loading...") else availableVersions
+                val items = if (isLoading && availableVersions == null) {
+                    listOf("")
+                } else {
+                    availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS
+                }
+                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(selectedVersion).takeIf { it >= 0 } ?: 0
                 
                 val defaultStyle = JewelTheme.comboBoxStyle
                 val transparentStyle = remember(defaultStyle) {
@@ -256,13 +302,22 @@ fun ComposeVersionField(
                             items = items,
                             selectedIndex = currentIndex,
                             onSelectedItemChange = { index ->
-                                if (availableVersions.isNotEmpty()) {
-                                    selectedVersion = availableVersions[index]
+                                availableVersions?.let { versions ->
+                                    if (versions.isNotEmpty() && index in versions.indices) {
+                                        selectedVersion = versions[index]
+                                    }
                                 }
                             },
+                            enabled = !isLoading && availableVersions != null,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                                .pointerHoverIcon(
+                                    if (isLoading || availableVersions == null) {
+                                        PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
+                                    } else {
+                                        PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+                                    }
+                                ),
                             style = transparentStyle
                         )
                     }
@@ -271,13 +326,22 @@ fun ComposeVersionField(
                         items = items,
                         selectedIndex = currentIndex,
                         onSelectedItemChange = { index ->
-                            if (availableVersions.isNotEmpty()) {
-                                selectedVersion = availableVersions[index]
+                            availableVersions?.let { versions ->
+                                if (versions.isNotEmpty() && index in versions.indices) {
+                                    selectedVersion = versions[index]
+                                }
                             }
                         },
+                        enabled = !isLoading && availableVersions != null,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                            .pointerHoverIcon(
+                                if (isLoading || availableVersions == null) {
+                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
+                                } else {
+                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+                                }
+                            ),
                         style = transparentStyle
                     )
                 }
@@ -299,6 +363,21 @@ fun ComposeVersionField(
                     val coroutineScope = rememberCoroutineScope()
                     val rotation = remember { androidx.compose.animation.core.Animatable(0f) }
 
+                    LaunchedEffect(isLoading) {
+                        if (isLoading) {
+                            while (isLoading) {
+                                rotation.animateTo(
+                                    targetValue = 360f,
+                                    animationSpec = androidx.compose.animation.core.tween(
+                                        durationMillis = 1000,
+                                        easing = androidx.compose.animation.core.LinearEasing
+                                    )
+                                )
+                                rotation.snapTo(0f)
+                            }
+                        }
+                    }
+
                     Icon(
                         key = WizardIconKeys.RefreshVersions,
                         contentDescription = "Refresh versions",
@@ -307,7 +386,8 @@ fun ComposeVersionField(
                             .graphicsLayer { rotationZ = rotation.value }
                             .clickable(
                                 indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
+                                interactionSource = remember { MutableInteractionSource() },
+                                enabled = !isLoading
                             ) {
                                 coroutineScope.launch {
                                     rotation.snapTo(0f)
@@ -547,7 +627,11 @@ fun OptionsSection(
     tests: Boolean,
     onGitToggle: () -> Unit,
     onTestsToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    composeVersion: String = "",
+    kotlinVersion: String = "",
+    lifecycleVersion: String = "",
+    hotReloadVersion: String = ""
 ) {
     Column(
         modifier = modifier,
@@ -564,6 +648,93 @@ fun OptionsSection(
             onToggle = onTestsToggle,
             label = "Add sample tests"
         )
+        
+        if (composeVersion.isNotEmpty() && kotlinVersion.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Versions will be used:",
+                    style = JewelTheme.defaultTextStyle,
+                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "• Kotlin:",
+                        style = JewelTheme.defaultTextStyle,
+                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = kotlinVersion,
+                        style = JewelTheme.defaultTextStyle,
+                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                        fontSize = 13.sp
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "• Compose Multiplatform:",
+                        style = JewelTheme.defaultTextStyle,
+                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = composeVersion,
+                        style = JewelTheme.defaultTextStyle,
+                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                        fontSize = 13.sp
+                    )
+                }
+                if (lifecycleVersion.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "• AndroidX Lifecycle:",
+                            style = JewelTheme.defaultTextStyle,
+                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = lifecycleVersion,
+                            style = JewelTheme.defaultTextStyle,
+                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+                if (hotReloadVersion.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "• Compose Hot Reload:",
+                            style = JewelTheme.defaultTextStyle,
+                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = hotReloadVersion,
+                            style = JewelTheme.defaultTextStyle,
+                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -615,9 +786,9 @@ private fun CompactSwitch(
     }
     
     val thumbColor = if (checked) {
-        JewelTheme.globalColors.text.info
+        Color(0xFFFFC107).copy(alpha = 0.5f)  // Yellow for Dev
     } else {
-        JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
+        Color(0xFF4CAF50).copy(alpha = 0.5f)  // Green for Stable
     }
     
     val textColor = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
@@ -741,4 +912,5 @@ fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier
         )
     }
 }
+
 

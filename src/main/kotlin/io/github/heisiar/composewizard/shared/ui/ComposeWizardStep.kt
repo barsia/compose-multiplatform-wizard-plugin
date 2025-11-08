@@ -90,7 +90,7 @@ class ComposeWizardStep(
         val projectIdState = androidx.compose.foundation.text.input.rememberTextFieldState(projectIdValue)
         
         val cachedVersions = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance().getStableVersions()
-        val initialComposeVersion = if (cachedVersions.isNotEmpty()) cachedVersions.first() else composeVersionValue
+        val initialComposeVersion = cachedVersions?.firstOrNull() ?: composeVersionValue
         
         val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
         val isInternalMode = com.intellij.openapi.application.ApplicationManager.getApplication().isInternal

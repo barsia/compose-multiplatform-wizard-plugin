@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -181,6 +182,22 @@ fun WizardMainContent(
 
             Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
 
+            val shouldShowHotReload = remember(state.desktop, state.composeVersion) {
+                state.desktop && isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
+            }
+            
+            val hotReloadVersion = remember(shouldShowHotReload) {
+                if (shouldShowHotReload) {
+                    io.github.heisiar.composewizard.shared.ComposeVersions.COMPOSE_HOT_RELOAD_VERSION
+                } else {
+                    ""
+                }
+            }
+            
+            LaunchedEffect(state.desktop, state.composeVersion, shouldShowHotReload) {
+                println("DEBUG Hot Reload: desktop=${state.desktop}, version=${state.composeVersion}, shouldShow=$shouldShowHotReload, hotReloadVersion=$hotReloadVersion")
+            }
+            
             OptionsSection(
                 git = state.git,
                 tests = state.tests,
@@ -191,7 +208,11 @@ fun WizardMainContent(
                 onTestsToggle = {
                     state.tests = !state.tests
                     ComposeWizardUsageCollector.logTestsToggled(state.tests)
-                }
+                },
+                composeVersion = state.composeVersion,
+                kotlinVersion = io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_KOTLIN_VERSION,
+                lifecycleVersion = io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION,
+                hotReloadVersion = hotReloadVersion
             )
         }
 
@@ -315,5 +336,43 @@ private fun FooterSection(state: WizardState) {
             }
         }
     }
+}
+
+private fun isComposeVersionLessThan(version: String, threshold: String): Boolean {
+    // Parse version: "1.9.2" or "1.10.0-beta01" or "1.10.0-beta01+dev3194"
+    val versionBase = version.split("+").first() // Remove dev suffix
+    val thresholdBase = threshold.split("+").first()
+    
+    // Split into numeric and qualifier parts
+    val versionNumeric = versionBase.split("-").first()
+    val versionQualifier = versionBase.substringAfter("-", "")
+    
+    val thresholdNumeric = thresholdBase.split("-").first()
+    val thresholdQualifier = thresholdBase.substringAfter("-", "")
+    
+    // Compare numeric parts (1.9.2 vs 1.10.0)
+    val versionParts = versionNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+    val thresholdParts = thresholdNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+    
+    for (i in 0 until maxOf(versionParts.size, thresholdParts.size)) {
+        val v = versionParts.getOrNull(i) ?: 0
+        val t = thresholdParts.getOrNull(i) ?: 0
+        if (v < t) return true
+        if (v > t) return false
+    }
+    
+    // Numeric parts are equal, compare qualifiers
+    // If threshold has qualifier but version doesn't, version is greater (stable > beta)
+    if (thresholdQualifier.isNotEmpty() && versionQualifier.isEmpty()) {
+        return false
+    }
+    
+    // If version has qualifier but threshold doesn't, version is less (beta < stable)
+    if (versionQualifier.isNotEmpty() && thresholdQualifier.isEmpty()) {
+        return true
+    }
+    
+    // Both have qualifiers or both don't - compare lexicographically
+    return versionQualifier < thresholdQualifier
 }
 

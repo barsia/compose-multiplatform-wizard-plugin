@@ -60,5 +60,18 @@ object ComposeVersions {
      * See: https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html
      */
     const val DEFAULT_KOTLIN_VERSION = "2.2.20"
+    
+    /**
+     * Default AndroidX Lifecycle version for Compose Multiplatform.
+     * See: https://maven.pkg.jetbrains.space/public/p/compose/dev/org/jetbrains/androidx/lifecycle/
+     */
+    const val DEFAULT_ANDROIDX_LIFECYCLE_VERSION = "2.9.5"
+    
+    /**
+     * Compose Hot Reload version.
+     * Used only for Compose versions < 1.10.0-beta01 and Desktop projects.
+     * Starting from 1.10.0-beta01, Hot Reload is built into Compose.
+     */
+    const val COMPOSE_HOT_RELOAD_VERSION = "1.0.0-rc02"
 }
 
