@@ -93,42 +93,18 @@ fun WizardMainContent(
                     )
                     
                     // Compose Version section on the right
-                    Column(
+                    ComposeVersionField(
+                        cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
+                        enableDevVersions = state.enableDevVersions,
+                        onVersionSelected = { state.composeVersion = it },
+                        onRefreshVersions = { },
                         modifier = Modifier.weight(0.4f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ComposeVersionField(
-                            cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
-                            enableDevVersions = state.enableDevVersions,
-                            onVersionSelected = { state.composeVersion = it },
-                            onRefreshVersions = { }
-                        )
-
-                        if (state.devCheckboxVisible) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clickable(
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() }
-                                    ) {
-                                        state.enableDevVersions = !state.enableDevVersions
-                                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
-                                    }
-                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                            ) {
-                                Checkbox(
-                                    checked = state.enableDevVersions,
-                                    onCheckedChange = {
-                                        state.enableDevVersions = it
-                                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
-                                    }
-                                )
-                                Text("Dev maven", style = JewelTheme.defaultTextStyle)
-                            }
+                        devCheckboxVisible = state.devCheckboxVisible,
+                        onDevVersionsToggle = { 
+                            state.enableDevVersions = it
+                            ComposeWizardUsageCollector.logDevVersionsToggled(it)
                         }
-                    }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(SPACING_BEFORE_LOCATION))
@@ -161,42 +137,18 @@ fun WizardMainContent(
                         modifier = Modifier.weight(0.6f)
                     )
                     
-                    Column(
+                    ComposeVersionField(
+                        cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
+                        enableDevVersions = state.enableDevVersions,
+                        onVersionSelected = { state.composeVersion = it },
+                        onRefreshVersions = { },
                         modifier = Modifier.weight(0.4f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ComposeVersionField(
-                            cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance(),
-                            enableDevVersions = state.enableDevVersions,
-                            onVersionSelected = { state.composeVersion = it },
-                            onRefreshVersions = { }
-                        )
-
-                        if (state.devCheckboxVisible) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clickable(
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() }
-                                    ) {
-                                        state.enableDevVersions = !state.enableDevVersions
-                                        ComposeWizardUsageCollector.logDevVersionsToggled(state.enableDevVersions)
-                                    }
-                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                            ) {
-                                Checkbox(
-                                    checked = state.enableDevVersions,
-                                    onCheckedChange = {
-                                        state.enableDevVersions = it
-                                        ComposeWizardUsageCollector.logDevVersionsToggled(it)
-                                    }
-                                )
-                                Text("Dev maven", style = JewelTheme.defaultTextStyle)
-                            }
+                        devCheckboxVisible = state.devCheckboxVisible,
+                        onDevVersionsToggle = { 
+                            state.enableDevVersions = it
+                            ComposeWizardUsageCollector.logDevVersionsToggled(it)
                         }
-                    }
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))

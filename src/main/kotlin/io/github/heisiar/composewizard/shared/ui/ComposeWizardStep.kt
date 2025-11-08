@@ -71,7 +71,9 @@ class ComposeWizardStep(
 
     private val mainPanel: ComposePanel by lazy {
         ComposePanel().apply {
-            preferredSize = Dimension(500, 600)
+            preferredSize = Dimension(500, 450)
+            minimumSize = Dimension(500, 450)
+            maximumSize = Dimension(800, 600)
             setContent {
                 org.jetbrains.jewel.bridge.theme.SwingBridgeTheme {
                     CreateComposeUI()

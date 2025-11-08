@@ -3,6 +3,7 @@ package io.github.heisiar.composewizard.shared.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -143,13 +145,35 @@ fun ComposeVersionField(
     enableDevVersions: Boolean,
     onVersionSelected: (String) -> Unit,
     onRefreshVersions: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    devCheckboxVisible: Boolean = false,
+    onDevVersionsToggle: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Compose Version", style = JewelTheme.defaultTextStyle)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Compose Version", style = JewelTheme.defaultTextStyle)
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            if (devCheckboxVisible) {
+                org.jetbrains.jewel.ui.component.Tooltip(
+                    tooltip = { Text(if (enableDevVersions) "Dev versions" else "Stable versions") }
+                ) {
+                    CompactSwitch(
+                        checked = enableDevVersions,
+                        onCheckedChange = { onDevVersionsToggle(it) }
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+        }
 
         val initialVersions =
             if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
@@ -219,7 +243,30 @@ fun ComposeVersionField(
                 }
                 val isTextTruncated = textWidth > availableWidth
                 
-                val comboBox = @Composable {
+                if (isTextTruncated) {
+                    org.jetbrains.jewel.ui.component.Tooltip(
+                        tooltip = { Text(selectedVersion) },
+                        tooltipPlacement = TooltipPlacement.ComponentRect(
+                            anchor = Alignment.BottomCenter,
+                            alignment = Alignment.BottomCenter,
+                            offset = DpOffset(0.dp, 4.dp)
+                        )
+                    ) {
+                        ListComboBox(
+                            items = items,
+                            selectedIndex = currentIndex,
+                            onSelectedItemChange = { index ->
+                                if (availableVersions.isNotEmpty()) {
+                                    selectedVersion = availableVersions[index]
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                            style = transparentStyle
+                        )
+                    }
+                } else {
                     ListComboBox(
                         items = items,
                         selectedIndex = currentIndex,
@@ -233,21 +280,6 @@ fun ComposeVersionField(
                             .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                         style = transparentStyle
                     )
-                }
-                
-                if (isTextTruncated) {
-                    Tooltip(
-                        tooltip = { Text(selectedVersion) },
-                        tooltipPlacement = TooltipPlacement.ComponentRect(
-                            anchor = Alignment.TopCenter,
-                            alignment = Alignment.TopCenter,
-                            offset = DpOffset(0.dp, -114.dp)
-                        )
-                    ) {
-                        comboBox()
-                    }
-                } else {
-                    comboBox()
                 }
             }
 
@@ -556,6 +588,116 @@ private fun CheckboxOption(
             onCheckedChange = { onToggle() }
         )
         Text(label, style = JewelTheme.defaultTextStyle)
+    }
+}
+
+@Composable
+private fun CompactSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val trackWidth = 46.dp
+    val trackHeight = 16.dp
+    val thumbSize = 12.dp
+    val thumbPadding = 2.dp
+    
+    val thumbOffset by animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        label = "thumbOffset"
+    )
+    
+    val trackColor = if (checked) {
+        JewelTheme.globalColors.text.info.copy(alpha = 0.3f)
+    } else {
+        JewelTheme.globalColors.text.normal.copy(alpha = 0.2f)
+    }
+    
+    val thumbColor = if (checked) {
+        JewelTheme.globalColors.text.info
+    } else {
+        JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
+    }
+    
+    val textColor = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
+    
+    Box(
+        modifier = modifier
+            .width(trackWidth)
+            .height(trackHeight)
+            .background(
+                color = trackColor,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(trackHeight / 2)
+            )
+            .border(
+                width = 0.5.dp,
+                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(trackHeight / 2)
+            )
+            .clickable(
+                enabled = enabled,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                onCheckedChange(!checked)
+            }
+            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(trackHeight)
+                .align(Alignment.Center)
+        ) {
+            if (checked) {
+                // Dev: text centered in the area 0-(trackWidth-thumbSize)
+                Box(
+                    modifier = Modifier
+                        .width(trackWidth - thumbSize)
+                        .height(trackHeight)
+                        .align(Alignment.CenterStart)
+                        .padding(start = 2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Dev",
+                        fontSize = 8.sp,
+                        color = textColor,
+                        style = JewelTheme.defaultTextStyle
+                    )
+                }
+            } else {
+                // Stable: text centered in the area thumbSize-trackWidth
+                Box(
+                    modifier = Modifier
+                        .width(trackWidth - thumbSize)
+                        .height(trackHeight)
+                        .align(Alignment.CenterEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Stable",
+                        fontSize = 8.sp,
+                        color = textColor,
+                        style = JewelTheme.defaultTextStyle
+                    )
+                }
+            }
+        }
+        
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(
+                    x = thumbPadding + (trackWidth - thumbSize - thumbPadding * 2) * thumbOffset
+                )
+                .size(thumbSize)
+                .background(
+                    color = thumbColor,
+                    shape = CircleShape
+                )
+        )
     }
 }
 
