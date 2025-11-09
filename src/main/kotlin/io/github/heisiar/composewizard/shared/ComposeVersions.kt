@@ -167,6 +167,55 @@ object ComposeVersions {
             material3Version = "1.9.0-beta06",
             savedStateVersion = "1.3.4",
             windowVersion = "1.4.0"
+        ),
+        "1.9.0-rc02" to ComposeLibraryVersions(
+            composeVersion = "1.9.0-rc02",
+            kotlinVersion = "2.0.21",
+            lifecycleVersion = "2.9.4-rc01",
+            material3Version = "1.9.0-beta05",
+            savedStateVersion = "1.3.4-rc01",
+            windowVersion = "1.4.0-rc02"
+        ),
+        "1.9.0-beta03" to ComposeLibraryVersions(
+            composeVersion = "1.9.0-beta03",
+            kotlinVersion = "2.0.20",
+            lifecycleVersion = "2.9.2",
+            material3Version = "1.9.0-beta03",
+            material3AdaptiveVersion = "1.2.0-alpha05",
+            navigationVersion = "2.9.0-beta05",
+            savedStateVersion = "1.3.2",
+            windowVersion = "1.4.0-beta01"
+        ),
+        "1.9.0-beta01" to ComposeLibraryVersions(
+            composeVersion = "1.9.0-beta01",
+            kotlinVersion = "2.0.20",
+            lifecycleVersion = "2.9.0",
+            material3Version = "1.9.0-alpha04",
+            material3AdaptiveVersion = "1.2.0-alpha04",
+            navigationVersion = "2.9.0-beta04",
+            windowVersion = "1.4.0-alpha09"
+        ),
+        "1.9.0-alpha03" to ComposeLibraryVersions(
+            composeVersion = "1.9.0-alpha03",
+            kotlinVersion = "2.0.20",
+            lifecycleVersion = "2.9.0",
+            material3AdaptiveVersion = "1.2.0-alpha03",
+            windowVersion = "1.4.0-alpha08"
+        ),
+        "1.9.0-alpha02" to ComposeLibraryVersions(
+            composeVersion = "1.9.0-alpha02",
+            kotlinVersion = "2.0.20",
+            lifecycleVersion = "2.9.0",
+            material3AdaptiveVersion = "1.2.0-alpha02",
+            windowVersion = "1.4.0-alpha07"
+        ),
+        "1.8.2" to ComposeLibraryVersions(
+            composeVersion = "1.8.2",
+            kotlinVersion = "2.0.20",
+            lifecycleVersion = "2.9.1",
+            material3AdaptiveVersion = "1.1.2",
+            navigationVersion = "2.9.0-beta03",
+            savedStateVersion = "1.3.1"
         )
     )
     
@@ -177,11 +226,11 @@ object ComposeVersions {
      * 
      * These versions are embedded in the plugin code and serve as:
      * 1. Instant availability (no internet required)
-     * 2. Baseline for incremental updates
+     * 2. Baseline for version filtering (Maven versions newer than first version in this list)
      * 3. Fallback when Maven is unavailable
      * 
-     * The plugin will check Maven once per 24 hours for newer versions and add them incrementally.
-     * Total cached versions limited to 20 (hardcoded + new).
+     * The plugin will check Maven once per 24 hours for newer versions than DEFAULT_VERSION.
+     * Total cached versions limited to 20 (hardcoded + new from Maven).
      * 
      * This list is automatically derived from LIBRARY_BUNDLES keys.
      */
@@ -189,12 +238,6 @@ object ComposeVersions {
         LIBRARY_BUNDLES.keys.toList()
         // LIBRARY_BUNDLES already has correct manual semantic order, don't re-sort
     }
-    
-    /**
-     * Fallback list for compatibility with existing code.
-     * Points to hardcoded versions.
-     */
-    val STABLE_VERSIONS = STABLE_VERSIONS_HARDCODED
     
     /**
      * Default Compose Multiplatform version to use in wizards.

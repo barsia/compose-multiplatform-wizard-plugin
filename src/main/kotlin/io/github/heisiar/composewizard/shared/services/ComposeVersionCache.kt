@@ -48,8 +48,16 @@ data class ComposeVersionCacheState(
 /**
  * Application-level service that caches Compose Multiplatform versions with TTL.
  * 
+ * ## Version Sources
+ * 
+ * **Stable versions** are combined from:
+ * 1. Hardcoded versions from LIBRARY_BUNDLES (instant availability, no internet)
+ * 2. New versions from Maven Central (filtered: only versions newer than first in LIBRARY_BUNDLES)
+ * 
+ * **Dev versions** are fetched from JetBrains Space Maven (no filtering).
+ * 
  * Versions are loaded in background on IDE startup and cached with a Time To Live (TTL).
- * Cache is automatically refreshed when TTL expires (12 hours by default).
+ * Cache is automatically refreshed when TTL expires (24 hours).
  * Cache is persisted to disk between IDE restarts.
  * This allows Template API wizard (which is synchronous) to access pre-loaded versions.
  * 
@@ -62,17 +70,17 @@ data class ComposeVersionCacheState(
  * val versions = cache.getStableVersions()
  * 
  * // Force immediate refresh (non-blocking)
- * cache.forceReload()
+ * cache.forceReloadStable()
  * 
  * // Invalidate cache (refresh on next access)
- * cache.invalidateCache()
+ * cache.invalidateStableCache()
  * ```
  * 
  * ## TTL Configuration
  * 
- * Current TTL: 12 hours (CACHE_TTL_MS)
+ * Current TTL: 24 hours (CACHE_TTL_MS)
  * - Compose stable versions: released every 2-3 weeks
- * - 12 hours = 2 checks per day = optimal balance
+ * - 24 hours = 1 check per day = optimal balance
  * - Can be adjusted based on release frequency
  */
 @Service(Service.Level.APP)
@@ -173,14 +181,18 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     /**
      * Get cached stable versions (non-blocking).
      * 
+     * Returns combined list of:
+     * - Hardcoded versions from LIBRARY_BUNDLES
+     * - New versions from Maven (filtered: only newer than first in LIBRARY_BUNDLES)
+     * 
      * Logic:
-     * 1. If cache exists → return cache
-     * 2. If no cache → return null (loading), trigger fetch
-     * 3. If fetch fails → fallback to hardcoded (handled in loadStableVersionsInBackground)
+     * 1. If cache exists and not expired → return cached (sorted by semver)
+     * 2. If no cache or expired → trigger background fetch, return null while loading
+     * 3. If fetch fails → fallback to hardcoded versions only
      * 
      * Returns null if loading not yet completed.
      * Returns cached versions (or hardcoded fallback) if loading completed.
-     * Automatically refreshes cache in background if TTL expired.
+     * Automatically refreshes cache in background if TTL expired (24 hours).
      */
     fun getStableVersions(): List<String>? {
         if (!initialized) {
@@ -250,7 +262,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         }
         
         // Loading completed → return result (either from Maven or hardcoded fallback), unsorted
-        val versions = persistentState.devVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS }
+        val versions = persistentState.devVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS_HARDCODED }
         println("DEBUG ComposeVersionCache.getDevVersions(): loading completed, returning (unsorted) ${versions.take(3)}")
         return versions
     }
@@ -292,7 +304,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
      */
     suspend fun getStableVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingStable) {
-            return@withContext if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.stableVersions
+            return@withContext if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else persistentState.stableVersions
         }
         
         logger.info("Waiting for stable Compose versions to load (timeout: ${timeoutMs}ms)...")
@@ -309,7 +321,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             logger.info("Stable Compose versions loaded successfully")
         }
         
-        if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.stableVersions
+        if (persistentState.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else persistentState.stableVersions
     }
     
     /**
@@ -339,7 +351,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
      */
     suspend fun getDevVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingDev) {
-            return@withContext if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.devVersions
+            return@withContext if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else persistentState.devVersions
         }
         
         logger.info("Waiting for dev Compose versions to load (timeout: ${timeoutMs}ms)...")
@@ -356,7 +368,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             logger.info("Dev Compose versions loaded successfully")
         }
         
-        if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS else persistentState.devVersions
+        if (persistentState.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else persistentState.devVersions
     }
     
     /**
@@ -490,6 +502,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
+                // Fetch filtered versions from Maven (only newer than first in LIBRARY_BUNDLES)
                 val versionsFromMaven = versionService.fetchAvailableVersions(includeDevVersions = false)
                 
                 if (!isActive) {
@@ -497,22 +510,32 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Use versions from Maven as-is (already sorted and limited to 20)
-                println("DEBUG ComposeVersionCache: Loaded ${versionsFromMaven.size} stable versions from Maven: ${versionsFromMaven.take(10)}")
+                // Combine hardcoded versions from LIBRARY_BUNDLES with new versions from Maven
+                val hardcodedVersions = ComposeVersions.LIBRARY_BUNDLES.keys.toList()
+                val allVersions = (hardcodedVersions + versionsFromMaven).distinct()
                 
-                persistentState.stableVersions = versionsFromMaven
+                // Sort by semantic version (descending - newest first)
+                val sortedVersions = allVersions.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+                
+                // Limit to MAX_CACHED_VERSIONS
+                val finalVersions = sortedVersions.take(MAX_CACHED_VERSIONS)
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versionsFromMaven.size} new versions from Maven")
+                println("DEBUG ComposeVersionCache: Combined with ${hardcodedVersions.size} hardcoded versions")
+                println("DEBUG ComposeVersionCache: Final stable versions (${finalVersions.size}): ${finalVersions.take(5)}")
+                
+                persistentState.stableVersions = finalVersions
                 persistentState.stableLastLoadTime = System.currentTimeMillis()
                 
-                println("DEBUG ComposeVersionCache: Cached ${versionsFromMaven.size} stable versions (TTL: 24h)")
-                logger.info("Cached ${versionsFromMaven.size} stable Compose versions from Maven")
+                logger.info("Cached ${finalVersions.size} stable Compose versions (${hardcodedVersions.size} hardcoded + ${versionsFromMaven.size} from Maven)")
             } catch (e: CancellationException) {
                 logger.info("Stable version loading cancelled due to plugin unload")
                 throw e
             } catch (e: Exception) {
-                println("DEBUG ComposeVersionCache: FAILED to load stable versions: ${e.message}, using fallback")
-                logger.warn("Failed to load stable Compose versions, using fallback: ${e.message}")
+                println("DEBUG ComposeVersionCache: FAILED to load stable versions: ${e.message}, using hardcoded fallback")
+                logger.warn("Failed to load stable Compose versions, using hardcoded fallback: ${e.message}")
                 if (persistentState.stableVersions.isEmpty()) {
-                    persistentState.stableVersions = ComposeVersions.STABLE_VERSIONS
+                    persistentState.stableVersions = ComposeVersions.STABLE_VERSIONS_HARDCODED
                 }
                 persistentState.stableLastLoadTime = System.currentTimeMillis()
             } finally {
@@ -558,7 +581,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             } catch (e: Exception) {
                 logger.warn("Failed to load dev Compose versions, using fallback: ${e.message}")
                 if (persistentState.devVersions.isEmpty()) {
-                    persistentState.devVersions = ComposeVersions.STABLE_VERSIONS
+                    persistentState.devVersions = ComposeVersions.STABLE_VERSIONS_HARDCODED
                 }
                 persistentState.devLastLoadTime = System.currentTimeMillis()
             } finally {

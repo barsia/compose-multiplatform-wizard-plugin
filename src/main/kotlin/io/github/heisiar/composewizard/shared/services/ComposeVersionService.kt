@@ -2,6 +2,7 @@ package io.github.heisiar.composewizard.shared.services
 
 import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -12,8 +13,8 @@ import javax.xml.parsers.DocumentBuilderFactory
  * Service for fetching Compose Multiplatform versions from Maven repositories.
  * 
  * Fetches versions from:
- * - **Stable versions**: Maven Central (https://repo1.maven.org)
- * - **Dev versions**: JetBrains Space (https://maven.pkg.jetbrains.space)
+ * - **Stable versions**: Maven Central (https://repo1.maven.org) - filters to versions newer than first in LIBRARY_BUNDLES
+ * - **Dev versions**: JetBrains Space (https://maven.pkg.jetbrains.space) - no filtering
  * 
  * Returns versions as-is from XML (no sorting).
  * Sorting happens at display time in ComposeVersionCache.getStableVersions().
@@ -45,8 +46,8 @@ class ComposeVersionService {
             fetchVersionsFromMaven(mavenUrl, includeDevVersions)
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
-            // For dev versions without internet: fallback to stable versions
-            ComposeVersions.STABLE_VERSIONS
+            // For dev versions without internet: fallback to hardcoded versions
+            ComposeVersions.STABLE_VERSIONS_HARDCODED
         }
     }
     
@@ -76,15 +77,23 @@ class ComposeVersionService {
                     }
                     
                     val result = if (isDevMode) {
-                        // Dev: Take FIRST 20 from XML as-is (no sorting!)
+                        // Dev: Take FIRST 20 from XML as-is (no sorting, no filtering!)
                         val first20 = versions.take(20)
                         println("DEBUG ComposeVersionService: Dev versions (first 20 from XML, no sorting): ${first20.take(10)}")
                         first20
                     } else {
-                        // Stable: Take LAST 20 from XML as-is (no sorting!)
-                        val last20 = versions.takeLast(20)
-                        println("DEBUG ComposeVersionService: Stable versions (last 20 from XML, no sorting): ${last20.take(10)}")
-                        last20
+                        // Stable: Filter versions newer than first in LIBRARY_BUNDLES
+                        val minVersion = ComposeVersions.DEFAULT_VERSION
+                        val minVersionParsed = ComposeVersionComparator.parse(minVersion)
+                        
+                        val filtered = versions.filter { version ->
+                            val parsed = ComposeVersionComparator.parse(version)
+                            parsed > minVersionParsed
+                        }
+                        
+                        println("DEBUG ComposeVersionService: Stable versions from Maven (filtered > $minVersion): ${filtered.size} versions")
+                        println("DEBUG ComposeVersionService: Filtered stable versions sample: ${filtered.take(5)}")
+                        filtered
                     }
                     return result
                 }
@@ -93,7 +102,7 @@ class ComposeVersionService {
             logger.warn("Failed to fetch versions from $mavenUrl: ${e.message}")
         }
         
-        return ComposeVersions.STABLE_VERSIONS
+        return ComposeVersions.STABLE_VERSIONS_HARDCODED
     }
 }
 

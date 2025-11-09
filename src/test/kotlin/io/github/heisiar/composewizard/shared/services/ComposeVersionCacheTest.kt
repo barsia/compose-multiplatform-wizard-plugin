@@ -13,7 +13,7 @@ class ComposeVersionCacheTest {
         val versions = cache.getStableVersions()
         
         assertTrue(versions.isNotEmpty())
-        assertEquals(ComposeVersions.STABLE_VERSIONS.first(), versions.first())
+        assertEquals(ComposeVersions.STABLE_VERSIONS_HARDCODED.first(), versions.first())
     }
 
     @Test
