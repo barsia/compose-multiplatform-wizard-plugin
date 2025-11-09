@@ -151,6 +151,8 @@ fun ComposeVersionField(
     devCheckboxVisible: Boolean = false,
     onDevVersionsToggle: (Boolean) -> Unit = {}
 ) {
+    var refreshTrigger by remember { mutableStateOf(0) }
+    
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -180,17 +182,12 @@ fun ComposeVersionField(
         val initialVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
         val initialLoadingState = if (enableDevVersions) cache.isLoadingDevVersions() else cache.isLoadingStableVersions()
 
-        var availableVersions by remember(enableDevVersions) { mutableStateOf(initialVersions) }
+        var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf(initialVersions) }
         var isFirstRender by remember(enableDevVersions) { mutableStateOf(true) }
         var currentSelectedVersion by remember(enableDevVersions) { 
-            val initialSelection = if (selectedVersion.isEmpty() || initialVersions?.contains(selectedVersion) == false) {
-                // No selection OR selectedVersion not in current list (e.g., switched dev↔stable) - use first from list
-                initialVersions?.firstOrNull() ?: ""
-            } else {
-                // selectedVersion exists in current list - keep it
-                selectedVersion
-            }
-            println("DEBUG ComposeVersionField: Initializing with enableDev=$enableDevVersions, selectedVersion='$selectedVersion', inList=${initialVersions?.contains(selectedVersion)}, initialSelection='$initialSelection'")
+            val initialSelection = initialVersions?.firstOrNull() ?: ""
+            println("DEBUG ComposeVersionField: Switching to enableDev=$enableDevVersions, auto-selected first version: '$initialSelection'")
+
             mutableStateOf(initialSelection)
         }
         // Show loading ONLY if no cached versions (background refresh shouldn't block UI)
@@ -282,6 +279,45 @@ fun ComposeVersionField(
             }
         }
 
+
+        // Poll for updated versions after manual refresh
+        LaunchedEffect(refreshTrigger) {
+            if (refreshTrigger == 0) return@LaunchedEffect
+            
+            println("DEBUG: Refresh triggered, waiting for new versions...")
+            isLoading = true
+            
+            kotlinx.coroutines.delay(200)
+            
+            while (true) {
+                val isCurrentlyLoading = if (enableDevVersions) {
+                    cache.isLoadingDevVersions()
+                } else {
+                    cache.isLoadingStableVersions()
+                }
+                
+                if (!isCurrentlyLoading) {
+                    val newVersions = if (enableDevVersions) {
+                        cache.getDevVersions()
+                    } else {
+                        cache.getStableVersions()
+                    }
+                    
+                    if (newVersions != null) {
+                        println("DEBUG: Refresh complete, got ${newVersions.size} versions: ${newVersions.take(3)}")
+                        availableVersions = newVersions
+                        if (currentSelectedVersion.isEmpty() || !newVersions.contains(currentSelectedVersion)) {
+                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
+                        }
+                        isLoading = false
+                        break
+                    }
+                }
+                
+                kotlinx.coroutines.delay(100)
+            }
+        }
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -357,6 +393,7 @@ fun ComposeVersionField(
                                 }
                             },
                             enabled = !isLoading && availableVersions != null,
+                            maxPopupHeight = 280.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .pointerHoverIcon(
@@ -383,6 +420,7 @@ fun ComposeVersionField(
                             }
                         },
                         enabled = !isLoading && availableVersions != null,
+                        maxPopupHeight = 280.dp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .pointerHoverIcon(
@@ -450,6 +488,7 @@ fun ComposeVersionField(
                                     )
                                 }
                                 onRefreshVersions()
+                                refreshTrigger++
                             },
                         tint = JewelTheme.globalColors.text.normal
                     )

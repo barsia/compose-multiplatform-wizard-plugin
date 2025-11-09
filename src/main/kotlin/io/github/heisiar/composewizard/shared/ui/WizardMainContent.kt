@@ -103,7 +103,14 @@ fun WizardMainContent(
                             state.composeVersion = it 
                             println("DEBUG WizardMainContent [Desktop]: state.composeVersion updated to '${state.composeVersion}'")
                         },
-                        onRefreshVersions = { },
+                        onRefreshVersions = {
+                            val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+                            if (state.enableDevVersions) {
+                                cache.forceReloadDev()
+                            } else {
+                                cache.forceReloadStable()
+                            }
+                        },
                         modifier = Modifier.weight(0.4f),
                         devCheckboxVisible = state.devCheckboxVisible,
                         onDevVersionsToggle = { 
@@ -149,7 +156,14 @@ fun WizardMainContent(
                         enableDevVersions = state.enableDevVersions,
                         selectedVersion = state.composeVersion,
                         onVersionSelected = { state.composeVersion = it },
-                        onRefreshVersions = { },
+                        onRefreshVersions = {
+                            val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+                            if (state.enableDevVersions) {
+                                cache.forceReloadDev()
+                            } else {
+                                cache.forceReloadStable()
+                            }
+                        },
                         modifier = Modifier.weight(0.4f),
                         devCheckboxVisible = state.devCheckboxVisible,
                         onDevVersionsToggle = { 

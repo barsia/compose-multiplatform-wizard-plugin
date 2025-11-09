@@ -36,13 +36,13 @@ class ComposeVersionService {
     
     companion object {
         private const val STABLE_MAVEN_URL = "https://repo1.maven.org/maven2/org/jetbrains/compose/compose-gradle-plugin/"
-        private const val DEV_MAVEN_URL = "https://maven.pkg.jetbrains.space/public/p/compose/dev/org/jetbrains/compose/org.jetbrains.compose.gradle.plugin/"
+        private const val DEV_MAVEN_URL = "https://maven.pkg.jetbrains.space/public/p/compose/dev/org/jetbrains/compose/compose-gradle-plugin/"
     }
     
     suspend fun fetchAvailableVersions(includeDevVersions: Boolean): List<String> = withContext(Dispatchers.IO) {
         try {
             val mavenUrl = if (includeDevVersions) DEV_MAVEN_URL else STABLE_MAVEN_URL
-            fetchVersionsFromMaven(mavenUrl)
+            fetchVersionsFromMaven(mavenUrl, sortVersions = !includeDevVersions)
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
             // For dev versions without internet: fallback to stable versions
@@ -50,7 +50,7 @@ class ComposeVersionService {
         }
     }
     
-    private fun fetchVersionsFromMaven(mavenUrl: String): List<String> {
+    private fun fetchVersionsFromMaven(mavenUrl: String, sortVersions: Boolean): List<String> {
         try {
             val metadataUrl = "${mavenUrl}maven-metadata.xml"
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
@@ -75,10 +75,18 @@ class ComposeVersionService {
                         }
                     }
                     
-                    // No sorting here - sorting happens on read (getStableVersions/getDevVersions)
-                    // Just take first 20 versions as-is from Maven
-                    println("DEBUG ComposeVersionService: Versions from Maven (first 10): ${versions.take(10)}")
-                    return versions.take(20)
+                    val result = if (sortVersions) {
+                        // Stable: Sort by semantic version (newest first), then take top 20
+                        val sorted = versions.sortedWith(compareByDescending { io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator.parse(it) })
+                        println("DEBUG ComposeVersionService: Stable versions from Maven (sorted, first 10): ${sorted.take(10)}")
+                        sorted.take(20)
+                    } else {
+                        // Dev: Take last 20 as-is from XML (newest are at the end)
+                        val last20 = versions.takeLast(20).reversed()
+                        println("DEBUG ComposeVersionService: Dev versions from Maven (unsorted, first 10): ${last20.take(10)}")
+                        last20
+                    }
+                    return result
                 }
             }
         } catch (e: Exception) {

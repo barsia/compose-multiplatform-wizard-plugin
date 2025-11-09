@@ -208,14 +208,31 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             initializeCache()
         }
         
-        val versions = if (persistentState.devVersions.isEmpty()) null else persistentState.devVersions
-        println("DEBUG ComposeVersionCache.getDevVersions(): returning ${versions?.take(3)}, isLoading=$isLoadingDev")
+        // Check if cache is valid and not expired
+        if (persistentState.devVersions.isNotEmpty() && !isDevCacheExpired()) {
+            // Return dev versions as-is (no sorting for dev)
+            println("DEBUG ComposeVersionCache.getDevVersions(): returning cached (unsorted) ${persistentState.devVersions.take(3)}")
+            return persistentState.devVersions
+        }
         
-        if (!isLoadingDev && isDevCacheExpired()) {
-            logger.info("Dev cache expired (TTL: ${CACHE_TTL_MS}ms), refreshing in background")
+        // No cache or expired → trigger loading (if not already loading)
+        if (!isLoadingDev) {
+            logger.info("Dev cache missing or expired, triggering background load")
+            println("DEBUG ComposeVersionCache: Starting dev version load (cache missing or expired)")
             loadDevVersionsInBackground()
         }
+        
+        // While loading → return null (UI will show loading indicator)
+        if (isLoadingDev) {
+            println("DEBUG ComposeVersionCache.getDevVersions(): loading in progress, returning null")
+            return null
+        }
+        
+        // Loading completed → return result (either from Maven or hardcoded fallback), unsorted
+        val versions = persistentState.devVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS }
+        println("DEBUG ComposeVersionCache.getDevVersions(): loading completed, returning (unsorted) ${versions.take(3)}")
         return versions
+
     }
     
     /**
@@ -442,30 +459,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Incremental update: add only NEW versions to hardcoded baseline
-                val hardcoded = ComposeVersions.STABLE_VERSIONS_HARDCODED
-                val newVersions = versionsFromMaven.filterNot { it in hardcoded }
+                // Use versions from Maven as-is (already sorted and limited to 20)
+                println("DEBUG ComposeVersionCache: Loaded ${versionsFromMaven.size} stable versions from Maven: ${versionsFromMaven.take(10)}")
                 
-                // Combine without sorting - sorting happens on read (getStableVersions)
-                println("DEBUG ComposeVersionCache: Before combining - newVersions (${newVersions.size}): ${newVersions.take(5)}")
-                println("DEBUG ComposeVersionCache: Before combining - hardcoded (${hardcoded.size}): ${hardcoded.take(5)}")
-                
-                val combined = (newVersions + hardcoded).take(MAX_CACHED_VERSIONS)
-                
-                println("DEBUG ComposeVersionCache: After combining - combined (${combined.size}): ${combined.take(10)}")
-                
-                persistentState.stableVersions = combined
+                persistentState.stableVersions = versionsFromMaven
                 persistentState.stableLastLoadTime = System.currentTimeMillis()
                 
-                if (newVersions.isNotEmpty()) {
-                    println("DEBUG ComposeVersionCache: Found ${newVersions.size} NEW stable versions: ${newVersions.joinToString(", ")}")
-                    logger.info("Found ${newVersions.size} new stable versions: ${newVersions.joinToString(", ")}")
-                } else {
-                    println("DEBUG ComposeVersionCache: No new versions, using ${hardcoded.count()} hardcoded versions")
-                }
-                
-                println("DEBUG ComposeVersionCache: Total ${combined.size} stable versions cached (TTL: 24h)")
-                logger.info("Cached ${combined.size} stable Compose versions (${newVersions.size} new + ${hardcoded.count()} hardcoded, limited to ${MAX_CACHED_VERSIONS})")
+                println("DEBUG ComposeVersionCache: Cached ${versionsFromMaven.size} stable versions (TTL: 24h)")
+                logger.info("Cached ${versionsFromMaven.size} stable Compose versions from Maven")
             } catch (e: CancellationException) {
                 logger.info("Stable version loading cancelled due to plugin unload")
                 throw e
@@ -505,25 +506,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Incremental update: add only NEW dev versions to existing cache
-                val existingDevVersions = persistentState.devVersions
-                val newDevVersions = versionsFromMaven.filterNot { it in existingDevVersions }
+                // Use versions from Maven as-is (already sorted and limited to 20)
+                println("DEBUG ComposeVersionCache: Loaded ${versionsFromMaven.size} dev versions from Maven: ${versionsFromMaven.take(10)}")
                 
-                // Combine: new versions first, then existing, limited to MAX
-                val combined = (newDevVersions + existingDevVersions).take(MAX_CACHED_VERSIONS)
-                
-                persistentState.devVersions = combined
+                persistentState.devVersions = versionsFromMaven
                 persistentState.devLastLoadTime = System.currentTimeMillis()
                 
-                if (newDevVersions.isNotEmpty()) {
-                    println("DEBUG ComposeVersionCache: Found ${newDevVersions.size} NEW dev versions: ${newDevVersions.take(3).joinToString(", ")}")
-                    logger.info("Found ${newDevVersions.size} new dev versions: ${newDevVersions.take(3).joinToString(", ")}")
-                } else {
-                    println("DEBUG ComposeVersionCache: No new dev versions, keeping ${existingDevVersions.size} existing")
-                }
-                
-                println("DEBUG ComposeVersionCache: Total ${combined.size} dev versions cached (TTL: 24h)")
-                logger.info("Cached ${combined.size} dev Compose versions (${newDevVersions.size} new + ${existingDevVersions.size} existing, limited to ${MAX_CACHED_VERSIONS})")
+                println("DEBUG ComposeVersionCache: Cached ${versionsFromMaven.size} dev versions (TTL: 24h)")
+                logger.info("Cached ${versionsFromMaven.size} dev Compose versions from Maven")
             } catch (e: CancellationException) {
                 logger.info("Dev version loading cancelled due to plugin unload")
                 throw e
