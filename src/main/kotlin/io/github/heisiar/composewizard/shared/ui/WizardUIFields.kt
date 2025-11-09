@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -32,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -44,6 +46,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -59,12 +62,14 @@ import org.jetbrains.jewel.ui.Outline
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
-import org.jetbrains.jewel.ui.component.ListComboBox
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
 import org.jetbrains.jewel.ui.component.Tooltip
-import org.jetbrains.jewel.ui.component.styling.ComboBoxStyle
-import org.jetbrains.jewel.ui.theme.comboBoxStyle
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.JBColor
+import com.intellij.util.ui.JBUI
+import javax.swing.DefaultComboBoxModel
+import java.awt.Dimension as AwtDimension
 import java.awt.Cursor
 import java.io.File
 import java.io.InputStream
@@ -139,6 +144,7 @@ fun ProjectNameField(
     }
 }
 
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ComposeVersionField(
@@ -185,9 +191,9 @@ fun ComposeVersionField(
         var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf(initialVersions) }
         var isFirstRender by remember(enableDevVersions) { mutableStateOf(true) }
         var currentSelectedVersion by remember(enableDevVersions) { 
+            // Always select first version when switching Dev/Stable
             val initialSelection = initialVersions?.firstOrNull() ?: ""
-            println("DEBUG ComposeVersionField: Switching to enableDev=$enableDevVersions, auto-selected first version: '$initialSelection'")
-
+            println("DEBUG ComposeVersionField: Initializing with enableDev=$enableDevVersions, always selecting first version: '$initialSelection'")
             mutableStateOf(initialSelection)
         }
         // Show loading ONLY if no cached versions (background refresh shouldn't block UI)
@@ -235,6 +241,44 @@ fun ComposeVersionField(
             }
         }
 
+        // Poll for updated versions after manual refresh
+        LaunchedEffect(refreshTrigger) {
+            if (refreshTrigger == 0) return@LaunchedEffect // Skip initial render
+            
+            println("DEBUG: Refresh triggered, waiting for new versions...")
+            isLoading = true
+            
+            kotlinx.coroutines.delay(200) // Small delay to let cache start loading
+            
+            while (true) {
+                val isCurrentlyLoading = if (enableDevVersions) {
+                    cache.isLoadingDevVersions()
+                } else {
+                    cache.isLoadingStableVersions()
+                }
+                
+                if (!isCurrentlyLoading) {
+                    val newVersions = if (enableDevVersions) {
+                        cache.getDevVersions()
+                    } else {
+                        cache.getStableVersions()
+                    }
+                    
+                    if (newVersions != null) {
+                        println("DEBUG: Refresh complete, got ${newVersions.size} versions: ${newVersions.take(3)}")
+                        availableVersions = newVersions
+                        if (currentSelectedVersion.isEmpty() || !newVersions.contains(currentSelectedVersion)) {
+                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
+                        }
+                        isLoading = false
+                        break
+                    }
+                }
+                
+                kotlinx.coroutines.delay(100)
+            }
+        }
+        
         LaunchedEffect(enableDevVersions) {
             println("DEBUG: Starting version loading check, enableDev=$enableDevVersions, initialVersions=${initialVersions?.take(3)}")
             
@@ -279,45 +323,6 @@ fun ComposeVersionField(
             }
         }
 
-
-        // Poll for updated versions after manual refresh
-        LaunchedEffect(refreshTrigger) {
-            if (refreshTrigger == 0) return@LaunchedEffect
-            
-            println("DEBUG: Refresh triggered, waiting for new versions...")
-            isLoading = true
-            
-            kotlinx.coroutines.delay(200)
-            
-            while (true) {
-                val isCurrentlyLoading = if (enableDevVersions) {
-                    cache.isLoadingDevVersions()
-                } else {
-                    cache.isLoadingStableVersions()
-                }
-                
-                if (!isCurrentlyLoading) {
-                    val newVersions = if (enableDevVersions) {
-                        cache.getDevVersions()
-                    } else {
-                        cache.getStableVersions()
-                    }
-                    
-                    if (newVersions != null) {
-                        println("DEBUG: Refresh complete, got ${newVersions.size} versions: ${newVersions.take(3)}")
-                        availableVersions = newVersions
-                        if (currentSelectedVersion.isEmpty() || !newVersions.contains(currentSelectedVersion)) {
-                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
-                        }
-                        isLoading = false
-                        break
-                    }
-                }
-                
-                kotlinx.coroutines.delay(100)
-            }
-        }
-
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -338,49 +343,56 @@ fun ComposeVersionField(
                 }
                 val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
                 
-                val defaultStyle = JewelTheme.comboBoxStyle
-                val transparentStyle = remember(defaultStyle) {
-                    val colors = org.jetbrains.jewel.ui.component.styling.ComboBoxColors(
-                        background = defaultStyle.colors.background,
-                        nonEditableBackground = Color.Transparent,
-                        backgroundDisabled = defaultStyle.colors.backgroundDisabled,
-                        backgroundFocused = defaultStyle.colors.backgroundFocused,
-                        backgroundPressed = defaultStyle.colors.backgroundPressed,
-                        backgroundHovered = defaultStyle.colors.backgroundHovered,
-                        content = defaultStyle.colors.content,
-                        contentDisabled = defaultStyle.colors.contentDisabled,
-                        contentFocused = defaultStyle.colors.contentFocused,
-                        contentPressed = defaultStyle.colors.contentPressed,
-                        contentHovered = defaultStyle.colors.contentHovered,
-                        border = defaultStyle.colors.border,
-                        borderDisabled = defaultStyle.colors.borderDisabled,
-                        borderFocused = defaultStyle.colors.borderFocused,
-                        borderPressed = defaultStyle.colors.borderPressed,
-                        borderHovered = defaultStyle.colors.borderHovered
-                    )
-                    ComboBoxStyle(colors, defaultStyle.metrics, defaultStyle.icons)
-                }
-                
-                val textMeasurer = rememberTextMeasurer()
-                val textStyle = JewelTheme.defaultTextStyle
-                val textWidth = remember(selectedVersion, textStyle) {
-                    textMeasurer.measure(selectedVersion, textStyle).size.width
-                }
-                val availableWidth = with(androidx.compose.ui.platform.LocalDensity.current) { 
-                    maxWidth.toPx() - 40.dp.toPx()
-                }
-                val isTextTruncated = textWidth > availableWidth
-                
-                if (isTextTruncated) {
-                    org.jetbrains.jewel.ui.component.Tooltip(
-                        tooltip = { Text(selectedVersion) },
-                        tooltipPlacement = TooltipPlacement.ComponentRect(
-                            anchor = Alignment.BottomCenter,
-                            alignment = Alignment.BottomCenter,
-                            offset = DpOffset(0.dp, 4.dp)
-                        )
-                    ) {
-                        ListComboBox(
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val textMeasurer = rememberTextMeasurer()
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    
+                    val textWidth = if (currentSelectedVersion.isNotEmpty()) {
+                        with(density) {
+                            textMeasurer.measure(
+                                text = currentSelectedVersion,
+                                style = JewelTheme.defaultTextStyle
+                            ).size.width.toDp()
+                        }
+                    } else {
+                        0.dp
+                    }
+                    
+                    // Show tooltip only if text is truncated (with some margin for dropdown button)
+                    val showTooltip = textWidth > (maxWidth - 40.dp) && currentSelectedVersion.isNotEmpty()
+                    
+                    if (showTooltip) {
+                        Tooltip(
+                            tooltip = { Text(currentSelectedVersion) },
+                            tooltipPlacement = TooltipPlacement.ComponentRect(
+                                anchor = androidx.compose.ui.Alignment.BottomCenter,
+                                alignment = androidx.compose.ui.Alignment.BottomCenter,
+                                offset = DpOffset(0.dp, 4.dp)
+                            )
+                        ) {
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = items,
+                                selectedIndex = currentIndex,
+                                onSelectedItemChange = { index ->
+                                    availableVersions?.let { versions ->
+                                        if (versions.isNotEmpty() && index in versions.indices) {
+                                            val newSelection = versions[index]
+                                            println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
+                                            currentSelectedVersion = newSelection
+                                        }
+                                    }
+                                },
+                                enabled = !isLoading && availableVersions != null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                                maxPopupHeight = 280.dp
+                            )
+                        }
+                    } else {
+                        org.jetbrains.jewel.ui.component.ListComboBox(
                             items = items,
                             selectedIndex = currentIndex,
                             onSelectedItemChange = { index ->
@@ -393,45 +405,12 @@ fun ComposeVersionField(
                                 }
                             },
                             enabled = !isLoading && availableVersions != null,
-                            maxPopupHeight = 280.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .pointerHoverIcon(
-                                    if (isLoading || availableVersions == null) {
-                                        PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
-                                    } else {
-                                        PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-                                    }
-                                ),
-                            style = transparentStyle
+                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                            maxPopupHeight = 280.dp
                         )
                     }
-                } else {
-                    ListComboBox(
-                        items = items,
-                        selectedIndex = currentIndex,
-                        onSelectedItemChange = { index ->
-                            availableVersions?.let { versions ->
-                                if (versions.isNotEmpty() && index in versions.indices) {
-                                    val newSelection = versions[index]
-                                    println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
-                                    currentSelectedVersion = newSelection
-                                }
-                            }
-                        },
-                        enabled = !isLoading && availableVersions != null,
-                        maxPopupHeight = 280.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerHoverIcon(
-                                if (isLoading || availableVersions == null) {
-                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
-                                } else {
-                                    PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-                                }
-                            ),
-                        style = transparentStyle
-                    )
                 }
             }
 
@@ -723,7 +702,9 @@ fun OptionsSection(
     hotReloadVersion: String = "",
     isResolvingLifecycle: Boolean = false,
     isFallback: Boolean = false,
-    isLifecycleFallback: Boolean = false
+    isLifecycleFallback: Boolean = false,
+    libraryVersions: Map<io.github.heisiar.composewizard.shared.LibraryType, String> = emptyMap(),
+    libraryFromBundle: Map<io.github.heisiar.composewizard.shared.LibraryType, Boolean> = emptyMap()
 ) {
     Column(
         modifier = modifier,
@@ -752,114 +733,137 @@ fun OptionsSection(
                     .alpha(if (versionsReady) 1f else 0.3f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Title with fallback indicator
-                val titleText = if (isFallback) {
-                    "Versions will be used: 📦 (offline fallback)"
-                } else {
-                    "Versions will be used:"
-                }
-                Text(
-                    text = titleText,
-                    style = JewelTheme.defaultTextStyle,
-                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f)
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Layout: label + version (for easy triple-click copy)
+                // Layout: 2-column table with versions (including title and Kotlin as first row)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Kotlin version
+                    // First row: Title and Kotlin version
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Left: Title with fallback indicator
+                        val titleText = if (isFallback) {
+                            "Versions will be used: 📦 (offline fallback)"
+                        } else {
+                            "Versions will be used:"
+                        }
                         Text(
-                            text = "Kotlin:",
+                            text = titleText,
                             style = JewelTheme.defaultTextStyle,
                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                            fontSize = 13.sp
+                            fontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
                         )
-                        Text(
-                            text = kotlinVersion,
-                            style = JewelTheme.defaultTextStyle,
-                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                            fontSize = 13.sp
-                        )
-                    }
-                    
-                    // Compose Multiplatform version
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Compose Multiplatform:",
-                            style = JewelTheme.defaultTextStyle,
-                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            text = composeVersion,
-                            style = JewelTheme.defaultTextStyle,
-                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                            fontSize = 13.sp
-                        )
-                    }
-                    
-                    // AndroidX Lifecycle version
-                    if (isResolvingLifecycle || lifecycleVersion.isNotEmpty()) {
+                        
+                        // Right: Kotlin version
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "AndroidX Lifecycle:",
+                                text = "Kotlin:",
                                 style = JewelTheme.defaultTextStyle,
                                 color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                fontSize = 13.sp
+                                fontSize = 12.sp
                             )
-                            val lifecycleDisplayText = if (isResolvingLifecycle) {
-                                "resolving..."
-                            } else if (isLifecycleFallback) {
-                                "$lifecycleVersion 📦"
-                            } else {
-                                lifecycleVersion
-                            }
                             Text(
-                                text = lifecycleDisplayText,
+                                text = kotlinVersion,
                                 style = JewelTheme.defaultTextStyle,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                fontSize = 13.sp,
-                                fontStyle = if (isResolvingLifecycle) {
-                                    androidx.compose.ui.text.font.FontStyle.Italic
-                                } else {
-                                    androidx.compose.ui.text.font.FontStyle.Normal
-                                }
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                                fontSize = 12.sp
                             )
                         }
                     }
                     
-                    // Compose Hot Reload version
-                    if (hotReloadVersion.isNotEmpty()) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    // Collect other versions for 2-column layout
+                    val allVersionItems = buildList {
+                        add("Compose" to composeVersion)
+                        io.github.heisiar.composewizard.shared.LibraryType.values().forEach { type ->
+                            val version = libraryVersions[type]
+                            if (!version.isNullOrEmpty()) {
+                                val displayText = if (libraryFromBundle[type] == true) {
+                                    "$version 📦"
+                                } else {
+                                    version
+                                }
+                                add(type.displayName to displayText)
+                            }
+                        }
+                        if (hotReloadVersion.isNotEmpty()) {
+                            add("Compose Hot Reload" to hotReloadVersion)
+                        }
+                    }
+                    
+                    // Split into two columns
+                    val midPoint = (allVersionItems.size + 1) / 2
+                    val leftColumn = allVersionItems.take(midPoint)
+                    val rightColumn = allVersionItems.drop(midPoint)
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Left column
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Text(
-                                text = "Compose Hot Reload:",
-                                style = JewelTheme.defaultTextStyle,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = hotReloadVersion,
-                                style = JewelTheme.defaultTextStyle,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                fontSize = 13.sp
-                            )
+                            leftColumn.forEach { (label, value) ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "$label:",
+                                        style = JewelTheme.defaultTextStyle,
+                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = value,
+                                        style = JewelTheme.defaultTextStyle,
+                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Right column
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            rightColumn.forEach { (label, value) ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "$label:",
+                                        style = JewelTheme.defaultTextStyle,
+                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = value,
+                                        style = JewelTheme.defaultTextStyle,
+                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
                 }

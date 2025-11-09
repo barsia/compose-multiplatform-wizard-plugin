@@ -20,9 +20,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
@@ -220,10 +222,42 @@ fun WizardMainContent(
             var lifecycleVersion by remember { mutableStateOf("") }
             var isResolvingLifecycle by remember { mutableStateOf(false) }
             
+            // Library versions state
+            val libraryVersions = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, String>() }
+            val libraryFromBundle = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, Boolean>() }
+            
+            // Load all library versions and subscribe to lifecycle updates
             LaunchedEffect(state.composeVersion) {
+                if (state.composeVersion.isEmpty()) return@LaunchedEffect
+                
+                // Load library versions with polling
+                println("DEBUG UI: Loading library versions for Compose ${state.composeVersion}")
+                libraryVersions.clear()
+                libraryFromBundle.clear()
+                
+                io.github.heisiar.composewizard.shared.LibraryType.values().forEach { type ->
+                    launch {
+                        var version = cache.getLibraryVersion(state.composeVersion, type)
+                        
+                        // Poll if version is still null (being resolved)
+                        var attempts = 0
+                        while (version == null && attempts < 50) {
+                            kotlinx.coroutines.delay(100)
+                            version = cache.getLibraryVersion(state.composeVersion, type)
+                            attempts++
+                        }
+                        
+                        if (version != null && version.isNotEmpty()) {
+                            libraryVersions[type] = version
+                            libraryFromBundle[type] = cache.isLibraryFromBundle(state.composeVersion, type)
+                            println("DEBUG UI: Loaded ${type.displayName}: $version (fromBundle=${libraryFromBundle[type]})")
+                        }
+                    }
+                }
+                
+                // Lifecycle version handling
                 println("DEBUG UI: Subscribing to Lifecycle version updates for Compose ${state.composeVersion}")
                 
-                // Initial check: get cached value or trigger resolution
                 val cachedLifecycle = cache.getLifecycleVersion(state.composeVersion)
                 println("DEBUG UI: cachedLifecycle = '$cachedLifecycle' (null=${cachedLifecycle == null}, empty=${cachedLifecycle?.isEmpty()})")
                 
@@ -237,7 +271,6 @@ fun WizardMainContent(
                     isResolvingLifecycle = true
                 }
                 
-                // Subscribe to Flow updates (reactive, no polling!)
                 cache.lifecycleVersionUpdates.collect { (version, lifecycle) ->
                     println("DEBUG UI: Flow event received: version=$version, lifecycle='$lifecycle', current=${state.composeVersion}")
                     if (version == state.composeVersion) {
@@ -255,7 +288,15 @@ fun WizardMainContent(
                 println("DEBUG Lifecycle: compose=${state.composeVersion}, lifecycle=$lifecycleVersion")
             }
             
-            val isFallback = remember { cache.isUsingFallbackVersions() }
+            val isFallback = remember(state.enableDevVersions) { 
+                val result = if (state.enableDevVersions) {
+                    cache.isUsingDevFallbackVersions()
+                } else {
+                    cache.isUsingFallbackVersions()
+                }
+                println("DEBUG WizardMainContent: isFallback=$result, enableDevVersions=${state.enableDevVersions}")
+                result
+            }
             val isLifecycleFallback = remember(state.composeVersion, lifecycleVersion) {
                 if (lifecycleVersion.isNotEmpty()) {
                     cache.isLifecycleFallback(state.composeVersion)
@@ -277,12 +318,17 @@ fun WizardMainContent(
                     ComposeWizardUsageCollector.logTestsToggled(state.tests)
                 },
                 composeVersion = state.composeVersion,
-                kotlinVersion = io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_KOTLIN_VERSION,
+                kotlinVersion = remember(state.composeVersion) {
+                    io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)?.kotlinVersion
+                        ?: io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_KOTLIN_VERSION
+                },
                 lifecycleVersion = lifecycleVersion,
                 hotReloadVersion = hotReloadVersion,
                 isResolvingLifecycle = isResolvingLifecycle,
                 isFallback = isFallback,
-                isLifecycleFallback = isLifecycleFallback
+                isLifecycleFallback = isLifecycleFallback,
+                libraryVersions = libraryVersions,
+                libraryFromBundle = libraryFromBundle
             )
         }
 

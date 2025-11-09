@@ -2,10 +2,11 @@ package io.github.heisiar.composewizard.shared.services
 
 import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.LibraryType
 import java.net.HttpURLConnection
 
 /**
- * Service for fetching Lifecycle versions from GitHub Web UI.
+ * Service for fetching library versions from GitHub Web UI.
  * 
  * Uses HTML scraping from compose-multiplatform-core release pages
  * because this repository doesn't provide GitHub Releases API access.
@@ -20,13 +21,24 @@ class ComposeLibraryVersionService {
         private const val TIMEOUT_MS = 5000
         private const val MAX_FALLBACK_VERSIONS = 20  // Limit fallback depth
         
+        // Regex patterns for all library types
         // Captures full version including qualifiers (alpha, beta, rc) and dev suffix
-        // Examples: 2.10.0-alpha04+dev3224, 2.9.5, 2.10.0-beta01
         private val LIFECYCLE_PATTERN = Regex("""lifecycle-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val MATERIAL3_PATTERN = Regex("""material3\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val MATERIAL3_ADAPTIVE_PATTERN = Regex("""adaptive-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val NAVIGATION_PATTERN = Regex("""navigation-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val NAVIGATION_EVENT_PATTERN = Regex("""navigationevent-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val SAVED_STATE_PATTERN = Regex("""savedstate\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val WINDOW_PATTERN = Regex("""window-core:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
     }
     
     data class FetchResult(
         val lifecycle: String? = null,
+        val isRateLimited: Boolean = false
+    )
+    
+    data class LibraryVersionsResult(
+        val versions: Map<LibraryType, String> = emptyMap(),
         val isRateLimited: Boolean = false
     )
     
@@ -88,6 +100,83 @@ class ComposeLibraryVersionService {
     }
     
     /**
+     * Fetch all library versions from GitHub Web UI for given Compose version.
+     * Returns LibraryVersionsResult with versions map and rate limit status.
+     */
+    fun fetchLibraryVersionsFromWebUI(composeVersion: String): LibraryVersionsResult {
+        return try {
+            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
+            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
+            
+            println("DEBUG: 🌐 Fetching library versions from GitHub Web UI: $composeVersion")
+            
+            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = TIMEOUT_MS
+            connection.readTimeout = TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
+            
+            val responseCode = connection.responseCode
+            
+            if (responseCode == 403 || responseCode == 429) {
+                println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
+                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = true)
+            }
+            
+            if (responseCode != 200) {
+                println("DEBUG: ❌ Not found or error (code: $responseCode)")
+                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false)
+            }
+            
+            val html = connection.inputStream.bufferedReader().use { it.readText() }
+            
+            // Parse all library versions from HTML
+            val versions = mutableMapOf<LibraryType, String>()
+            
+            LIFECYCLE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.LIFECYCLE] = it
+                println("DEBUG: ✅ Found lifecycle: $it")
+            }
+            
+            MATERIAL3_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.MATERIAL3] = it
+                println("DEBUG: ✅ Found material3: $it")
+            }
+            
+            MATERIAL3_ADAPTIVE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.MATERIAL3_ADAPTIVE] = it
+                println("DEBUG: ✅ Found material3-adaptive: $it")
+            }
+            
+            NAVIGATION_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.NAVIGATION] = it
+                println("DEBUG: ✅ Found navigation: $it")
+            }
+            
+            NAVIGATION_EVENT_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.NAVIGATION_EVENT] = it
+                println("DEBUG: ✅ Found navigationEvent: $it")
+            }
+            
+            SAVED_STATE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.SAVED_STATE] = it
+                println("DEBUG: ✅ Found savedState: $it")
+            }
+            
+            WINDOW_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.WINDOW] = it
+                println("DEBUG: ✅ Found window: $it")
+            }
+            
+            println("DEBUG: Parsed ${versions.size} library versions from GitHub")
+            
+            LibraryVersionsResult(versions = versions, isRateLimited = false)
+        } catch (e: Exception) {
+            logger.info("Failed to fetch library versions from Web UI for $composeVersion: ${e.message}")
+            LibraryVersionsResult(versions = emptyMap(), isRateLimited = false)
+        }
+    }
+    
+    /**
      * Generate fallback versions for given base Compose version.
      * 
      * For "1.10.0-beta02" generates:
@@ -95,12 +184,18 @@ class ComposeLibraryVersionService {
      * - 1.10.0-alpha08, alpha07, ..., alpha01
      * - 1.9.3, 1.9.2, 1.9.1, ...
      * - 1.8.0, 1.7.1, ...
+     * 
+     * For "1.9.0-rc02" generates:
+     * - 1.9.0-rc01
+     * - 1.9.0-beta08, beta07, ..., beta01
+     * - 1.9.0-alpha08, alpha07, ..., alpha01
+     * - 1.8.3, 1.8.2, ...
      */
     fun generateFallbackVersions(baseVersion: String): List<String> {
         val versions = mutableListOf<String>()
         
-        // Start with known Bundle versions (fast checks first!)
-        versions.addAll(ComposeVersions.LIBRARY_BUNDLES.keys)
+        // Start with known Bundle versions (fast checks first!), excluding dev versions
+        versions.addAll(ComposeVersions.LIBRARY_BUNDLES.keys.filter { !it.contains("+dev") })
         
         val parts = baseVersion.split(".")
         
@@ -123,6 +218,16 @@ class ComposeLibraryVersionService {
                 // Add previous qualifiers of same type (beta02 → beta01, alpha05 → alpha04, ...)
                 for (i in (qualifierNum - 1) downTo 1) {
                     versions.add("$major.$minor.$patch-$qualifierType${i.toString().padStart(2, '0')}")
+                }
+                
+                // If rc, add betas and alphas for same patch
+                if (qualifierType == "rc") {
+                    for (i in 8 downTo 1) {
+                        versions.add("$major.$minor.$patch-beta${i.toString().padStart(2, '0')}")
+                    }
+                    for (i in 8 downTo 1) {
+                        versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
+                    }
                 }
                 
                 // If beta, add alphas for same patch

@@ -9,6 +9,7 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,10 +21,28 @@ data class ComposeVersionCacheState(
     var stableLastLoadTime: Long = 0L,
     var devVersions: List<String> = emptyList(),
     var devLastLoadTime: Long = 0L,
-    // LinkedHashMap preserves insertion order for FIFO cleanup
+    
+    // Library versions cache (LinkedHashMap preserves insertion order for FIFO cleanup)
     var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf(),
-    // Track if lifecycle version is from hardcoded bundle (true) or GitHub (false)
-    var lifecycleIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
+    var lifecycleIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var material3Versions: LinkedHashMap<String, String> = linkedMapOf(),
+    var material3IsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var material3AdaptiveVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var material3AdaptiveIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var navigationVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var navigationIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var navigationEventVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var navigationEventIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var savedStateVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var savedStateIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var windowVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var windowIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
 )
 
 /**
@@ -391,6 +410,24 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         return cached.all { it in hardcoded }
     }
     
+    fun isUsingDevFallbackVersions(): Boolean {
+        // If never loaded from Maven (initial state with empty cache)
+        if (persistentState.devLastLoadTime == 0L) {
+            println("DEBUG isUsingDevFallbackVersions: devLastLoadTime=0, returning true (never loaded)")
+            return true
+        }
+        
+        // If cache is empty after failed load
+        if (persistentState.devVersions.isEmpty()) {
+            println("DEBUG isUsingDevFallbackVersions: devVersions is empty, returning true")
+            return true
+        }
+        
+        // Dev versions are never hardcoded, so if we have any versions loaded, it's not fallback
+        println("DEBUG isUsingDevFallbackVersions: devLastLoadTime=${persistentState.devLastLoadTime}, devVersions.size=${persistentState.devVersions.size}, returning false")
+        return false
+    }
+    
     /**
      * Manually invalidate stable cache (reset TTL).
      * Next call to getStableVersions() will trigger background refresh.
@@ -580,6 +617,82 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     /**
+     * Get versions map for given library type.
+     */
+    private fun getVersionsMap(type: LibraryType): LinkedHashMap<String, String> {
+        return when (type) {
+            LibraryType.LIFECYCLE -> persistentState.lifecycleVersions
+            LibraryType.MATERIAL3 -> persistentState.material3Versions
+            LibraryType.MATERIAL3_ADAPTIVE -> persistentState.material3AdaptiveVersions
+            LibraryType.NAVIGATION -> persistentState.navigationVersions
+            LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventVersions
+            LibraryType.SAVED_STATE -> persistentState.savedStateVersions
+            LibraryType.WINDOW -> persistentState.windowVersions
+        }
+    }
+    
+    /**
+     * Get isFromBundle map for given library type.
+     */
+    private fun getIsFromBundleMap(type: LibraryType): LinkedHashMap<String, Boolean> {
+        return when (type) {
+            LibraryType.LIFECYCLE -> persistentState.lifecycleIsFromBundle
+            LibraryType.MATERIAL3 -> persistentState.material3IsFromBundle
+            LibraryType.MATERIAL3_ADAPTIVE -> persistentState.material3AdaptiveIsFromBundle
+            LibraryType.NAVIGATION -> persistentState.navigationIsFromBundle
+            LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventIsFromBundle
+            LibraryType.SAVED_STATE -> persistentState.savedStateIsFromBundle
+            LibraryType.WINDOW -> persistentState.windowIsFromBundle
+        }
+    }
+    
+    /**
+     * Get library version for given Compose version and library type.
+     * Returns cached value if available, triggers background resolution if not.
+     * Returns null while resolving (to show loading indicator in UI).
+     * Empty string in cache means "not found" - treated as null.
+     */
+    fun getLibraryVersion(composeVersion: String, type: LibraryType): String? {
+        if (!initialized) {
+            initializeCache()
+        }
+        
+        val versionsMap = getVersionsMap(type)
+        val cached = versionsMap[composeVersion]
+        
+        // Empty string in cache means "not found" - don't return it, treat as null
+        if (cached != null && cached.isNotEmpty()) {
+            return cached
+        }
+        
+        // Trigger background resolution if not already resolving
+        if (!isResolvingLibrary(composeVersion, type)) {
+            resolveLibraryVersionInBackground(composeVersion, type)
+        }
+        
+        // Return null while resolving (UI should show loading indicator)
+        return null
+    }
+    
+    /**
+     * Check if library version is currently being resolved.
+     */
+    fun isResolvingLibrary(composeVersion: String, type: LibraryType): Boolean {
+        val key = "$composeVersion:${type.name}"
+        return synchronized(lifecycleResolvingVersions) {
+            lifecycleResolvingVersions.contains(key)
+        }
+    }
+    
+    /**
+     * Check if library version is from fallback (bundle).
+     * Returns true only if version was loaded from hardcoded bundle, not from GitHub.
+     */
+    fun isLibraryFromBundle(composeVersion: String, type: LibraryType): Boolean {
+        return getIsFromBundleMap(type)[composeVersion] == true
+    }
+    
+    /**
      * Add lifecycle version to cache with FIFO cleanup.
      * If cache exceeds MAX_LIFECYCLE_CACHE_SIZE, removes oldest entries.
      * @param fromBundle true if version is from hardcoded bundle (fallback), false if from GitHub
@@ -684,20 +797,123 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     }
                 }
                 
-                // Step 3: Nothing found → use default fallback
-                println("DEBUG: ⚠️ Lifecycle not found, using default fallback: ${ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION}")
-                cacheLifecycleVersion(composeVersion, ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
-                _lifecycleVersionUpdates.emit(composeVersion to ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+                // Step 3: Nothing found → cache empty string
+                println("DEBUG: ⚠️ Lifecycle not found, caching empty string")
+                cacheLifecycleVersion(composeVersion, "")
+                _lifecycleVersionUpdates.emit(composeVersion to "")
                 
             } catch (e: Exception) {
                 logger.warn("Failed to resolve Lifecycle version for Compose $composeVersion: ${e.message}")
-                cacheLifecycleVersion(composeVersion, ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
-                _lifecycleVersionUpdates.emit(composeVersion to ComposeVersions.DEFAULT_ANDROIDX_LIFECYCLE_VERSION)
+                cacheLifecycleVersion(composeVersion, "")
+                _lifecycleVersionUpdates.emit(composeVersion to "")
             } finally {
                 synchronized(lifecycleResolvingVersions) {
                     lifecycleResolvingVersions.remove(composeVersion)
                 }
             }
+        }
+    }
+    
+    /**
+     * Universal library version resolution in background for any LibraryType.
+     */
+    private fun resolveLibraryVersionInBackground(composeVersion: String, type: LibraryType) {
+        val key = "$composeVersion:${type.name}"
+        synchronized(lifecycleResolvingVersions) {
+            if (lifecycleResolvingVersions.contains(key)) {
+                println("DEBUG: Already resolving ${type.displayName} for Compose $composeVersion")
+                return
+            }
+            lifecycleResolvingVersions.add(key)
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG: Resolving ${type.displayName} version for Compose $composeVersion in background")
+                
+                // Step 1: Fetch all library versions from GitHub
+                val result = libraryVersionService.fetchLibraryVersionsFromWebUI(composeVersion)
+                val version = result.versions[type]
+                
+                if (version != null) {
+                    println("DEBUG: ✅ Found ${type.displayName} in GitHub for $composeVersion: $version")
+                    cacheLibraryVersion(composeVersion, type, version, fromBundle = false)
+                    return@launch
+                }
+                
+                // Step 2: Fallback to LIBRARY_BUNDLES
+                val bundle = ComposeVersions.getLibraryBundle(composeVersion)
+                val bundleVersion = bundle?.getVersion(type)
+                
+                if (bundleVersion != null) {
+                    println("DEBUG: 📦 Found ${type.displayName} in Bundle for $composeVersion: $bundleVersion")
+                    cacheLibraryVersion(composeVersion, type, bundleVersion, fromBundle = true)
+                    return@launch
+                }
+                
+                // Step 3: Fallback chain (for +dev versions and similar)
+                val baseVersion = composeVersion.substringBefore("+dev")
+                if (baseVersion != composeVersion) {
+                    println("DEBUG: Dev version detected, trying base version: $baseVersion")
+                    
+                    // Try base version bundle
+                    val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
+                    val baseVersionLib = baseBundle?.getVersion(type)
+                    if (baseVersionLib != null) {
+                        println("DEBUG: 📦 Found ${type.displayName} in Bundle for base version $baseVersion: $baseVersionLib")
+                        cacheLibraryVersion(composeVersion, type, baseVersionLib, fromBundle = true)
+                        return@launch
+                    }
+                }
+                
+                // Step 4: Try fallback versions
+                val fallbackVersions = libraryVersionService.generateFallbackVersions(composeVersion)
+                for (fallbackVersion in fallbackVersions) {
+                    val fallbackBundle = ComposeVersions.getLibraryBundle(fallbackVersion)
+                    val fallbackVersionLib = fallbackBundle?.getVersion(type)
+                    if (fallbackVersionLib != null) {
+                        println("DEBUG: 📦 Found ${type.displayName} in Bundle for fallback version $fallbackVersion: $fallbackVersionLib")
+                        cacheLibraryVersion(composeVersion, type, fallbackVersionLib, fromBundle = true)
+                        return@launch
+                    }
+                }
+                
+                // Step 5: Not found - cache empty string to avoid repeated lookups
+                println("DEBUG: ⚠️ ${type.displayName} not found for $composeVersion, caching empty string")
+                cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
+                
+            } catch (e: Exception) {
+                logger.warn("Failed to resolve ${type.displayName} version for Compose $composeVersion: ${e.message}")
+                cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
+            } finally {
+                synchronized(lifecycleResolvingVersions) {
+                    lifecycleResolvingVersions.remove(key)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Universal library version caching with FIFO cleanup.
+     */
+    private fun cacheLibraryVersion(composeVersion: String, type: LibraryType, version: String, fromBundle: Boolean) {
+        val versionsMap = getVersionsMap(type)
+        val isFromBundleMap = getIsFromBundleMap(type)
+        
+        synchronized(versionsMap) {
+            versionsMap[composeVersion] = version
+            isFromBundleMap[composeVersion] = fromBundle
+            
+            // FIFO cleanup: remove oldest entries if exceeds limit
+            while (versionsMap.size > MAX_LIFECYCLE_CACHE_SIZE) {
+                val oldestKey = versionsMap.keys.first()
+                versionsMap.remove(oldestKey)
+                isFromBundleMap.remove(oldestKey)
+                println("DEBUG: Removed oldest ${type.displayName} cache entry: $oldestKey (FIFO cleanup)")
+            }
+            
+            val source = if (fromBundle) "Bundle 📦" else "GitHub"
+            println("DEBUG: Cached ${type.displayName}: $composeVersion → $version from $source (cache size: ${versionsMap.size}/$MAX_LIFECYCLE_CACHE_SIZE)")
         }
     }
     
