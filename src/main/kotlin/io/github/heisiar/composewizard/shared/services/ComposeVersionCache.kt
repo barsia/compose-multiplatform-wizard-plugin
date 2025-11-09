@@ -21,7 +21,9 @@ data class ComposeVersionCacheState(
     var devVersions: List<String> = emptyList(),
     var devLastLoadTime: Long = 0L,
     // LinkedHashMap preserves insertion order for FIFO cleanup
-    var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf()
+    var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    // Track if lifecycle version is from hardcoded bundle (true) or GitHub (false)
+    var lifecycleIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
 )
 
 /**
@@ -232,7 +234,6 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         val versions = persistentState.devVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS }
         println("DEBUG ComposeVersionCache.getDevVersions(): loading completed, returning (unsorted) ${versions.take(3)}")
         return versions
-
     }
     
     /**
@@ -572,38 +573,33 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     /**
      * Check if Lifecycle version for given Compose version is from fallback (bundle).
-     * Returns true if version is from predefined bundle, false if from GitHub API.
+     * Returns true only if version was loaded from hardcoded bundle, not from GitHub.
      */
     fun isLifecycleFallback(composeVersion: String): Boolean {
-        val cached = persistentState.lifecycleVersions[composeVersion]
-        if (cached.isNullOrEmpty()) {
-            return false
-        }
-        
-        // Check if version matches predefined bundle
-        val baseVersion = composeVersion.substringBefore("+dev")
-        val bundle = ComposeVersions.getLibraryBundle(baseVersion)
-        
-        return bundle?.lifecycleVersion == cached
+        return persistentState.lifecycleIsFromBundle[composeVersion] == true
     }
     
     /**
      * Add lifecycle version to cache with FIFO cleanup.
      * If cache exceeds MAX_LIFECYCLE_CACHE_SIZE, removes oldest entries.
+     * @param fromBundle true if version is from hardcoded bundle (fallback), false if from GitHub
      */
-    private fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String) {
+    private fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String, fromBundle: Boolean = false) {
         synchronized(persistentState.lifecycleVersions) {
             // Add new entry
             persistentState.lifecycleVersions[composeVersion] = lifecycleVersion
+            persistentState.lifecycleIsFromBundle[composeVersion] = fromBundle
             
             // FIFO cleanup: remove oldest entries if exceeds limit
             while (persistentState.lifecycleVersions.size > MAX_LIFECYCLE_CACHE_SIZE) {
                 val oldestKey = persistentState.lifecycleVersions.keys.first()
                 persistentState.lifecycleVersions.remove(oldestKey)
+                persistentState.lifecycleIsFromBundle.remove(oldestKey)
                 println("DEBUG: Removed oldest lifecycle cache entry: $oldestKey (FIFO cleanup)")
             }
             
-            println("DEBUG: Cached lifecycle: $composeVersion → $lifecycleVersion (cache size: ${persistentState.lifecycleVersions.size}/$MAX_LIFECYCLE_CACHE_SIZE)")
+            val source = if (fromBundle) "Bundle 📦" else "GitHub"
+            println("DEBUG: Cached lifecycle: $composeVersion → $lifecycleVersion from $source (cache size: ${persistentState.lifecycleVersions.size}/$MAX_LIFECYCLE_CACHE_SIZE)")
         }
     }
     
@@ -648,7 +644,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
                     if (baseBundle?.lifecycleVersion != null) {
                         println("DEBUG: 📦 Found base in Bundle (network fallback): $baseVersion → ${baseBundle.lifecycleVersion}")
-                        cacheLifecycleVersion(composeVersion, baseBundle.lifecycleVersion)
+                        cacheLifecycleVersion(composeVersion, baseBundle.lifecycleVersion, fromBundle = true)
                         _lifecycleVersionUpdates.emit(composeVersion to baseBundle.lifecycleVersion)
                         return@launch
                     }
@@ -666,7 +662,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     val bundle = ComposeVersions.getLibraryBundle(fallbackVersion)
                     if (bundle?.lifecycleVersion != null) {
                         println("DEBUG: 📦 Found in Bundle: $fallbackVersion → ${bundle.lifecycleVersion}")
-                        cacheLifecycleVersion(composeVersion, bundle.lifecycleVersion)  // Cache for REQUESTED version!
+                        cacheLifecycleVersion(composeVersion, bundle.lifecycleVersion, fromBundle = true)  // Cache for REQUESTED version!
                         _lifecycleVersionUpdates.emit(composeVersion to bundle.lifecycleVersion)
                         return@launch
                     }

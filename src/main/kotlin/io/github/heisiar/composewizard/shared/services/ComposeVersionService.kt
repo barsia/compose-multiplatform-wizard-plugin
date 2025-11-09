@@ -42,7 +42,7 @@ class ComposeVersionService {
     suspend fun fetchAvailableVersions(includeDevVersions: Boolean): List<String> = withContext(Dispatchers.IO) {
         try {
             val mavenUrl = if (includeDevVersions) DEV_MAVEN_URL else STABLE_MAVEN_URL
-            fetchVersionsFromMaven(mavenUrl, sortVersions = !includeDevVersions)
+            fetchVersionsFromMaven(mavenUrl, includeDevVersions)
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
             // For dev versions without internet: fallback to stable versions
@@ -50,12 +50,12 @@ class ComposeVersionService {
         }
     }
     
-    private fun fetchVersionsFromMaven(mavenUrl: String, sortVersions: Boolean): List<String> {
+    private fun fetchVersionsFromMaven(mavenUrl: String, isDevMode: Boolean): List<String> {
         try {
             val metadataUrl = "${mavenUrl}maven-metadata.xml"
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = 2000  // Reduced from 5000ms to 2000ms
-            connection.readTimeout = 2000     // Reduced from 5000ms to 2000ms
+            connection.connectTimeout = 2000
+            connection.readTimeout = 2000
             connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
             
             if (connection.responseCode == 200) {
@@ -75,15 +75,15 @@ class ComposeVersionService {
                         }
                     }
                     
-                    val result = if (sortVersions) {
-                        // Stable: Sort by semantic version (newest first), then take top 20
-                        val sorted = versions.sortedWith(compareByDescending { io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator.parse(it) })
-                        println("DEBUG ComposeVersionService: Stable versions from Maven (sorted, first 10): ${sorted.take(10)}")
-                        sorted.take(20)
+                    val result = if (isDevMode) {
+                        // Dev: Take FIRST 20 from XML as-is (no sorting!)
+                        val first20 = versions.take(20)
+                        println("DEBUG ComposeVersionService: Dev versions (first 20 from XML, no sorting): ${first20.take(10)}")
+                        first20
                     } else {
-                        // Dev: Take last 20 as-is from XML (newest are at the end)
-                        val last20 = versions.takeLast(20).reversed()
-                        println("DEBUG ComposeVersionService: Dev versions from Maven (unsorted, first 10): ${last20.take(10)}")
+                        // Stable: Take LAST 20 from XML as-is (no sorting!)
+                        val last20 = versions.takeLast(20)
+                        println("DEBUG ComposeVersionService: Stable versions (last 20 from XML, no sorting): ${last20.take(10)}")
                         last20
                     }
                     return result
