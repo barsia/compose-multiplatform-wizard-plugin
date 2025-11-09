@@ -7,8 +7,8 @@ enum class LibraryType(val displayName: String) {
     LIFECYCLE("Lifecycle"),
     MATERIAL3("Material3"),
     MATERIAL3_ADAPTIVE("Material3 Adaptive"),
-    NAVIGATION("Navigation"),
-    NAVIGATION_EVENT("NavigationEvent"),
+    NAVIGATION("Navigation3"),
+    NAVIGATION_EVENT("Navigation Event"),
     SAVED_STATE("SavedState"),
     WINDOW("Window"),
     HOT_RELOAD("Compose Hot Reload")
@@ -35,7 +35,7 @@ data class ComposeLibraryVersions(
     
     // AndroidX Libraries
     val lifecycleVersion: String,
-    val navigationVersion: String? = null,
+    val navigation3Version: String? = null,
     val navigationEventVersion: String? = null,
     val savedStateVersion: String? = null,
     val windowVersion: String? = null,
@@ -51,7 +51,7 @@ data class ComposeLibraryVersions(
         LibraryType.LIFECYCLE -> lifecycleVersion
         LibraryType.MATERIAL3 -> material3Version
         LibraryType.MATERIAL3_ADAPTIVE -> material3AdaptiveVersion
-        LibraryType.NAVIGATION -> navigationVersion
+        LibraryType.NAVIGATION -> navigation3Version
         LibraryType.NAVIGATION_EVENT -> navigationEventVersion
         LibraryType.SAVED_STATE -> savedStateVersion
         LibraryType.WINDOW -> windowVersion
@@ -88,24 +88,13 @@ object ComposeVersions {
      * To add new versions: add entry here, everything else updates automatically.
      */
     val LIBRARY_BUNDLES = linkedMapOf(
-        "1.10.0-beta02" to ComposeLibraryVersions(
-            composeVersion = "1.10.0-beta02",
-            kotlinVersion = "2.2.21",
-            lifecycleVersion = "2.10.0-alpha04",
-            material3Version = "1.10.0-alpha04",
-            material3AdaptiveVersion = "1.3.0-alpha01",
-            navigationVersion = "1.0.0-alpha04",
-            navigationEventVersion = "1.0.0-beta01",
-            savedStateVersion = "1.4.0-beta01",
-            windowVersion = "1.5.0-rc01"
-        ),
         "1.10.0-beta01" to ComposeLibraryVersions(
             composeVersion = "1.10.0-beta01",
             kotlinVersion = "2.2.21",
             lifecycleVersion = "2.10.0-alpha04",
             material3Version = "1.10.0-alpha04",
             material3AdaptiveVersion = "1.3.0-alpha01",
-            navigationVersion = "1.0.0-alpha04",
+            navigation3Version = "1.0.0-alpha04",
             navigationEventVersion = "1.0.0-beta01",
             savedStateVersion = "1.4.0-beta01",
             windowVersion = "1.5.0-rc01"
@@ -116,7 +105,7 @@ object ComposeVersions {
             lifecycleVersion = "2.10.0-alpha03",
             material3Version = "1.10.0-alpha03",
             material3AdaptiveVersion = "1.2.0-beta01",
-            navigationVersion = "1.0.0-alpha03",
+            navigation3Version = "1.0.0-alpha03",
             navigationEventVersion = "1.0.0-alpha02",
             savedStateVersion = "1.4.0-alpha03",
             windowVersion = "1.5.0-beta01"
@@ -127,7 +116,7 @@ object ComposeVersions {
             lifecycleVersion = "2.10.0-alpha02",
             material3Version = "1.10.0-alpha02",
             material3AdaptiveVersion = "1.2.0-alpha07",
-            navigationVersion = "1.0.0-alpha02",
+            navigation3Version = "1.0.0-alpha02",
             navigationEventVersion = "1.0.0-alpha01",
             savedStateVersion = "1.4.0-alpha02",
             windowVersion = "1.5.0-alpha02"
@@ -138,7 +127,7 @@ object ComposeVersions {
             lifecycleVersion = "2.10.0-alpha01",
             material3Version = "1.10.0-alpha01",
             material3AdaptiveVersion = "1.2.0-alpha06",
-            navigationVersion = "1.0.0-alpha01",
+            navigation3Version = "1.0.0-alpha01",
             savedStateVersion = "1.4.0-alpha01",
             windowVersion = "1.5.0-alpha01"
         ),
@@ -159,7 +148,7 @@ object ComposeVersions {
             kotlinVersion = "2.0.21",
             lifecycleVersion = "2.9.5",
             material3Version = "1.9.0",
-            navigationVersion = "2.9.1",
+            navigation3Version = "2.9.1",
             savedStateVersion = "1.3.5"
         ),
         "1.9.0" to ComposeLibraryVersions(
@@ -184,7 +173,7 @@ object ComposeVersions {
             lifecycleVersion = "2.9.2",
             material3Version = "1.9.0-beta03",
             material3AdaptiveVersion = "1.2.0-alpha05",
-            navigationVersion = "2.9.0-beta05",
+            navigation3Version = "2.9.0-beta05",
             savedStateVersion = "1.3.2",
             windowVersion = "1.4.0-beta01"
         ),
@@ -194,7 +183,7 @@ object ComposeVersions {
             lifecycleVersion = "2.9.0",
             material3Version = "1.9.0-alpha04",
             material3AdaptiveVersion = "1.2.0-alpha04",
-            navigationVersion = "2.9.0-beta04",
+            navigation3Version = "2.9.0-beta04",
             windowVersion = "1.4.0-alpha09"
         ),
         "1.9.0-alpha03" to ComposeLibraryVersions(
@@ -216,7 +205,7 @@ object ComposeVersions {
             kotlinVersion = "2.0.20",
             lifecycleVersion = "2.9.1",
             material3AdaptiveVersion = "1.1.2",
-            navigationVersion = "2.9.0-beta03",
+            navigation3Version = "2.9.0-beta03",
             savedStateVersion = "1.3.1"
         )
     )

@@ -45,7 +45,7 @@ object ProjectCreator {
                 lifecycleVersion = libraryVersions.lifecycleVersion,
                 material3Version = libraryVersions.material3Version,
                 material3AdaptiveVersion = libraryVersions.material3AdaptiveVersion,
-                navigationVersion = libraryVersions.navigationVersion,
+                navigation3Version = libraryVersions.navigation3Version,
                 navigationEventVersion = libraryVersions.navigationEventVersion,
                 savedStateVersion = libraryVersions.savedStateVersion,
                 windowVersion = libraryVersions.windowVersion,

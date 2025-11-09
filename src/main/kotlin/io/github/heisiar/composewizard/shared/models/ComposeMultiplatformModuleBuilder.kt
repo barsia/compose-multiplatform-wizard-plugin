@@ -39,7 +39,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var lifecycleVersion: String? = null
     var material3Version: String? = null
     var material3AdaptiveVersion: String? = null
-    var navigationVersion: String? = null
+    var navigation3Version: String? = null
     var navigationEventVersion: String? = null
     var savedStateVersion: String? = null
     var windowVersion: String? = null

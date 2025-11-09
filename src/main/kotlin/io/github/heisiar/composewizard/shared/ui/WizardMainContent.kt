@@ -314,10 +314,26 @@ fun WizardMainContent(
                 val versionLabel: (io.github.heisiar.composewizard.shared.LibraryType) -> String = { type ->
                     val version = libraryVersions[type]
                     if (version != null && version.isNotEmpty()) {
-                        val suffix = if (libraryFromBundle[type] == true) " 📦" else ""
-                        " ($version$suffix)"
+                        " $version"
                     } else {
                         ""
+                    }
+                }
+                
+                val currentBundle = io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)
+                
+                // Pre-compute isPinned for all library types
+                val isPinnedMap = io.github.heisiar.composewizard.shared.LibraryType.entries.associateWith { type ->
+                    val versionInCurrentBundle = currentBundle?.getVersion(type)
+                    versionInCurrentBundle.isNullOrEmpty()
+                }
+                
+                val pinnedIndicator: (io.github.heisiar.composewizard.shared.LibraryType) -> (@Composable () -> Unit)? = { type ->
+                    if (libraryFromBundle[type] == true) {
+                        val isPinned = isPinnedMap[type] ?: false
+                        { PinnedVersionIndicator(isPinned = isPinned) }
+                    } else {
+                        null
                     }
                 }
                 
@@ -328,12 +344,18 @@ fun WizardMainContent(
                 ) {
                     // Lifecycle - always included (disabled checkbox)
                     if (lifecycleVersion.isNotEmpty()) {
-                        val lifecycleSuffix = if (isLifecycleFallback) " 📦" else ""
+                        val lifecycleIsPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: false
+                        val lifecycleTrailingContent: (@Composable () -> Unit)? = if (isLifecycleFallback) {
+                            { PinnedVersionIndicator(isPinned = lifecycleIsPinned) }
+                        } else {
+                            null
+                        }
                         CheckboxOption(
                             checked = true,
                             onToggle = { }, // No-op, always enabled
-                            label = "Lifecycle ($lifecycleVersion$lifecycleSuffix)",
-                            enabled = false
+                            label = "Lifecycle $lifecycleVersion",
+                            enabled = false,
+                            trailingContent = lifecycleTrailingContent
                         )
                     }
                     
@@ -342,7 +364,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive
                         },
-                        label = "Material3 Adaptive${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)}"
+                        label = "Material3 Adaptive${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)
                     )
                     
                     CheckboxOption(
@@ -350,7 +373,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeNavigationEvent = !state.includeNavigationEvent
                         },
-                        label = "NavigationEvent${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)}"
+                        label = "NavigationEvent${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)
                     )
                     
                     CheckboxOption(
@@ -358,7 +382,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeWindow = !state.includeWindow
                         },
-                        label = "Window${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)}"
+                        label = "Window${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)
                     )
                 }
                 
@@ -372,7 +397,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeMaterial3 = !state.includeMaterial3
                         },
-                        label = "Material3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)}"
+                        label = "Material3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)
                     )
                     
                     CheckboxOption(
@@ -380,7 +406,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeNavigation = !state.includeNavigation
                         },
-                        label = "Navigation${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)}"
+                        label = "Navigation${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)
                     )
                     
                     CheckboxOption(
@@ -388,7 +415,8 @@ fun WizardMainContent(
                         onToggle = { 
                             state.includeSavedState = !state.includeSavedState
                         },
-                        label = "SavedState${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)}"
+                        label = "SavedState${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)
                     )
                     
                     if (shouldShowHotReload) {
@@ -397,7 +425,7 @@ fun WizardMainContent(
                             onToggle = { 
                                 state.includeHotReload = !state.includeHotReload
                             },
-                            label = "Compose Hot Reload${if (hotReloadVersion.isNotEmpty()) " ($hotReloadVersion)" else ""}"
+                            label = "Compose Hot Reload${if (hotReloadVersion.isNotEmpty()) " $hotReloadVersion" else ""}"
                         )
                     }
                 }

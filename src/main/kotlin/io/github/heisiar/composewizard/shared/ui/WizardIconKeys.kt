@@ -12,5 +12,6 @@ object WizardIconKeys {
     val RefreshVersions: PathIconKey = PathIconKey("icons/refresh-versions.svg", WizardIconKeys::class.java)
     val Desktop: PathIconKey = PathIconKey("icons/desktop.svg", WizardIconKeys::class.java)
     val Android: PathIconKey = PathIconKey("icons/android.svg", WizardIconKeys::class.java)
+    val Pin: PathIconKey = PathIconKey("icons/pin.svg", WizardIconKeys::class.java)
 }
 

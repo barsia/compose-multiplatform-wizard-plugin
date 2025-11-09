@@ -13,7 +13,7 @@ class ModularTemplateProcessor(
     private val lifecycleVersion: String?,
     private val material3Version: String?,
     private val material3AdaptiveVersion: String?,
-    private val navigationVersion: String?,
+    private val navigation3Version: String?,
     private val navigationEventVersion: String?,
     private val savedStateVersion: String?,
     private val windowVersion: String?,
@@ -106,7 +106,7 @@ class ModularTemplateProcessor(
             content = replaceOptionalLibraryVersionBlock(content, "MATERIAL3_ADAPTIVE_VERSION_BLOCK",
                                                          includeMaterial3Adaptive, material3AdaptiveVersion, "androidx-material3-adaptive")
             content = replaceOptionalLibraryVersionBlock(content, "NAVIGATION_VERSION_BLOCK",
-                                                         includeNavigation, navigationVersion, "androidx-navigation")
+                                                         includeNavigation, navigation3Version, "androidx-navigation")
             content = replaceOptionalLibraryVersionBlock(content, "NAVIGATION_EVENT_VERSION_BLOCK",
                                                          includeNavigationEvent, navigationEventVersion, "androidx-navigation-event")
             content = replaceOptionalLibraryVersionBlock(content, "SAVED_STATE_VERSION_BLOCK",
@@ -552,7 +552,7 @@ androidx-material3-adaptive-navigation = { module = "org.jetbrains.compose.mater
                 add("            implementation(libs.androidx.material3.adaptive.layout)")
                 add("            implementation(libs.androidx.material3.adaptive.navigation)")
             }
-            if (includeNavigation && navigationVersion != null) {
+            if (includeNavigation && navigation3Version != null) {
                 add("            implementation(libs.androidx.navigation)")
             }
             if (includeNavigationEvent && navigationEventVersion != null) {

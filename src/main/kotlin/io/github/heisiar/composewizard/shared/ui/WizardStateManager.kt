@@ -36,7 +36,7 @@ class WizardState {
     var lifecycleVersion by mutableStateOf<String?>(null)
     var material3Version by mutableStateOf<String?>(null)
     var material3AdaptiveVersion by mutableStateOf<String?>(null)
-    var navigationVersion by mutableStateOf<String?>(null)
+    var navigation3Version by mutableStateOf<String?>(null)
     var navigationEventVersion by mutableStateOf<String?>(null)
     var savedStateVersion by mutableStateOf<String?>(null)
     var windowVersion by mutableStateOf<String?>(null)

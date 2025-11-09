@@ -42,7 +42,7 @@ data class ComposeVersionCacheState(
     var material3AdaptiveVersions: LinkedHashMap<String, String> = linkedMapOf(),
     var material3AdaptiveIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
     
-    var navigationVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var navigation3Versions: LinkedHashMap<String, String> = linkedMapOf(),
     var navigationIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
     
     var navigationEventVersions: LinkedHashMap<String, String> = linkedMapOf(),
@@ -657,7 +657,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             LibraryType.LIFECYCLE -> persistentState.lifecycleVersions
             LibraryType.MATERIAL3 -> persistentState.material3Versions
             LibraryType.MATERIAL3_ADAPTIVE -> persistentState.material3AdaptiveVersions
-            LibraryType.NAVIGATION -> persistentState.navigationVersions
+            LibraryType.NAVIGATION -> persistentState.navigation3Versions
             LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventVersions
             LibraryType.SAVED_STATE -> persistentState.savedStateVersions
             LibraryType.WINDOW -> persistentState.windowVersions

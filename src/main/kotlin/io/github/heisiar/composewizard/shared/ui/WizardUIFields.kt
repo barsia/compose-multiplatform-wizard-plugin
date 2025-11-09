@@ -338,38 +338,38 @@ fun ComposeVersionField(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
-        ) {
-            val items = if (isLoading && availableVersions == null) {
-                listOf("")
-            } else {
-                println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
-                val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
-                println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
-                versions
-            }
-            val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
-            
+            ) {
+                val items = if (isLoading && availableVersions == null) {
+                    listOf("")
+                } else {
+                    println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
+                    val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
+                    println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
+                    versions
+                }
+                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
+                
             Box(
                 modifier = Modifier
                     .widthIn(min = 200.dp)
                     .weight(1f)
-            ) {
-                org.jetbrains.jewel.ui.component.ListComboBox(
-                    items = items,
-                    selectedIndex = currentIndex,
-                    onSelectedItemChange = { index ->
-                        availableVersions?.let { versions ->
-                            if (versions.isNotEmpty() && index in versions.indices) {
-                                val newSelection = versions[index]
-                                println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
-                                currentSelectedVersion = newSelection
-                            }
-                        }
-                    },
-                    enabled = !isLoading && availableVersions != null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                        ) {
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = items,
+                                selectedIndex = currentIndex,
+                                onSelectedItemChange = { index ->
+                                    availableVersions?.let { versions ->
+                                        if (versions.isNotEmpty() && index in versions.indices) {
+                                            val newSelection = versions[index]
+                                            println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
+                                            currentSelectedVersion = newSelection
+                                        }
+                                    }
+                                },
+                                enabled = !isLoading && availableVersions != null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                     maxPopupHeight = 280.dp,
                     style = transparentComboBoxStyle()
                 )
@@ -679,40 +679,97 @@ fun OptionsSection(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
+fun PinnedVersionIndicator(
+    isPinned: Boolean = false
+) {
+    val tooltipText = if (isPinned) {
+        "Version not published with current release"
+    } else {
+        "Could not retrieve version from GitHub"
+    }
+    
+    Tooltip(
+        tooltip = { Text(tooltipText) }
+    ) {
+        Box(
+            modifier = Modifier
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { /* Consume click - prevent propagation to parent Row */ }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.DEFAULT_CURSOR)))
+                .offset(y = (-6).dp) // Superscript effect - even higher
+        ) {
+            Icon(
+                key = WizardIconKeys.Pin,
+                contentDescription = "Pinned version",
+                modifier = Modifier.size(18.dp),
+                tint = JewelTheme.globalColors.text.normal
+            )
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
 fun CheckboxOption(
     checked: Boolean,
     onToggle: () -> Unit,
     label: String,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    iconKey: org.jetbrains.jewel.ui.icon.IconKey? = null,
+    useColoredIcon: Boolean = false,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     val content = @Composable {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clickable(
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable(
                     enabled = enabled,
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { onToggle() }
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onToggle() }
                 .pointerHoverIcon(
                     if (enabled) PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
                     else PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
                 )
-        ) {
-            Checkbox(
-                checked = checked,
+    ) {
+        Checkbox(
+            checked = checked,
                 onCheckedChange = { onToggle() },
                 enabled = enabled
             )
-            Text(
-                text = label,
-                style = JewelTheme.defaultTextStyle,
-                color = if (enabled) JewelTheme.globalColors.text.normal 
-                        else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconKey != null) {
+                    Icon(
+                        key = iconKey,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (useColoredIcon) {
+                            androidx.compose.ui.graphics.Color.Unspecified
+                        } else if (enabled) {
+                            JewelTheme.globalColors.text.normal
+                        } else {
+                            JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
+                        }
+                    )
+                }
+                Text(
+                    text = label,
+                    style = JewelTheme.defaultTextStyle,
+                    color = if (enabled) JewelTheme.globalColors.text.normal 
+                            else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                if (trailingContent != null) {
+                    trailingContent()
+                }
+            }
         }
     }
     
