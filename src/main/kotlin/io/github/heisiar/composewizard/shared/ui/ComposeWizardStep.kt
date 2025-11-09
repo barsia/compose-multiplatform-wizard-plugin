@@ -64,6 +64,14 @@ class ComposeWizardStep(
     private var targetWeb = WizardDefaults.TARGET_WEB
     private var enableDevVersions = WizardDefaults.ENABLE_DEV_VERSIONS
     
+    private var includeMaterial3 = false
+    private var includeMaterial3Adaptive = false
+    private var includeNavigation = false
+    private var includeNavigationEvent = false
+    private var includeSavedState = false
+    private var includeWindow = false
+    private var includeHotReload = false
+    
     private val wizardStartTime = System.currentTimeMillis()
     
     // Trigger for re-validation when component becomes visible
@@ -161,6 +169,13 @@ class ComposeWizardStep(
             targetWeb = state.web
             initGit = state.git
             includeTests = state.tests
+            this@ComposeWizardStep.includeMaterial3 = state.includeMaterial3
+            this@ComposeWizardStep.includeMaterial3Adaptive = state.includeMaterial3Adaptive
+            this@ComposeWizardStep.includeNavigation = state.includeNavigation
+            this@ComposeWizardStep.includeNavigationEvent = state.includeNavigationEvent
+            this@ComposeWizardStep.includeSavedState = state.includeSavedState
+            this@ComposeWizardStep.includeWindow = state.includeWindow
+            this@ComposeWizardStep.includeHotReload = state.includeHotReload
             updateButtonState(isValid)
         }
         
@@ -283,6 +298,13 @@ class ComposeWizardStep(
         builder.initGit = initGit
         builder.includeTests = includeTests
         builder.enableDevVersions = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
+        builder.includeMaterial3 = includeMaterial3
+        builder.includeMaterial3Adaptive = includeMaterial3Adaptive
+        builder.includeNavigation = includeNavigation
+        builder.includeNavigationEvent = includeNavigationEvent
+        builder.includeSavedState = includeSavedState
+        builder.includeWindow = includeWindow
+        builder.includeHotReload = includeHotReload
 
         val timeSpent = System.currentTimeMillis() - wizardStartTime
         val platformsCount = listOf(targetDesktop, targetAndroid, targetIOS, targetWeb).count { it }

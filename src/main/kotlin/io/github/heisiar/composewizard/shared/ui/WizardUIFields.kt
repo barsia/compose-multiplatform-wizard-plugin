@@ -1,6 +1,6 @@
 package io.github.heisiar.composewizard.shared.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,11 +9,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -23,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,43 +30,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.WizardStrings
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.Outline
 import org.jetbrains.jewel.ui.component.Checkbox
-import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
 import org.jetbrains.jewel.ui.component.Tooltip
-import com.intellij.openapi.ui.ComboBox
-import com.intellij.ui.JBColor
-import com.intellij.util.ui.JBUI
-import javax.swing.DefaultComboBoxModel
-import java.awt.Dimension as AwtDimension
+import org.jetbrains.jewel.ui.component.styling.ComboBoxColors
+import org.jetbrains.jewel.ui.component.styling.ComboBoxStyle
+import org.jetbrains.jewel.ui.component.styling.LocalDefaultComboBoxStyle
 import java.awt.Cursor
 import java.io.File
 import java.io.InputStream
@@ -79,6 +59,37 @@ private object ResourceLoader {
         return Thread.currentThread().contextClassLoader?.getResourceAsStream(path)
             ?: javaClass.classLoader?.getResourceAsStream(path)
     }
+}
+
+@Composable
+private fun transparentComboBoxStyle(): ComboBoxStyle {
+    val defaultStyle = LocalDefaultComboBoxStyle.current
+    val defaultColors = defaultStyle.colors
+    val defaultMetrics = defaultStyle.metrics
+    val defaultIcons = defaultStyle.icons
+    
+    return ComboBoxStyle(
+        colors = ComboBoxColors(
+            background = Color.Transparent,
+            nonEditableBackground = Color.Transparent,
+            backgroundDisabled = defaultColors.backgroundDisabled,
+            backgroundFocused = Color.Transparent,
+            backgroundPressed = defaultColors.backgroundPressed,
+            backgroundHovered = defaultColors.backgroundHovered,
+            content = defaultColors.content,
+            contentDisabled = defaultColors.contentDisabled,
+            contentFocused = defaultColors.contentFocused,
+            contentPressed = defaultColors.contentPressed,
+            contentHovered = defaultColors.contentHovered,
+            border = defaultColors.border,
+            borderDisabled = defaultColors.borderDisabled,
+            borderFocused = defaultColors.borderFocused,
+            borderPressed = defaultColors.borderPressed,
+            borderHovered = defaultColors.borderHovered,
+        ),
+        metrics = defaultMetrics,
+        icons = defaultIcons,
+    )
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -328,90 +339,40 @@ fun ComposeVersionField(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoxWithConstraints(
+            val items = if (isLoading && availableVersions == null) {
+                listOf("")
+            } else {
+                println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
+                val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
+                println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
+                versions
+            }
+            val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
+            
+            Box(
                 modifier = Modifier
                     .widthIn(min = 200.dp)
                     .weight(1f)
             ) {
-                val items = if (isLoading && availableVersions == null) {
-                    listOf("")
-                } else {
-                    println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
-                    val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
-                    println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
-                    versions
-                }
-                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
-                
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val textMeasurer = rememberTextMeasurer()
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    
-                    val textWidth = if (currentSelectedVersion.isNotEmpty()) {
-                        with(density) {
-                            textMeasurer.measure(
-                                text = currentSelectedVersion,
-                                style = JewelTheme.defaultTextStyle
-                            ).size.width.toDp()
+                org.jetbrains.jewel.ui.component.ListComboBox(
+                    items = items,
+                    selectedIndex = currentIndex,
+                    onSelectedItemChange = { index ->
+                        availableVersions?.let { versions ->
+                            if (versions.isNotEmpty() && index in versions.indices) {
+                                val newSelection = versions[index]
+                                println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
+                                currentSelectedVersion = newSelection
+                            }
                         }
-                    } else {
-                        0.dp
-                    }
-                    
-                    // Show tooltip only if text is truncated (with some margin for dropdown button)
-                    val showTooltip = textWidth > (maxWidth - 40.dp) && currentSelectedVersion.isNotEmpty()
-                    
-                    if (showTooltip) {
-                        Tooltip(
-                            tooltip = { Text(currentSelectedVersion) },
-                            tooltipPlacement = TooltipPlacement.ComponentRect(
-                                anchor = androidx.compose.ui.Alignment.BottomCenter,
-                                alignment = androidx.compose.ui.Alignment.BottomCenter,
-                                offset = DpOffset(0.dp, 4.dp)
-                            )
-                        ) {
-                            org.jetbrains.jewel.ui.component.ListComboBox(
-                                items = items,
-                                selectedIndex = currentIndex,
-                                onSelectedItemChange = { index ->
-                                    availableVersions?.let { versions ->
-                                        if (versions.isNotEmpty() && index in versions.indices) {
-                                            val newSelection = versions[index]
-                                            println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
-                                            currentSelectedVersion = newSelection
-                                        }
-                                    }
-                                },
-                                enabled = !isLoading && availableVersions != null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                                maxPopupHeight = 280.dp
-                            )
-                        }
-                    } else {
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = items,
-                            selectedIndex = currentIndex,
-                            onSelectedItemChange = { index ->
-                                availableVersions?.let { versions ->
-                                    if (versions.isNotEmpty() && index in versions.indices) {
-                                        val newSelection = versions[index]
-                                        println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
-                                        currentSelectedVersion = newSelection
-                                    }
-                                }
-                            },
-                            enabled = !isLoading && availableVersions != null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                            maxPopupHeight = 280.dp
-                        )
-                    }
-                }
+                    },
+                    enabled = !isLoading && availableVersions != null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                    maxPopupHeight = 280.dp,
+                    style = transparentComboBoxStyle()
+                )
             }
 
             Tooltip(
@@ -667,6 +628,7 @@ private fun PlatformItem(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .clickable(
                 indication = null,
@@ -680,7 +642,7 @@ private fun PlatformItem(
         )
         Box(
             modifier = Modifier
-                .size(width = 56.dp, height = 72.dp),
+                .size(width = 56.dp, height = 48.dp),
             contentAlignment = Alignment.Center
         ) {
             icon()
@@ -695,20 +657,11 @@ fun OptionsSection(
     tests: Boolean,
     onGitToggle: () -> Unit,
     onTestsToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-    composeVersion: String = "",
-    kotlinVersion: String = "",
-    lifecycleVersion: String = "",
-    hotReloadVersion: String = "",
-    isResolvingLifecycle: Boolean = false,
-    isFallback: Boolean = false,
-    isLifecycleFallback: Boolean = false,
-    libraryVersions: Map<io.github.heisiar.composewizard.shared.LibraryType, String> = emptyMap(),
-    libraryFromBundle: Map<io.github.heisiar.composewizard.shared.LibraryType, Boolean> = emptyMap()
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.padding(start = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         CheckboxOption(
             checked = git,
@@ -721,178 +674,56 @@ fun OptionsSection(
             onToggle = onTestsToggle,
             label = "Add sample tests"
         )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Show versions section (with reduced opacity while loading)
-        val versionsReady = composeVersion.isNotEmpty() && kotlinVersion.isNotEmpty()
-        androidx.compose.foundation.text.selection.SelectionContainer {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(if (versionsReady) 1f else 0.3f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Layout: 2-column table with versions (including title and Kotlin as first row)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    // First row: Title and Kotlin version
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Left: Title with fallback indicator
-                        val titleText = if (isFallback) {
-                            "Versions will be used: 📦 (offline fallback)"
-                        } else {
-                            "Versions will be used:"
-                        }
-                        Text(
-                            text = titleText,
-                            style = JewelTheme.defaultTextStyle,
-                            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        
-                        // Right: Kotlin version
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = "Kotlin:",
-                                style = JewelTheme.defaultTextStyle,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = kotlinVersion,
-                                style = JewelTheme.defaultTextStyle,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                    
-                    // Collect other versions for 2-column layout
-                    val allVersionItems = buildList {
-                        add("Compose" to composeVersion)
-                        io.github.heisiar.composewizard.shared.LibraryType.values().forEach { type ->
-                            val version = libraryVersions[type]
-                            if (!version.isNullOrEmpty()) {
-                                val displayText = if (libraryFromBundle[type] == true) {
-                                    "$version 📦"
-                                } else {
-                                    version
-                                }
-                                add(type.displayName to displayText)
-                            }
-                        }
-                        if (hotReloadVersion.isNotEmpty()) {
-                            add("Compose Hot Reload" to hotReloadVersion)
-                        }
-                    }
-                    
-                    // Split into two columns
-                    val midPoint = (allVersionItems.size + 1) / 2
-                    val leftColumn = allVersionItems.take(midPoint)
-                    val rightColumn = allVersionItems.drop(midPoint)
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Left column
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            leftColumn.forEach { (label, value) ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "$label:",
-                                        style = JewelTheme.defaultTextStyle,
-                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = value,
-                                        style = JewelTheme.defaultTextStyle,
-                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                        
-                        // Right column
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            rightColumn.forEach { (label, value) ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "$label:",
-                                        style = JewelTheme.defaultTextStyle,
-                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = value,
-                                        style = JewelTheme.defaultTextStyle,
-                                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun CheckboxOption(
+fun CheckboxOption(
     checked: Boolean,
     onToggle: () -> Unit,
-    label: String
+    label: String,
+    enabled: Boolean = true
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onToggle() }
-            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-    ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = { onToggle() }
-        )
-        Text(label, style = JewelTheme.defaultTextStyle)
+    val content = @Composable {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(
+                    enabled = enabled,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() }
+                .pointerHoverIcon(
+                    if (enabled) PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+                    else PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
+                )
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { onToggle() },
+                enabled = enabled
+            )
+            Text(
+                text = label,
+                style = JewelTheme.defaultTextStyle,
+                color = if (enabled) JewelTheme.globalColors.text.normal 
+                        else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+    
+    if (!enabled) {
+        Tooltip(
+            tooltip = { Text("Included in the base template and cannot be disabled") }
+        ) {
+            content()
+        }
+    } else {
+        content()
     }
 }
 

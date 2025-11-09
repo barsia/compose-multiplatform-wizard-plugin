@@ -5,9 +5,9 @@ import com.intellij.openapi.module.EmptyModuleType
 import com.intellij.openapi.module.ModuleType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableRootModel
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.WizardStrings
 import javax.swing.Icon
@@ -34,6 +34,24 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var initGit: Boolean = WizardDefaults.INIT_GIT
     var includeTests: Boolean = WizardDefaults.INCLUDE_TESTS
     var enableDevVersions: Boolean = WizardDefaults.ENABLE_DEV_VERSIONS
+    
+    var kotlinVersion: String = ""
+    var lifecycleVersion: String? = null
+    var material3Version: String? = null
+    var material3AdaptiveVersion: String? = null
+    var navigationVersion: String? = null
+    var navigationEventVersion: String? = null
+    var savedStateVersion: String? = null
+    var windowVersion: String? = null
+    var hotReloadVersion: String? = null
+    
+    var includeMaterial3: Boolean = false
+    var includeMaterial3Adaptive: Boolean = false
+    var includeNavigation: Boolean = false
+    var includeNavigationEvent: Boolean = false
+    var includeSavedState: Boolean = false
+    var includeWindow: Boolean = false
+    var includeHotReload: Boolean = false
 
     override fun getModuleType(): ModuleType<*> = EmptyModuleType.getInstance()
 
@@ -85,7 +103,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     override fun isTemplateBased(): Boolean = false
 
     override fun isAvailable(): Boolean = true
-
+    
     fun createProjectStructure(rootPath: String, projectName: String) {
         io.github.heisiar.composewizard.shared.ProjectCreator.createProjectStructure(
             projectPath = rootPath,

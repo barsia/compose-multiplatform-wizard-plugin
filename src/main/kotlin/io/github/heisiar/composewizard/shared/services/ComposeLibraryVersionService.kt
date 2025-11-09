@@ -28,7 +28,7 @@ class ComposeLibraryVersionService {
         private val MATERIAL3_ADAPTIVE_PATTERN = Regex("""adaptive-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val NAVIGATION_PATTERN = Regex("""navigation-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val NAVIGATION_EVENT_PATTERN = Regex("""navigationevent-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val SAVED_STATE_PATTERN = Regex("""savedstate\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val SAVED_STATE_PATTERN = Regex("""savedstate\*?:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val WINDOW_PATTERN = Regex("""window-core:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
     }
     

@@ -1,7 +1,6 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -24,28 +23,26 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.Text
-import java.awt.Cursor
 
-private val SPACING_BETWEEN_SECTIONS = 16.dp
+private val SPACING_BETWEEN_SECTIONS = 8.dp
 private val SPACING_BEFORE_LOCATION = 0.dp
 private val LOCATION_SECTION_VERTICAL_OFFSET = 4.dp
 private val TEXTFIELD_VERTICAL_OFFSET = 8.dp
 private val TEXTFIELD_HEIGHT_REDUCTION = 16.dp
+private val LIBRARIES_SECTION_SPACING = 4.dp
+private val LIBRARY_ITEM_SPACING = 2.dp
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -150,7 +147,7 @@ fun WizardMainContent(
                         projectIdFocused = projectIdFocused,
                         projectIdInteractionSource = projectIdInteractionSource,
                         onIdChanged = { },
-                        modifier = Modifier.weight(0.6f)
+                        modifier = Modifier.weight(0.5f)
                     )
                     
                     ComposeVersionField(
@@ -166,7 +163,7 @@ fun WizardMainContent(
                                 cache.forceReloadStable()
                             }
                         },
-                        modifier = Modifier.weight(0.4f),
+                        modifier = Modifier.weight(0.5f),
                         devCheckboxVisible = state.devCheckboxVisible,
                         onDevVersionsToggle = { 
                             state.enableDevVersions = it
@@ -178,8 +175,6 @@ fun WizardMainContent(
                 
                 Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
             }
-
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
 
             PlatformsSection(
                 desktop = state.desktop,
@@ -210,13 +205,16 @@ fun WizardMainContent(
                 state.desktop && isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
             }
             
-            val hotReloadVersion = remember(shouldShowHotReload) {
+            LaunchedEffect(shouldShowHotReload) {
                 if (shouldShowHotReload) {
-                    io.github.heisiar.composewizard.shared.ComposeVersions.COMPOSE_HOT_RELOAD_VERSION
+                    state.hotReloadVersion = io.github.heisiar.composewizard.shared.ComposeVersions.COMPOSE_HOT_RELOAD_VERSION
                 } else {
-                    ""
+                    state.hotReloadVersion = null
+                    state.includeHotReload = false
                 }
             }
+            
+            val hotReloadVersion = state.hotReloadVersion ?: ""
             
             val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
             var lifecycleVersion by remember { mutableStateOf("") }
@@ -304,6 +302,108 @@ fun WizardMainContent(
                     false
                 }
             }
+                        
+            Text("Libraries", style = JewelTheme.defaultTextStyle)
+            
+            Spacer(modifier = Modifier.height(LIBRARIES_SECTION_SPACING))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                val versionLabel: (io.github.heisiar.composewizard.shared.LibraryType) -> String = { type ->
+                    val version = libraryVersions[type]
+                    if (version != null && version.isNotEmpty()) {
+                        val suffix = if (libraryFromBundle[type] == true) " 📦" else ""
+                        " ($version$suffix)"
+                    } else {
+                        ""
+                    }
+                }
+                
+                // Left column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
+                ) {
+                    // Lifecycle - always included (disabled checkbox)
+                    if (lifecycleVersion.isNotEmpty()) {
+                        val lifecycleSuffix = if (isLifecycleFallback) " 📦" else ""
+                        CheckboxOption(
+                            checked = true,
+                            onToggle = { }, // No-op, always enabled
+                            label = "Lifecycle ($lifecycleVersion$lifecycleSuffix)",
+                            enabled = false
+                        )
+                    }
+                    
+                    CheckboxOption(
+                        checked = state.includeMaterial3Adaptive,
+                        onToggle = { 
+                            state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive
+                        },
+                        label = "Material3 Adaptive${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)}"
+                    )
+                    
+                    CheckboxOption(
+                        checked = state.includeNavigationEvent,
+                        onToggle = { 
+                            state.includeNavigationEvent = !state.includeNavigationEvent
+                        },
+                        label = "NavigationEvent${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)}"
+                    )
+                    
+                    CheckboxOption(
+                        checked = state.includeWindow,
+                        onToggle = { 
+                            state.includeWindow = !state.includeWindow
+                        },
+                        label = "Window${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)}"
+                    )
+                }
+                
+                // Right column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
+                ) {
+                    CheckboxOption(
+                        checked = state.includeMaterial3,
+                        onToggle = { 
+                            state.includeMaterial3 = !state.includeMaterial3
+                        },
+                        label = "Material3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)}"
+                    )
+                    
+                    CheckboxOption(
+                        checked = state.includeNavigation,
+                        onToggle = { 
+                            state.includeNavigation = !state.includeNavigation
+                        },
+                        label = "Navigation${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)}"
+                    )
+                    
+                    CheckboxOption(
+                        checked = state.includeSavedState,
+                        onToggle = { 
+                            state.includeSavedState = !state.includeSavedState
+                        },
+                        label = "SavedState${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)}"
+                    )
+                    
+                    if (shouldShowHotReload) {
+                        CheckboxOption(
+                            checked = state.includeHotReload,
+                            onToggle = { 
+                                state.includeHotReload = !state.includeHotReload
+                            },
+                            label = "Compose Hot Reload${if (hotReloadVersion.isNotEmpty()) " ($hotReloadVersion)" else ""}"
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
             
             // Show OptionsSection (it will update reactively when state.composeVersion is set)
             OptionsSection(
@@ -316,19 +416,7 @@ fun WizardMainContent(
                 onTestsToggle = {
                     state.tests = !state.tests
                     ComposeWizardUsageCollector.logTestsToggled(state.tests)
-                },
-                composeVersion = state.composeVersion,
-                kotlinVersion = remember(state.composeVersion) {
-                    io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)?.kotlinVersion
-                        ?: io.github.heisiar.composewizard.shared.ComposeVersions.DEFAULT_KOTLIN_VERSION
-                },
-                lifecycleVersion = lifecycleVersion,
-                hotReloadVersion = hotReloadVersion,
-                isResolvingLifecycle = isResolvingLifecycle,
-                isFallback = isFallback,
-                isLifecycleFallback = isLifecycleFallback,
-                libraryVersions = libraryVersions,
-                libraryFromBundle = libraryFromBundle
+                }
             )
         }
 

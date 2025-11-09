@@ -1,7 +1,5 @@
 package io.github.heisiar.composewizard.shared.ui
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -33,6 +31,24 @@ class WizardState {
     var projectPathError by mutableStateOf<String?>(null)
     var projectLocationWarning by mutableStateOf<String?>(null)
     var projectIdError by mutableStateOf<String?>(null)
+    
+    var kotlinVersion by mutableStateOf("")
+    var lifecycleVersion by mutableStateOf<String?>(null)
+    var material3Version by mutableStateOf<String?>(null)
+    var material3AdaptiveVersion by mutableStateOf<String?>(null)
+    var navigationVersion by mutableStateOf<String?>(null)
+    var navigationEventVersion by mutableStateOf<String?>(null)
+    var savedStateVersion by mutableStateOf<String?>(null)
+    var windowVersion by mutableStateOf<String?>(null)
+    var hotReloadVersion by mutableStateOf<String?>(null)
+    
+    var includeMaterial3 by mutableStateOf(false)
+    var includeMaterial3Adaptive by mutableStateOf(false)
+    var includeNavigation by mutableStateOf(false)
+    var includeNavigationEvent by mutableStateOf(false)
+    var includeSavedState by mutableStateOf(false)
+    var includeWindow by mutableStateOf(false)
+    var includeHotReload by mutableStateOf(false)
     
     val hasNoTargets by derivedStateOf { 
         !desktop && !android && !ios && !web 

@@ -10,7 +10,8 @@ enum class LibraryType(val displayName: String) {
     NAVIGATION("Navigation"),
     NAVIGATION_EVENT("NavigationEvent"),
     SAVED_STATE("SavedState"),
-    WINDOW("Window")
+    WINDOW("Window"),
+    HOT_RELOAD("Compose Hot Reload")
 }
 
 /**
@@ -54,6 +55,7 @@ data class ComposeLibraryVersions(
         LibraryType.NAVIGATION_EVENT -> navigationEventVersion
         LibraryType.SAVED_STATE -> savedStateVersion
         LibraryType.WINDOW -> windowVersion
+        LibraryType.HOT_RELOAD -> null
     }
 }
 

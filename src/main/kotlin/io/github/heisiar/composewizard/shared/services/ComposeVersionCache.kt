@@ -11,9 +11,19 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class ComposeVersionCacheState(
     var cacheVersion: Int = 0, // Cache version for invalidation
@@ -651,6 +661,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventVersions
             LibraryType.SAVED_STATE -> persistentState.savedStateVersions
             LibraryType.WINDOW -> persistentState.windowVersions
+            LibraryType.HOT_RELOAD -> LinkedHashMap()
         }
     }
     
@@ -666,6 +677,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventIsFromBundle
             LibraryType.SAVED_STATE -> persistentState.savedStateIsFromBundle
             LibraryType.WINDOW -> persistentState.windowIsFromBundle
+            LibraryType.HOT_RELOAD -> LinkedHashMap()
         }
     }
     

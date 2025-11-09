@@ -30,16 +30,39 @@ object ProjectCreator {
             println("Package: ${builder.projectId}")
             println("Targets: Desktop=${builder.targetDesktop}, Android=${builder.targetAndroid}, iOS=${builder.targetIOS}, Web=${builder.targetWeb}")
             
+            // Get library versions from LIBRARY_BUNDLES with fallback to default
+            val libraryVersions = ComposeVersions.getLibraryBundle(builder.composeVersion)
+                ?: ComposeVersions.getLibraryBundle(ComposeVersions.DEFAULT_VERSION)!!
+            
+            println("=== ProjectCreator: Using library versions from LIBRARY_BUNDLES ===")
+            println("Compose: ${builder.composeVersion}, Kotlin: ${libraryVersions.kotlinVersion}, Lifecycle: ${libraryVersions.lifecycleVersion}")
+            
             val processor = TemplateProcessor(
                 projectName = projectName,
                 projectId = builder.projectId,
                 composeVersion = builder.composeVersion,
+                kotlinVersion = libraryVersions.kotlinVersion,
+                lifecycleVersion = libraryVersions.lifecycleVersion,
+                material3Version = libraryVersions.material3Version,
+                material3AdaptiveVersion = libraryVersions.material3AdaptiveVersion,
+                navigationVersion = libraryVersions.navigationVersion,
+                navigationEventVersion = libraryVersions.navigationEventVersion,
+                savedStateVersion = libraryVersions.savedStateVersion,
+                windowVersion = libraryVersions.windowVersion,
+                hotReloadVersion = builder.hotReloadVersion,
                 includeTests = builder.includeTests,
                 targetDesktop = builder.targetDesktop,
                 targetAndroid = builder.targetAndroid,
                 targetIOS = builder.targetIOS,
                 targetWeb = builder.targetWeb,
-                enableDevVersions = builder.enableDevVersions
+                enableDevVersions = builder.enableDevVersions,
+                includeMaterial3 = builder.includeMaterial3,
+                includeMaterial3Adaptive = builder.includeMaterial3Adaptive,
+                includeNavigation = builder.includeNavigation,
+                includeNavigationEvent = builder.includeNavigationEvent,
+                includeSavedState = builder.includeSavedState,
+                includeWindow = builder.includeWindow,
+                includeHotReload = builder.includeHotReload
             )
             
             processor.copyTemplateToProject(projectPath)
