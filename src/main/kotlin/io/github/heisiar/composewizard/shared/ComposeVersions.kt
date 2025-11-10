@@ -7,7 +7,8 @@ enum class LibraryType(val displayName: String) {
     LIFECYCLE("Lifecycle"),
     MATERIAL3("Material3"),
     MATERIAL3_ADAPTIVE("Material3 Adaptive"),
-    NAVIGATION("Navigation3"),
+    NAVIGATION("Navigation"),
+    NAVIGATION3("Navigation3"),
     NAVIGATION_EVENT("Navigation Event"),
     SAVED_STATE("SavedState"),
     WINDOW("Window"),
@@ -35,6 +36,7 @@ data class ComposeLibraryVersions(
     
     // AndroidX Libraries
     val lifecycleVersion: String,
+    val navigationVersion: String? = null,
     val navigation3Version: String? = null,
     val navigationEventVersion: String? = null,
     val savedStateVersion: String? = null,
@@ -51,7 +53,8 @@ data class ComposeLibraryVersions(
         LibraryType.LIFECYCLE -> lifecycleVersion
         LibraryType.MATERIAL3 -> material3Version
         LibraryType.MATERIAL3_ADAPTIVE -> material3AdaptiveVersion
-        LibraryType.NAVIGATION -> navigation3Version
+        LibraryType.NAVIGATION -> navigationVersion
+        LibraryType.NAVIGATION3 -> navigation3Version
         LibraryType.NAVIGATION_EVENT -> navigationEventVersion
         LibraryType.SAVED_STATE -> savedStateVersion
         LibraryType.WINDOW -> windowVersion
@@ -136,77 +139,6 @@ object ComposeVersions {
             kotlinVersion = "2.1.0",
             lifecycleVersion = "2.9.6",
             savedStateVersion = "1.3.6"
-        ),
-        "1.9.2" to ComposeLibraryVersions(
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.1.0",
-            lifecycleVersion = "2.9.5",
-            material3AdaptiveVersion = "1.2.0"
-        ),
-        "1.9.1" to ComposeLibraryVersions(
-            composeVersion = "1.9.1",
-            kotlinVersion = "2.0.21",
-            lifecycleVersion = "2.9.5",
-            material3Version = "1.9.0",
-            navigation3Version = "2.9.1",
-            savedStateVersion = "1.3.5"
-        ),
-        "1.9.0" to ComposeLibraryVersions(
-            composeVersion = "1.9.0",
-            kotlinVersion = "2.0.21",
-            lifecycleVersion = "2.9.4",
-            material3Version = "1.9.0-beta06",
-            savedStateVersion = "1.3.4",
-            windowVersion = "1.4.0"
-        ),
-        "1.9.0-rc02" to ComposeLibraryVersions(
-            composeVersion = "1.9.0-rc02",
-            kotlinVersion = "2.0.21",
-            lifecycleVersion = "2.9.4-rc01",
-            material3Version = "1.9.0-beta05",
-            savedStateVersion = "1.3.4-rc01",
-            windowVersion = "1.4.0-rc02"
-        ),
-        "1.9.0-beta03" to ComposeLibraryVersions(
-            composeVersion = "1.9.0-beta03",
-            kotlinVersion = "2.0.20",
-            lifecycleVersion = "2.9.2",
-            material3Version = "1.9.0-beta03",
-            material3AdaptiveVersion = "1.2.0-alpha05",
-            navigation3Version = "2.9.0-beta05",
-            savedStateVersion = "1.3.2",
-            windowVersion = "1.4.0-beta01"
-        ),
-        "1.9.0-beta01" to ComposeLibraryVersions(
-            composeVersion = "1.9.0-beta01",
-            kotlinVersion = "2.0.20",
-            lifecycleVersion = "2.9.0",
-            material3Version = "1.9.0-alpha04",
-            material3AdaptiveVersion = "1.2.0-alpha04",
-            navigation3Version = "2.9.0-beta04",
-            windowVersion = "1.4.0-alpha09"
-        ),
-        "1.9.0-alpha03" to ComposeLibraryVersions(
-            composeVersion = "1.9.0-alpha03",
-            kotlinVersion = "2.0.20",
-            lifecycleVersion = "2.9.0",
-            material3AdaptiveVersion = "1.2.0-alpha03",
-            windowVersion = "1.4.0-alpha08"
-        ),
-        "1.9.0-alpha02" to ComposeLibraryVersions(
-            composeVersion = "1.9.0-alpha02",
-            kotlinVersion = "2.0.20",
-            lifecycleVersion = "2.9.0",
-            material3AdaptiveVersion = "1.2.0-alpha02",
-            windowVersion = "1.4.0-alpha07"
-        ),
-        "1.8.2" to ComposeLibraryVersions(
-            composeVersion = "1.8.2",
-            kotlinVersion = "2.0.20",
-            lifecycleVersion = "2.9.1",
-            material3AdaptiveVersion = "1.1.2",
-            navigation3Version = "2.9.0-beta03",
-            savedStateVersion = "1.3.1"
         )
     )
     
@@ -238,6 +170,17 @@ object ComposeVersions {
         get() = LIBRARY_BUNDLES.keys.firstOrNull() ?: error("LIBRARY_BUNDLES must not be empty")
     
     /**
+     * Last stable Compose Multiplatform version in LIBRARY_BUNDLES.
+     * Used as baseline for Maven filtering - only versions >= this one are fetched.
+     * Filters out dev versions (alpha/beta/rc) to get the true stable baseline.
+     */
+    val LAST_STABLE_VERSION: String by lazy {
+        LIBRARY_BUNDLES.keys.firstOrNull { version ->
+            !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
+        } ?: LIBRARY_BUNDLES.keys.first()
+    }
+    
+    /**
      * Default Kotlin version compatible with Compose Multiplatform.
      * 
      * Version compatibility:
@@ -247,7 +190,7 @@ object ComposeVersions {
      * Update this when updating DEFAULT_VERSION to ensure compatibility.
      * See: https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html
      */
-    const val DEFAULT_KOTLIN_VERSION = "2.2.21"
+    const val KOTLIN_VERSION_WIZARD = "2.2.21"
     
     /**
      * Compose Hot Reload version.

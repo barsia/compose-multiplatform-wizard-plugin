@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.shared
 
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
+import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 import java.io.File
 
 /**
@@ -30,25 +31,45 @@ object ProjectCreator {
             println("Package: ${builder.projectId}")
             println("Targets: Desktop=${builder.targetDesktop}, Android=${builder.targetAndroid}, iOS=${builder.targetIOS}, Web=${builder.targetWeb}")
             
-            // Get library versions from LIBRARY_BUNDLES with fallback to default
+            // Get library versions from ComposeVersionCache with fallback to LIBRARY_BUNDLES
+            val cache = ComposeVersionCache.getInstance()
             val libraryVersions = ComposeVersions.getLibraryBundle(builder.composeVersion)
                 ?: ComposeVersions.getLibraryBundle(ComposeVersions.DEFAULT_VERSION)!!
             
-            println("=== ProjectCreator: Using library versions from LIBRARY_BUNDLES ===")
-            println("Compose: ${builder.composeVersion}, Kotlin: ${libraryVersions.kotlinVersion}, Lifecycle: ${libraryVersions.lifecycleVersion}")
+            // Try to get versions from cache first, fallback to LIBRARY_BUNDLES
+            val lifecycleVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.LIFECYCLE)
+                ?: libraryVersions.lifecycleVersion
+            val material3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3)
+                ?: libraryVersions.material3Version
+            val material3AdaptiveVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3_ADAPTIVE)
+                ?: libraryVersions.material3AdaptiveVersion
+            val navigationVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION)
+                ?: libraryVersions.navigationVersion
+            val navigation3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION3)
+                ?: libraryVersions.navigation3Version
+            val navigationEventVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION_EVENT)
+                ?: libraryVersions.navigationEventVersion
+            val savedStateVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.SAVED_STATE)
+                ?: libraryVersions.savedStateVersion
+            val windowVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.WINDOW)
+                ?: libraryVersions.windowVersion
+            
+            println("=== ProjectCreator: Using library versions (Cache + LIBRARY_BUNDLES fallback) ===")
+            println("Compose: ${builder.composeVersion}, Kotlin: ${libraryVersions.kotlinVersion}, Lifecycle: $lifecycleVersion")
             
             val processor = TemplateProcessor(
                 projectName = projectName,
                 projectId = builder.projectId,
                 composeVersion = builder.composeVersion,
                 kotlinVersion = libraryVersions.kotlinVersion,
-                lifecycleVersion = libraryVersions.lifecycleVersion,
-                material3Version = libraryVersions.material3Version,
-                material3AdaptiveVersion = libraryVersions.material3AdaptiveVersion,
-                navigation3Version = libraryVersions.navigation3Version,
-                navigationEventVersion = libraryVersions.navigationEventVersion,
-                savedStateVersion = libraryVersions.savedStateVersion,
-                windowVersion = libraryVersions.windowVersion,
+                lifecycleVersion = lifecycleVersion,
+                material3Version = material3Version,
+                material3AdaptiveVersion = material3AdaptiveVersion,
+                navigationVersion = navigationVersion,
+                navigation3Version = navigation3Version,
+                navigationEventVersion = navigationEventVersion,
+                savedStateVersion = savedStateVersion,
+                windowVersion = windowVersion,
                 hotReloadVersion = builder.hotReloadVersion,
                 includeTests = builder.includeTests,
                 targetDesktop = builder.targetDesktop,
@@ -59,6 +80,7 @@ object ProjectCreator {
                 includeMaterial3 = builder.includeMaterial3,
                 includeMaterial3Adaptive = builder.includeMaterial3Adaptive,
                 includeNavigation = builder.includeNavigation,
+                includeNavigation3 = builder.includeNavigation3,
                 includeNavigationEvent = builder.includeNavigationEvent,
                 includeSavedState = builder.includeSavedState,
                 includeWindow = builder.includeWindow,

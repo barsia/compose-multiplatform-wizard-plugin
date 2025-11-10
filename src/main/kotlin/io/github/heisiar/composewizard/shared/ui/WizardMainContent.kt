@@ -233,7 +233,10 @@ fun WizardMainContent(
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
-                io.github.heisiar.composewizard.shared.LibraryType.values().forEach { type ->
+                io.github.heisiar.composewizard.shared.LibraryType.values()
+                    .filter { it != io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD 
+                           && it != io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE }
+                    .forEach { type ->
                     launch {
                         var version = cache.getLibraryVersion(state.composeVersion, type)
                         
@@ -408,6 +411,15 @@ fun WizardMainContent(
                         },
                         label = "Navigation${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)}",
                         trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)
+                    )
+                    
+                    CheckboxOption(
+                        checked = state.includeNavigation3,
+                        onToggle = { 
+                            state.includeNavigation3 = !state.includeNavigation3
+                        },
+                        label = "Navigation3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3)}",
+                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3)
                     )
                     
                     CheckboxOption(

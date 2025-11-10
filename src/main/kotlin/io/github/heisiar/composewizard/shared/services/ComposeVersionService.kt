@@ -6,7 +6,6 @@ import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
-import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -82,16 +81,16 @@ class ComposeVersionService {
                         println("DEBUG ComposeVersionService: Dev versions (first 20 from XML, no sorting): ${first20.take(10)}")
                         first20
                     } else {
-                        // Stable: Filter versions newer than first in LIBRARY_BUNDLES
-                        val minVersion = ComposeVersions.DEFAULT_VERSION
+                        // Stable: Filter versions >= last stable version in LIBRARY_BUNDLES
+                        val minVersion = ComposeVersions.LAST_STABLE_VERSION
                         val minVersionParsed = ComposeVersionComparator.parse(minVersion)
                         
                         val filtered = versions.filter { version ->
                             val parsed = ComposeVersionComparator.parse(version)
-                            parsed > minVersionParsed
+                            parsed >= minVersionParsed
                         }
                         
-                        println("DEBUG ComposeVersionService: Stable versions from Maven (filtered > $minVersion): ${filtered.size} versions")
+                        println("DEBUG ComposeVersionService: Stable versions from Maven (filtered >= $minVersion): ${filtered.size} versions")
                         println("DEBUG ComposeVersionService: Filtered stable versions sample: ${filtered.take(5)}")
                         filtered
                     }

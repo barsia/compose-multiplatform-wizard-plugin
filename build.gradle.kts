@@ -1,8 +1,8 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.10.2"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
+    id("org.jetbrains.kotlin.jvm") version "2.3.0-Beta2"
+    id("org.jetbrains.intellij.platform") version "2.10.4"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.0-Beta2"
 }
 
 // Configure Java toolchain for the entire project (required for Jewel)

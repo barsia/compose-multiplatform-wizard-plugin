@@ -12,7 +12,7 @@ object ProjectFixtures {
         projectName = TEST_PROJECT_NAME,
         projectId = TEST_PACKAGE_NAME,
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = true,
         targetAndroid = false,
         targetIOS = false,
@@ -25,7 +25,7 @@ object ProjectFixtures {
         projectName = "WebProject",
         projectId = "org.example.web",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = false,
         targetAndroid = false,
         targetIOS = false,
@@ -38,7 +38,7 @@ object ProjectFixtures {
         projectName = "ProjectIos",
         projectId = "org.example.ios",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = false,
         targetAndroid = false,
         targetIOS = true,
@@ -51,7 +51,7 @@ object ProjectFixtures {
         projectName = "ProjectAndroid",
         projectId = "org.example.android",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = false,
         targetAndroid = true,
         targetIOS = false,
@@ -64,7 +64,7 @@ object ProjectFixtures {
         projectName: String = TEST_PROJECT_NAME,
         packageName: String = TEST_PACKAGE_NAME,
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -82,7 +82,7 @@ object ProjectFixtures {
         projectName: String = "WebProject",
         packageName: String = "org.example.web",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -102,7 +102,7 @@ object ProjectFixtures {
         projectName: String = "ProjectAndroid",
         packageName: String = "org.example.android",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -122,7 +122,7 @@ object ProjectFixtures {
         projectName: String = TEST_PROJECT_NAME,
         packageName: String = TEST_PACKAGE_NAME,
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -142,7 +142,7 @@ object ProjectFixtures {
         projectName: String = "ProjectIos",
         packageName: String = "org.example.ios",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -162,7 +162,7 @@ object ProjectFixtures {
         projectName: String = "WebProject",
         packageName: String = "org.example.web",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -180,7 +180,7 @@ object ProjectFixtures {
         projectName = "ProjectAndroidDesktop",
         projectId = "org.example.android.desktop",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = true,
         targetAndroid = true,
         targetIOS = false,
@@ -193,7 +193,7 @@ object ProjectFixtures {
         projectName = "ProjectAndroidIos",
         projectId = "org.example.android.ios",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = false,
         targetAndroid = true,
         targetIOS = true,
@@ -206,7 +206,7 @@ object ProjectFixtures {
         projectName = "ProjectDesktopWeb",
         projectId = "org.example.desktop.web",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = true,
         targetAndroid = false,
         targetIOS = false,
@@ -219,7 +219,7 @@ object ProjectFixtures {
         projectName = "ProjectAllPlatforms",
         projectId = "org.example.all.platforms",
         composeVersion = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion = ComposeVersions.DEFAULT_KOTLIN_VERSION,
+        kotlinVersion = ComposeVersions.KOTLIN_VERSION_WIZARD,
         targetDesktop = true,
         targetAndroid = true,
         targetIOS = true,
@@ -234,7 +234,7 @@ object ProjectFixtures {
         projectName: String = "AndroidDesktopIosTests",
         packageName: String = "org.example.project.android.desktop.ios.tests",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,
@@ -254,7 +254,7 @@ object ProjectFixtures {
         projectName: String = "AndroidWebIosGit",
         packageName: String = "org.example.android.web.ios.git",
         composeVersion: String = ComposeVersions.DEFAULT_VERSION,
-        kotlinVersion: String = ComposeVersions.DEFAULT_KOTLIN_VERSION
+        kotlinVersion: String = ComposeVersions.KOTLIN_VERSION_WIZARD
     ) = ProjectConfig(
         projectName = projectName,
         projectId = packageName,

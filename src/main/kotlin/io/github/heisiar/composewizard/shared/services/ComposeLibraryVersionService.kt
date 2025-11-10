@@ -222,17 +222,17 @@ class ComposeLibraryVersionService {
                 
                 // If rc, add betas and alphas for same patch
                 if (qualifierType == "rc") {
-                    for (i in 8 downTo 1) {
+                    for (i in 3 downTo 1) {
                         versions.add("$major.$minor.$patch-beta${i.toString().padStart(2, '0')}")
                     }
-                    for (i in 8 downTo 1) {
+                    for (i in 3 downTo 1) {
                         versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
                     }
                 }
                 
                 // If beta, add alphas for same patch
                 if (qualifierType == "beta") {
-                    for (i in 8 downTo 1) {
+                    for (i in 3 downTo 1) {
                         versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
                     }
                 }

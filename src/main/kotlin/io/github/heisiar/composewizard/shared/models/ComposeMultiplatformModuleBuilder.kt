@@ -39,6 +39,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var lifecycleVersion: String? = null
     var material3Version: String? = null
     var material3AdaptiveVersion: String? = null
+    var navigationVersion: String? = null
     var navigation3Version: String? = null
     var navigationEventVersion: String? = null
     var savedStateVersion: String? = null
@@ -48,6 +49,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var includeMaterial3: Boolean = false
     var includeMaterial3Adaptive: Boolean = false
     var includeNavigation: Boolean = false
+    var includeNavigation3: Boolean = false
     var includeNavigationEvent: Boolean = false
     var includeSavedState: Boolean = false
     var includeWindow: Boolean = false

@@ -1,5 +1,7 @@
 package io.github.heisiar.composewizard.shared.utils
 
+import java.util.concurrent.ConcurrentHashMap
+
 /**
  * Semantic version comparator for Compose Multiplatform versions.
  * 
@@ -10,7 +12,15 @@ package io.github.heisiar.composewizard.shared.utils
  */
 object ComposeVersionComparator {
     
+    private val cache = ConcurrentHashMap<String, VersionComparable>()
+    
     fun parse(version: String, debug: Boolean = false): VersionComparable {
+        return cache.getOrPut(version) {
+            parseInternal(version, debug)
+        }
+    }
+    
+    private fun parseInternal(version: String, debug: Boolean): VersionComparable {
         return try {
             // Split by '.', '-', or '+' to handle both stable and dev versions
             val parts = version.split(".", "-", "+")

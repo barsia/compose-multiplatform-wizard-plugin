@@ -67,6 +67,7 @@ class ComposeWizardStep(
     private var includeMaterial3 = false
     private var includeMaterial3Adaptive = false
     private var includeNavigation = false
+    private var includeNavigation3 = false
     private var includeNavigationEvent = false
     private var includeSavedState = false
     private var includeWindow = false
@@ -172,6 +173,7 @@ class ComposeWizardStep(
             this@ComposeWizardStep.includeMaterial3 = state.includeMaterial3
             this@ComposeWizardStep.includeMaterial3Adaptive = state.includeMaterial3Adaptive
             this@ComposeWizardStep.includeNavigation = state.includeNavigation
+            this@ComposeWizardStep.includeNavigation3 = state.includeNavigation3
             this@ComposeWizardStep.includeNavigationEvent = state.includeNavigationEvent
             this@ComposeWizardStep.includeSavedState = state.includeSavedState
             this@ComposeWizardStep.includeWindow = state.includeWindow
@@ -301,6 +303,7 @@ class ComposeWizardStep(
         builder.includeMaterial3 = includeMaterial3
         builder.includeMaterial3Adaptive = includeMaterial3Adaptive
         builder.includeNavigation = includeNavigation
+        builder.includeNavigation3 = includeNavigation3
         builder.includeNavigationEvent = includeNavigationEvent
         builder.includeSavedState = includeSavedState
         builder.includeWindow = includeWindow
