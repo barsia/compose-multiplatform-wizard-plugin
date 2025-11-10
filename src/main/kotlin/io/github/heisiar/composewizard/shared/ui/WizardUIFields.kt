@@ -667,22 +667,19 @@ fun PinnedVersionIndicator(
     Tooltip(
         tooltip = { Text(tooltipText) }
     ) {
-        Box(
+        Icon(
+            key = WizardIconKeys.Pin,
+            contentDescription = "Pinned version",
             modifier = Modifier
+                .size(16.dp)
+                .offset(y = (-6).dp)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
                 ) { /* Consume click - prevent propagation to parent Row */ }
-                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.DEFAULT_CURSOR)))
-                .offset(y = (-6).dp) // Superscript effect - even higher
-        ) {
-            Icon(
-                key = WizardIconKeys.Pin,
-                contentDescription = "Pinned version",
-                modifier = Modifier.size(18.dp),
-                tint = JewelTheme.globalColors.text.normal
-            )
-        }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.DEFAULT_CURSOR))),
+            tint = JewelTheme.globalColors.text.normal
+        )
     }
 }
 
@@ -699,9 +696,9 @@ fun CheckboxOption(
 ) {
     val content = @Composable {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .fillMaxWidth()
             .clickable(
                     enabled = enabled,
                 indication = null,
@@ -717,8 +714,10 @@ fun CheckboxOption(
                 onCheckedChange = { onToggle() },
                 enabled = enabled
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
             ) {
                 if (iconKey != null) {
                     Icon(
@@ -742,9 +741,10 @@ fun CheckboxOption(
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                if (trailingContent != null) {
-                    trailingContent()
-                }
+            }
+            if (trailingContent != null) {
+                Spacer(modifier = Modifier.width(6.dp))
+                trailingContent()
             }
         }
     }
@@ -784,7 +784,7 @@ private fun CompactSwitch(
     }
     
     val thumbColor = if (checked) {
-        Color(0xFFFFC107).copy(alpha = 0.5f)  // Yellow for Dev
+        Color(0xFFF44336).copy(alpha = 0.5f)  // Red for Dev
     } else {
         Color(0xFF4CAF50).copy(alpha = 0.5f)  // Green for Stable
     }

@@ -19,6 +19,7 @@ class ComposeLibraryVersionService {
         // compose-multiplatform-core Web UI URL for tags
         private const val CORE_TAG_WEB_URL = "https://github.com/JetBrains/compose-multiplatform-core/releases/tag"
         private const val TIMEOUT_MS = 5000
+        private const val CHECK_TIMEOUT_MS = 3000  // Faster timeout for existence checks
         private const val MAX_FALLBACK_VERSIONS = 20  // Limit fallback depth
         
         // Regex patterns for all library types
@@ -34,12 +35,14 @@ class ComposeLibraryVersionService {
     
     data class FetchResult(
         val lifecycle: String? = null,
-        val isRateLimited: Boolean = false
+        val isRateLimited: Boolean = false,
+        val pageExists: Boolean = false  // true if release page exists (200 OK)
     )
     
     data class LibraryVersionsResult(
         val versions: Map<LibraryType, String> = emptyMap(),
-        val isRateLimited: Boolean = false
+        val isRateLimited: Boolean = false,
+        val pageExists: Boolean = false  // true if release page exists (200 OK)
     )
     
     /**
@@ -52,7 +55,7 @@ class ComposeLibraryVersionService {
     
     /**
      * Fetch lifecycle version from GitHub Web UI with rate limit status.
-     * Returns FetchResult with lifecycle (if found) and rate limit flag.
+     * Returns FetchResult with lifecycle (if found), rate limit flag, and page existence status.
      */
     fun fetchLifecycleFromWebUIWithStatus(composeVersion: String): FetchResult {
         return try {
@@ -72,14 +75,15 @@ class ComposeLibraryVersionService {
             
             if (responseCode == 403 || responseCode == 429) {
                 println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
-                return FetchResult(lifecycle = null, isRateLimited = true)
+                return FetchResult(lifecycle = null, isRateLimited = true, pageExists = false)
             }
             
             if (responseCode != 200) {
-                println("DEBUG: ❌ Not found or error (code: $responseCode)")
-                return FetchResult(lifecycle = null, isRateLimited = false)
+                println("DEBUG: ❌ Release page does not exist (code: $responseCode)")
+                return FetchResult(lifecycle = null, isRateLimited = false, pageExists = false)
             }
             
+            // Release page exists! Parse libraries
             val html = connection.inputStream.bufferedReader().use { it.readText() }
             
             // Parse lifecycle version from HTML
@@ -87,15 +91,15 @@ class ComposeLibraryVersionService {
             val lifecycleVersion = match?.groups?.get(1)?.value
             
             if (lifecycleVersion != null) {
-                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion")
+                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion (release page exists)")
             } else {
-                println("DEBUG: ❌ Lifecycle pattern not found in HTML")
+                println("DEBUG: ⚠️ Release page exists but lifecycle not published")
             }
             
-            FetchResult(lifecycle = lifecycleVersion, isRateLimited = false)
+            FetchResult(lifecycle = lifecycleVersion, isRateLimited = false, pageExists = true)
         } catch (e: Exception) {
             logger.info("Failed to fetch lifecycle from Web UI for $composeVersion: ${e.message}")
-            FetchResult(lifecycle = null, isRateLimited = false)
+            FetchResult(lifecycle = null, isRateLimited = false, pageExists = false)
         }
     }
     
@@ -119,14 +123,15 @@ class ComposeLibraryVersionService {
             
             if (responseCode == 403 || responseCode == 429) {
                 println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
-                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = true)
+                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = true, pageExists = false)
             }
             
             if (responseCode != 200) {
-                println("DEBUG: ❌ Not found or error (code: $responseCode)")
-                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false)
+                println("DEBUG: ❌ Release page does not exist (code: $responseCode)")
+                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
             }
             
+            // Release page exists! Parse libraries
             val html = connection.inputStream.bufferedReader().use { it.readText() }
             
             // Parse all library versions from HTML
@@ -167,12 +172,12 @@ class ComposeLibraryVersionService {
                 println("DEBUG: ✅ Found window: $it")
             }
             
-            println("DEBUG: Parsed ${versions.size} library versions from GitHub")
+            println("DEBUG: Parsed ${versions.size} library versions from release page (page exists)")
             
-            LibraryVersionsResult(versions = versions, isRateLimited = false)
+            LibraryVersionsResult(versions = versions, isRateLimited = false, pageExists = true)
         } catch (e: Exception) {
             logger.info("Failed to fetch library versions from Web UI for $composeVersion: ${e.message}")
-            LibraryVersionsResult(versions = emptyMap(), isRateLimited = false)
+            LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
         }
     }
     
@@ -272,6 +277,33 @@ class ComposeLibraryVersionService {
             type to num
         } else {
             "" to 0
+        }
+    }
+    
+    /**
+     * Check if a Compose version has a release page on GitHub.
+     * Returns true if the page exists (200 OK), false otherwise.
+     * Uses HEAD request for efficiency.
+     */
+    fun hasReleasePage(composeVersion: String): Boolean {
+        return try {
+            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
+            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
+            
+            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
+            connection.requestMethod = "HEAD"  // Only check headers, don't download content
+            connection.connectTimeout = CHECK_TIMEOUT_MS
+            connection.readTimeout = CHECK_TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
+            connection.instanceFollowRedirects = true
+            
+            val responseCode = connection.responseCode
+            connection.disconnect()
+            
+            responseCode == 200
+        } catch (e: Exception) {
+            logger.debug("Failed to check release page for $composeVersion: ${e.message}")
+            false
         }
     }
 }

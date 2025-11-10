@@ -224,20 +224,12 @@ fun WizardMainContent(
             val libraryVersions = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, String>() }
             val libraryFromBundle = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, Boolean>() }
             
-            // Loading state with minimum display time
-            var isLoadingLibraries by remember { mutableStateOf(false) }
-            
             // Load all library versions and subscribe to lifecycle updates
-            LaunchedEffect(state.composeVersion) {
+            LaunchedEffect(state.composeVersion, state.enableDevVersions) {
                 if (state.composeVersion.isEmpty()) return@LaunchedEffect
                 
-                // Start loading
-                isLoadingLibraries = true
-                val loadingStartTime = System.currentTimeMillis()
-                val minLoadingTime = 500L
-                
                 // Load library versions with polling
-                println("DEBUG UI: Loading library versions for Compose ${state.composeVersion}")
+                println("DEBUG UI: Loading library versions for Compose ${state.composeVersion} (dev=${state.enableDevVersions})")
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
@@ -270,14 +262,6 @@ fun WizardMainContent(
                 
                 // Wait for all libraries to finish loading
                 jobs.forEach { it.join() }
-                
-                // Ensure minimum display time (500ms)
-                val elapsed = System.currentTimeMillis() - loadingStartTime
-                if (elapsed < minLoadingTime) {
-                    kotlinx.coroutines.delay(minLoadingTime - elapsed)
-                }
-                
-                isLoadingLibraries = false
                 
                 // Subscribe to real-time Lifecycle updates (for late GitHub API responses)
                 cache.lifecycleVersionUpdates.collect { (version, lifecycle) ->
@@ -370,29 +354,40 @@ fun WizardMainContent(
                     enabled: Boolean = true
                 ) {
                     val version = libraryVersions[type]
-                    val isLoading = isLoadingLibraries && version == null
                     
-                    if (isLoading) {
-                        // Show skeleton while loading
+                    // Show skeleton while this specific library is loading (version not yet in map)
+                    if (version == null) {
                         SkeletonText(width = 180.dp)
-                    } else if (version != null && version.isNotEmpty()) {
+                    } else if (version.isNotEmpty()) {
                         // Show option only if version is found
-                        val fullLabel = "$label $version"
-                        val trailingContent: (@Composable () -> Unit)? = if (libraryFromBundle[type] == true) {
-                            val isPinned = isPinnedMap[type] ?: false
-                            { PinnedVersionIndicator(isPinned = isPinned) }
-                        } else {
-                            null
+                        val trailingContent: (@Composable () -> Unit) = {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = version,
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    color = if (enabled) org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal
+                                            else org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
+                                )
+                                
+                                if (libraryFromBundle[type] == true) {
+                                    val isPinned = isPinnedMap[type] ?: false
+                                    PinnedVersionIndicator(isPinned = isPinned)
+                                }
+                                
+                                LibraryVersionCopyIcon(version = version)
+                            }
                         }
                         CheckboxOption(
                             checked = checked,
                             onToggle = onToggle,
-                            label = fullLabel,
+                            label = label,
                             enabled = enabled,
                             trailingContent = trailingContent
                         )
                     }
-                    // If version not found and not loading - don't show anything
+                    // If version not found (empty string) and not loading - don't show anything
                 }
                 
                 // Left column
@@ -476,6 +471,28 @@ fun WizardMainContent(
                 }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            colors = listOf(
+                                androidx.compose.ui.graphics.Color.Transparent,
+                                JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                                JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                                JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                                JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                                androidx.compose.ui.graphics.Color.Transparent
+                            ),
+                            startX = 0f,
+                            endX = Float.POSITIVE_INFINITY
+                        )
+                    )
+            )
             
             Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
             

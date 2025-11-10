@@ -9,6 +9,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -23,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
@@ -32,6 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -151,11 +157,11 @@ fun ValidationPopupJB(
             -JBUI.scale(0) - popupSize.height/2
         )
         
-        popup?.show(RelativePoint(mainPanel, point))
+        popup.show(RelativePoint(mainPanel, point))
         
         if (popup is com.intellij.ui.popup.AbstractPopup) {
             try {
-                val window = (popup as com.intellij.ui.popup.AbstractPopup).popupWindow
+                val window = popup.popupWindow
                 if (window != null && com.intellij.ui.WindowRoundedCornersManager.isAvailable()) {
                     com.intellij.ui.WindowRoundedCornersManager.setRoundedCorners(
                         window,
@@ -168,7 +174,7 @@ fun ValidationPopupJB(
         }
         
         onDispose {
-            popup?.cancel()
+            popup.cancel()
         }
     }
 }
@@ -529,5 +535,40 @@ fun SkeletonText(
             .clip(RoundedCornerShape(4.dp))
             .background(skeletonColor)
     )
+}
+
+@androidx.compose.foundation.ExperimentalFoundationApi
+@Composable
+fun LibraryVersionCopyIcon(version: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    
+    org.jetbrains.jewel.ui.component.Tooltip(
+        tooltip = { Text("Copy version") }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = interactionSource
+                ) {
+                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                    val stringSelection = java.awt.datatransfer.StringSelection(version)
+                    clipboard.setContents(stringSelection, null)
+                }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
+                contentDescription = "Copy version",
+                modifier = Modifier.size(14.dp),
+                tint = org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(
+                    alpha = if (isHovered) 0.8f else 0.5f
+                )
+            )
+        }
+    }
 }
 

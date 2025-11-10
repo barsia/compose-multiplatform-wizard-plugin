@@ -769,38 +769,50 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             try {
                 println("DEBUG: Resolving Lifecycle version for Compose $composeVersion in background")
                 
-                // Step 1: Direct GitHub Web UI request for full version
-                var lifecycleVersion = libraryVersionService.fetchLifecycleFromWebUI(composeVersion)
+                val baseVersion = composeVersion.substringBefore("+dev")
                 
-                if (lifecycleVersion != null) {
-                    println("DEBUG: ✅ Found lifecycle in GitHub for $composeVersion: $lifecycleVersion")
-                    cacheLifecycleVersion(composeVersion, lifecycleVersion)
-                    _lifecycleVersionUpdates.emit(composeVersion to lifecycleVersion)
+                // Step 1: Direct GitHub Web UI request for full version
+                val result = libraryVersionService.fetchLifecycleFromWebUIWithStatus(composeVersion)
+                
+                if (result.lifecycle != null) {
+                    println("DEBUG: ✅ Found lifecycle in GitHub for $composeVersion: ${result.lifecycle}")
+                    cacheLifecycleVersion(composeVersion, result.lifecycle)
+                    _lifecycleVersionUpdates.emit(composeVersion to result.lifecycle)
                     return@launch
                 }
                 
-                // Step 1.5: Fast-path for +dev versions
-                val baseVersion = composeVersion.substringBefore("+dev")
-                if (baseVersion != composeVersion) {
-                    println("DEBUG: Dev version detected, trying base version: $baseVersion")
+                // Step 1.5: If release page exists but library not found - try fallback
+                if (result.pageExists) {
+                    println("DEBUG: ⚠️ Release page exists for $composeVersion but lifecycle not published")
                     
-                    // Try GitHub for base version first (priority for freshness!)
-                    val baseLifecycle = libraryVersionService.fetchLifecycleFromWebUI(baseVersion)
-                    if (baseLifecycle != null) {
-                        println("DEBUG: ✅ Found base in GitHub: $baseVersion → $baseLifecycle")
-                        cacheLifecycleVersion(composeVersion, baseLifecycle)
-                        _lifecycleVersionUpdates.emit(composeVersion to baseLifecycle)
-                        return@launch
+                    // For +dev versions: try base version as fallback
+                    if (baseVersion != composeVersion) {
+                        println("DEBUG: Dev version detected, trying base version fallback: $baseVersion")
+                        
+                        // Try GitHub for base version
+                        val baseLifecycle = libraryVersionService.fetchLifecycleFromWebUI(baseVersion)
+                        if (baseLifecycle != null) {
+                            println("DEBUG: ✅ Found base in GitHub: $baseVersion → $baseLifecycle")
+                            cacheLifecycleVersion(composeVersion, baseLifecycle)
+                            _lifecycleVersionUpdates.emit(composeVersion to baseLifecycle)
+                            return@launch
+                        }
+                        
+                        // Try Bundle for base version
+                        val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
+                        if (baseBundle?.lifecycleVersion != null) {
+                            println("DEBUG: 📦 Found base in Bundle: $baseVersion → ${baseBundle.lifecycleVersion}")
+                            cacheLifecycleVersion(composeVersion, baseBundle.lifecycleVersion, fromBundle = true)
+                            _lifecycleVersionUpdates.emit(composeVersion to baseBundle.lifecycleVersion)
+                            return@launch
+                        }
                     }
-                    
-                    // If GitHub didn't respond - Bundle for base version (quick fallback)
-                    val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
-                    if (baseBundle?.lifecycleVersion != null) {
-                        println("DEBUG: 📦 Found base in Bundle (network fallback): $baseVersion → ${baseBundle.lifecycleVersion}")
-                        cacheLifecycleVersion(composeVersion, baseBundle.lifecycleVersion, fromBundle = true)
-                        _lifecycleVersionUpdates.emit(composeVersion to baseBundle.lifecycleVersion)
-                        return@launch
-                    }
+                } else {
+                    // Release page doesn't exist - skip this version entirely
+                    println("DEBUG: ❌ Release page does not exist for $composeVersion, caching empty")
+                    cacheLifecycleVersion(composeVersion, "")
+                    _lifecycleVersionUpdates.emit(composeVersion to "")
+                    return@launch
                 }
                 
                 // Step 2: Fallback chain (Bundle → GitHub for each fallback version)
@@ -888,29 +900,38 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Step 2: Fallback to LIBRARY_BUNDLES
-                val bundle = ComposeVersions.getLibraryBundle(composeVersion)
-                val bundleVersion = bundle?.getVersion(type)
-                
-                if (bundleVersion != null) {
-                    println("DEBUG: 📦 Found ${type.displayName} in Bundle for $composeVersion: $bundleVersion")
-                    cacheLibraryVersion(composeVersion, type, bundleVersion, fromBundle = true)
-                    return@launch
-                }
-                
-                // Step 3: Fallback chain (for +dev versions and similar)
-                val baseVersion = composeVersion.substringBefore("+dev")
-                if (baseVersion != composeVersion) {
-                    println("DEBUG: Dev version detected, trying base version: $baseVersion")
+                // Step 1.5: If release page exists but library not found - try fallback
+                if (result.pageExists) {
+                    println("DEBUG: ⚠️ Release page exists for $composeVersion but ${type.displayName} not published")
                     
-                    // Try base version bundle
-                    val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
-                    val baseVersionLib = baseBundle?.getVersion(type)
-                    if (baseVersionLib != null) {
-                        println("DEBUG: 📦 Found ${type.displayName} in Bundle for base version $baseVersion: $baseVersionLib")
-                        cacheLibraryVersion(composeVersion, type, baseVersionLib, fromBundle = true)
+                    // Try Bundle for requested version first
+                    val bundle = ComposeVersions.getLibraryBundle(composeVersion)
+                    val bundleVersion = bundle?.getVersion(type)
+                    if (bundleVersion != null) {
+                        println("DEBUG: 📦 Found ${type.displayName} in Bundle for $composeVersion: $bundleVersion")
+                        cacheLibraryVersion(composeVersion, type, bundleVersion, fromBundle = true)
                         return@launch
                     }
+                    
+                    // For +dev versions: try base version as fallback
+                    val baseVersion = composeVersion.substringBefore("+dev")
+                    if (baseVersion != composeVersion) {
+                        println("DEBUG: Dev version detected, trying base version fallback: $baseVersion")
+                        
+                        // Try base version bundle
+                        val baseBundle = ComposeVersions.getLibraryBundle(baseVersion)
+                        val baseVersionLib = baseBundle?.getVersion(type)
+                        if (baseVersionLib != null) {
+                            println("DEBUG: 📦 Found ${type.displayName} in Bundle for base version $baseVersion: $baseVersionLib")
+                            cacheLibraryVersion(composeVersion, type, baseVersionLib, fromBundle = true)
+                            return@launch
+                        }
+                    }
+                } else {
+                    // Release page doesn't exist - skip this version entirely
+                    println("DEBUG: ❌ Release page does not exist for $composeVersion, caching empty for ${type.displayName}")
+                    cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
+                    return@launch
                 }
                 
                 // Step 4: Try fallback versions

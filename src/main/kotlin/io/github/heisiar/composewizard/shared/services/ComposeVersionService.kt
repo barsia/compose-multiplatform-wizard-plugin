@@ -4,6 +4,8 @@ import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import javax.xml.parsers.DocumentBuilderFactory
@@ -42,12 +44,44 @@ class ComposeVersionService {
     suspend fun fetchAvailableVersions(includeDevVersions: Boolean): List<String> = withContext(Dispatchers.IO) {
         try {
             val mavenUrl = if (includeDevVersions) DEV_MAVEN_URL else STABLE_MAVEN_URL
-            fetchVersionsFromMaven(mavenUrl, includeDevVersions)
+            val versions = fetchVersionsFromMaven(mavenUrl, includeDevVersions)
+            
+            // Filter dev versions to only those with release pages on GitHub
+            if (includeDevVersions) {
+                filterDevVersionsWithReleasePage(versions)
+            } else {
+                versions
+            }
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
             // For dev versions without internet: fallback to hardcoded versions
             ComposeVersions.STABLE_VERSIONS_HARDCODED
         }
+    }
+    
+    private suspend fun filterDevVersionsWithReleasePage(versions: List<String>): List<String> = kotlinx.coroutines.coroutineScope {
+        val libraryService = ComposeLibraryVersionService()
+        
+        println("DEBUG ComposeVersionService: Filtering ${versions.size} dev versions for GitHub release page existence (parallel checks)...")
+        val startTime = System.currentTimeMillis()
+        
+        // Check all versions in parallel using coroutines
+        val deferredResults = versions.map { version ->
+            async(Dispatchers.IO) {
+                val hasPage = libraryService.hasReleasePage(version)
+                if (!hasPage) {
+                    println("DEBUG ComposeVersionService: ❌ Excluding $version (no release page)")
+                }
+                version to hasPage
+            }
+        }
+        
+        val results = deferredResults.awaitAll()
+        val filtered = results.filter { it.second }.map { it.first }
+        val elapsed = System.currentTimeMillis() - startTime
+        
+        println("DEBUG ComposeVersionService: Filtered to ${filtered.size} dev versions with release pages (took ${elapsed}ms)")
+        filtered
     }
     
     private fun fetchVersionsFromMaven(mavenUrl: String, isDevMode: Boolean): List<String> {
