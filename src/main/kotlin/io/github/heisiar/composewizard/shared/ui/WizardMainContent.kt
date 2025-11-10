@@ -224,59 +224,72 @@ fun WizardMainContent(
             val libraryVersions = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, String>() }
             val libraryFromBundle = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, Boolean>() }
             
+            // Loading state with minimum display time
+            var isLoadingLibraries by remember { mutableStateOf(false) }
+            
             // Load all library versions and subscribe to lifecycle updates
             LaunchedEffect(state.composeVersion) {
                 if (state.composeVersion.isEmpty()) return@LaunchedEffect
+                
+                // Start loading
+                isLoadingLibraries = true
+                val loadingStartTime = System.currentTimeMillis()
+                val minLoadingTime = 500L
                 
                 // Load library versions with polling
                 println("DEBUG UI: Loading library versions for Compose ${state.composeVersion}")
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
-                io.github.heisiar.composewizard.shared.LibraryType.values()
-                    .filter { it != io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD 
-                           && it != io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE }
-                    .forEach { type ->
-                    launch {
-                        var version = cache.getLibraryVersion(state.composeVersion, type)
-                        
-                        // Poll if version is still null (being resolved)
-                        var attempts = 0
-                        while (version == null && attempts < 50) {
-                            kotlinx.coroutines.delay(100)
-                            version = cache.getLibraryVersion(state.composeVersion, type)
-                            attempts++
-                        }
-                        
-                        if (version != null && version.isNotEmpty()) {
-                            libraryVersions[type] = version
-                            libraryFromBundle[type] = cache.isLibraryFromBundle(state.composeVersion, type)
-                            println("DEBUG UI: Loaded ${type.displayName}: $version (fromBundle=${libraryFromBundle[type]})")
+                val jobs = io.github.heisiar.composewizard.shared.LibraryType.values()
+                    .filter { it != io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD }
+                    .map { type ->
+                        launch {
+                            var version = cache.getLibraryVersion(state.composeVersion, type)
+                            
+                            // Poll if version is still null (being resolved)
+                            var attempts = 0
+                            while (version == null && attempts < 50) {
+                                kotlinx.coroutines.delay(100)
+                                version = cache.getLibraryVersion(state.composeVersion, type)
+                                attempts++
+                            }
+                            
+                            // Store version even if empty (not found)
+                            if (version != null) {
+                                libraryVersions[type] = version
+                                if (version.isNotEmpty()) {
+                                    libraryFromBundle[type] = cache.isLibraryFromBundle(state.composeVersion, type)
+                                    println("DEBUG UI: Loaded ${type.displayName}: $version (fromBundle=${libraryFromBundle[type]})")
+                                } else {
+                                    println("DEBUG UI: ${type.displayName} not found for ${state.composeVersion}")
+                                }
+                            }
                         }
                     }
+                
+                // Wait for all libraries to finish loading
+                jobs.forEach { it.join() }
+                
+                // Ensure minimum display time (500ms)
+                val elapsed = System.currentTimeMillis() - loadingStartTime
+                if (elapsed < minLoadingTime) {
+                    kotlinx.coroutines.delay(minLoadingTime - elapsed)
                 }
                 
-                // Lifecycle version handling
-                println("DEBUG UI: Subscribing to Lifecycle version updates for Compose ${state.composeVersion}")
+                isLoadingLibraries = false
                 
-                val cachedLifecycle = cache.getLifecycleVersion(state.composeVersion)
-                println("DEBUG UI: cachedLifecycle = '$cachedLifecycle' (null=${cachedLifecycle == null}, empty=${cachedLifecycle?.isEmpty()})")
-                
-                if (cachedLifecycle != null && cachedLifecycle.isNotEmpty()) {
-                    println("DEBUG UI: ✅ Initial Lifecycle value from cache: $cachedLifecycle")
-                    lifecycleVersion = cachedLifecycle
-                    isResolvingLifecycle = false
-                } else {
-                    println("DEBUG UI: ⏳ No cached Lifecycle, resolving...")
-                    lifecycleVersion = ""
-                    isResolvingLifecycle = true
-                }
-                
+                // Subscribe to real-time Lifecycle updates (for late GitHub API responses)
                 cache.lifecycleVersionUpdates.collect { (version, lifecycle) ->
                     println("DEBUG UI: Flow event received: version=$version, lifecycle='$lifecycle', current=${state.composeVersion}")
                     if (version == state.composeVersion) {
                         println("DEBUG UI: ✅ Received Lifecycle update: '$lifecycle' for Compose $version")
                         lifecycleVersion = lifecycle
+                        libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = lifecycle
+                        if (lifecycle.isNotEmpty()) {
+                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = 
+                                cache.isLibraryFromBundle(state.composeVersion, io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE)
+                        }
                         isResolvingLifecycle = false
                     } else {
                         println("DEBUG UI: ⚠️ Ignoring Lifecycle update for different version: $version != ${state.composeVersion}")
@@ -298,8 +311,9 @@ fun WizardMainContent(
                 println("DEBUG WizardMainContent: isFallback=$result, enableDevVersions=${state.enableDevVersions}")
                 result
             }
-            val isLifecycleFallback = remember(state.composeVersion, lifecycleVersion) {
-                if (lifecycleVersion.isNotEmpty()) {
+            val isLifecycleFallback = remember(state.composeVersion, libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE]) {
+                val lifecycle = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE]
+                if (lifecycle != null && lifecycle.isNotEmpty()) {
                     cache.isLifecycleFallback(state.composeVersion)
                 } else {
                     false
@@ -310,19 +324,34 @@ fun WizardMainContent(
             
             Spacer(modifier = Modifier.height(LIBRARIES_SECTION_SPACING))
             
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val versionLabel: (io.github.heisiar.composewizard.shared.LibraryType) -> String = { type ->
-                    val version = libraryVersions[type]
-                    if (version != null && version.isNotEmpty()) {
-                        " $version"
-                    } else {
-                        ""
+            // Show loading state if compose version not selected yet
+            if (state.composeVersion.isEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
+                    ) {
+                        repeat(4) {
+                            SkeletonText(width = 180.dp)
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
+                    ) {
+                        repeat(4) {
+                            SkeletonText(width = 180.dp)
+                        }
                     }
                 }
-                
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 val currentBundle = io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)
                 
                 // Pre-compute isPinned for all library types
@@ -331,13 +360,39 @@ fun WizardMainContent(
                     versionInCurrentBundle.isNullOrEmpty()
                 }
                 
-                val pinnedIndicator: (io.github.heisiar.composewizard.shared.LibraryType) -> (@Composable () -> Unit)? = { type ->
-                    if (libraryFromBundle[type] == true) {
-                        val isPinned = isPinnedMap[type] ?: false
-                        { PinnedVersionIndicator(isPinned = isPinned) }
-                    } else {
-                        null
+                // Helper to render library option with skeleton support
+                @Composable
+                fun LibraryOption(
+                    type: io.github.heisiar.composewizard.shared.LibraryType,
+                    checked: Boolean,
+                    onToggle: () -> Unit,
+                    label: String,
+                    enabled: Boolean = true
+                ) {
+                    val version = libraryVersions[type]
+                    val isLoading = isLoadingLibraries && version == null
+                    
+                    if (isLoading) {
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                    } else if (version != null && version.isNotEmpty()) {
+                        // Show option only if version is found
+                        val fullLabel = "$label $version"
+                        val trailingContent: (@Composable () -> Unit)? = if (libraryFromBundle[type] == true) {
+                            val isPinned = isPinnedMap[type] ?: false
+                            { PinnedVersionIndicator(isPinned = isPinned) }
+                        } else {
+                            null
+                        }
+                        CheckboxOption(
+                            checked = checked,
+                            onToggle = onToggle,
+                            label = fullLabel,
+                            enabled = enabled,
+                            trailingContent = trailingContent
+                        )
                     }
+                    // If version not found and not loading - don't show anything
                 }
                 
                 // Left column
@@ -346,47 +401,33 @@ fun WizardMainContent(
                     verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                 ) {
                     // Lifecycle - always included (disabled checkbox)
-                    if (lifecycleVersion.isNotEmpty()) {
-                        val lifecycleIsPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: false
-                        val lifecycleTrailingContent: (@Composable () -> Unit)? = if (isLifecycleFallback) {
-                            { PinnedVersionIndicator(isPinned = lifecycleIsPinned) }
-                        } else {
-                            null
-                        }
-                        CheckboxOption(
-                            checked = true,
-                            onToggle = { }, // No-op, always enabled
-                            label = "Lifecycle $lifecycleVersion",
-                            enabled = false,
-                            trailingContent = lifecycleTrailingContent
-                        )
-                    }
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE,
+                        checked = true,
+                        onToggle = { },
+                        label = "Lifecycle",
+                        enabled = false
+                    )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE,
                         checked = state.includeMaterial3Adaptive,
-                        onToggle = { 
-                            state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive
-                        },
-                        label = "Material3 Adaptive${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE)
+                        onToggle = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive },
+                        label = "Material3 Adaptive"
                     )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT,
                         checked = state.includeNavigationEvent,
-                        onToggle = { 
-                            state.includeNavigationEvent = !state.includeNavigationEvent
-                        },
-                        label = "NavigationEvent${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT)
+                        onToggle = { state.includeNavigationEvent = !state.includeNavigationEvent },
+                        label = "NavigationEvent"
                     )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.WINDOW,
                         checked = state.includeWindow,
-                        onToggle = { 
-                            state.includeWindow = !state.includeWindow
-                        },
-                        label = "Window${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.WINDOW)
+                        onToggle = { state.includeWindow = !state.includeWindow },
+                        label = "Window"
                     )
                 }
                 
@@ -395,40 +436,32 @@ fun WizardMainContent(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                 ) {
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3,
                         checked = state.includeMaterial3,
-                        onToggle = { 
-                            state.includeMaterial3 = !state.includeMaterial3
-                        },
-                        label = "Material3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3)
+                        onToggle = { state.includeMaterial3 = !state.includeMaterial3 },
+                        label = "Material3"
                     )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION,
                         checked = state.includeNavigation,
-                        onToggle = { 
-                            state.includeNavigation = !state.includeNavigation
-                        },
-                        label = "Navigation${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION)
+                        onToggle = { state.includeNavigation = !state.includeNavigation },
+                        label = "Navigation"
                     )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3,
                         checked = state.includeNavigation3,
-                        onToggle = { 
-                            state.includeNavigation3 = !state.includeNavigation3
-                        },
-                        label = "Navigation3${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3)
+                        onToggle = { state.includeNavigation3 = !state.includeNavigation3 },
+                        label = "Navigation3"
                     )
                     
-                    CheckboxOption(
+                    LibraryOption(
+                        type = io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE,
                         checked = state.includeSavedState,
-                        onToggle = { 
-                            state.includeSavedState = !state.includeSavedState
-                        },
-                        label = "SavedState${versionLabel(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)}",
-                        trailingContent = pinnedIndicator(io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE)
+                        onToggle = { state.includeSavedState = !state.includeSavedState },
+                        label = "SavedState"
                     )
                     
                     if (shouldShowHotReload) {
@@ -440,6 +473,7 @@ fun WizardMainContent(
                             label = "Compose Hot Reload${if (hotReloadVersion.isNotEmpty()) " $hotReloadVersion" else ""}"
                         )
                     }
+                }
                 }
             }
             

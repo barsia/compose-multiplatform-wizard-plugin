@@ -200,57 +200,23 @@ fun ComposeVersionField(
         val initialLoadingState = if (enableDevVersions) cache.isLoadingDevVersions() else cache.isLoadingStableVersions()
 
         var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf(initialVersions) }
-        var isFirstRender by remember(enableDevVersions) { mutableStateOf(true) }
-        var currentSelectedVersion by remember(enableDevVersions) { 
-            // Always select first version when switching Dev/Stable
-            val initialSelection = initialVersions?.firstOrNull() ?: ""
-            println("DEBUG ComposeVersionField: Initializing with enableDev=$enableDevVersions, always selecting first version: '$initialSelection'")
-            mutableStateOf(initialSelection)
-        }
-        // Show loading ONLY if no cached versions (background refresh shouldn't block UI)
         var isLoading by remember(enableDevVersions) { mutableStateOf(initialVersions == null) }
-        var minLoadingTimeElapsed by remember(enableDevVersions) { mutableStateOf(initialVersions != null) }
-
-        // Sync currentSelectedVersion with external selectedVersion
-        LaunchedEffect(selectedVersion) {
-            if (selectedVersion.isNotEmpty() && selectedVersion != currentSelectedVersion) {
-                println("DEBUG ComposeVersionField: Syncing selectedVersion: '$currentSelectedVersion' -> '$selectedVersion'")
-                currentSelectedVersion = selectedVersion
-            }
+        
+        // Local UI state for immediate display
+        var displayedVersion by remember(enableDevVersions) { 
+            val firstVersion = initialVersions?.firstOrNull() ?: ""
+            println("DEBUG ComposeVersionField: Initializing displayedVersion (enableDev=$enableDevVersions): '$firstVersion'")
+            mutableStateOf(firstVersion)
         }
 
-        LaunchedEffect(currentSelectedVersion) {
-            println("DEBUG ComposeVersionField: LaunchedEffect triggered - isFirstRender=$isFirstRender, currentSelectedVersion='$currentSelectedVersion', selectedVersion='$selectedVersion'")
-            
-            // On first render: notify parent if we auto-selected from dropdown (different from selectedVersion)
-            if (isFirstRender) {
-                isFirstRender = false
-                if (currentSelectedVersion.isNotEmpty() && currentSelectedVersion != selectedVersion) {
-                    println("DEBUG ComposeVersionField: ✅ First render with auto-selection from dropdown: '$currentSelectedVersion' (was: '$selectedVersion')")
-                    onVersionSelected(currentSelectedVersion)
-                } else {
-                    println("DEBUG ComposeVersionField: First render with matching selectedVersion='$selectedVersion', skipping notification")
-                }
-                return@LaunchedEffect
-            }
-            
-            if (currentSelectedVersion.isNotEmpty() && currentSelectedVersion != selectedVersion) {
-                println("DEBUG ComposeVersionField: ✅ Notifying parent about selection change: '$selectedVersion' -> '$currentSelectedVersion'")
-                onVersionSelected(currentSelectedVersion)
-            } else {
-                println("DEBUG ComposeVersionField: ❌ NOT notifying parent - condition not met (empty=${currentSelectedVersion.isEmpty()}, equal=${currentSelectedVersion == selectedVersion})")
-            }
-        }
-
+        // On Dev/Stable switch: notify parent
         LaunchedEffect(enableDevVersions) {
-            if (initialVersions == null) {
-                minLoadingTimeElapsed = false
-                println("DEBUG: No cached versions, starting min loading timer (1000ms)")
-                kotlinx.coroutines.delay(1000)
-                minLoadingTimeElapsed = true
-                println("DEBUG: Minimum loading time (1000ms) elapsed")
+            if (displayedVersion.isNotEmpty()) {
+                println("DEBUG ComposeVersionField: Dev/Stable switched (enableDev=$enableDevVersions), notifying parent: '$displayedVersion'")
+                onVersionSelected(displayedVersion)
             }
         }
+
 
         // Poll for updated versions after manual refresh
         LaunchedEffect(refreshTrigger) {
@@ -278,8 +244,10 @@ fun ComposeVersionField(
                     if (newVersions != null) {
                         println("DEBUG: Refresh complete, got ${newVersions.size} versions: ${newVersions.take(3)}")
                         availableVersions = newVersions
-                        if (currentSelectedVersion.isEmpty() || !newVersions.contains(currentSelectedVersion)) {
-                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
+                        val firstVersion = newVersions.firstOrNull() ?: ""
+                        if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
+                            displayedVersion = firstVersion
+                            onVersionSelected(firstVersion)
                         }
                         isLoading = false
                         break
@@ -311,23 +279,20 @@ fun ComposeVersionField(
                     cache.getStableVersions()
                 }
                 
-                println("DEBUG: Polling - isLoading=$isCurrentlyLoading, versions: ${newVersions?.take(3)}, minTimeElapsed=$minLoadingTimeElapsed")
+                println("DEBUG: Polling - isLoading=$isCurrentlyLoading, versions: ${newVersions?.take(3)}")
                 
                 if (!isCurrentlyLoading && newVersions != null) {
-                    if (minLoadingTimeElapsed) {
-                        println("DEBUG: Loading complete and min time elapsed, updating UI with ${newVersions.take(3)}")
-                        availableVersions = newVersions
-                        // Reset selection if current version not in new list (e.g., loaded from empty cache with DEFAULT_VERSION)
-                        if (currentSelectedVersion.isNotEmpty() && !newVersions.contains(currentSelectedVersion)) {
-                            println("DEBUG: Current selection '$currentSelectedVersion' not in new list, resetting to first: ${newVersions.firstOrNull()}")
-                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
-                        } else if (currentSelectedVersion.isEmpty() && selectedVersion.isEmpty()) {
-                            // Only set selection if both are empty (initial state)
-                            currentSelectedVersion = newVersions.firstOrNull() ?: ""
-                        }
-                        isLoading = false
-                        break
+                    println("DEBUG: Loading complete, updating UI with ${newVersions.take(3)}")
+                    availableVersions = newVersions
+                    // Reset selection if current version not in new list or empty
+                    val firstVersion = newVersions.firstOrNull() ?: ""
+                    if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
+                        println("DEBUG: Current selection '$selectedVersion' not in new list or empty, selecting first: $firstVersion")
+                        displayedVersion = firstVersion
+                        onVersionSelected(firstVersion)
                     }
+                    isLoading = false
+                    break
                 }
                 
                 kotlinx.coroutines.delay(100)
@@ -339,40 +304,51 @@ fun ComposeVersionField(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
             ) {
-                val items = if (isLoading && availableVersions == null) {
-                    listOf("")
-                } else {
-                    println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
-                    val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
-                    println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
-                    versions
+                val items = remember(enableDevVersions, availableVersions) {
+                    if (isLoading && availableVersions == null) {
+                        listOf("")
+                    } else {
+                        println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
+                        val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
+                        println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
+                        versions
+                    }
                 }
-                val currentIndex = if (isLoading && availableVersions == null) 0 else items.indexOf(currentSelectedVersion).takeIf { it >= 0 } ?: 0
+                
+                val currentIndex = remember(displayedVersion, items, isLoading) {
+                    val index = if (isLoading && availableVersions == null) 0 else items.indexOf(displayedVersion).takeIf { it >= 0 } ?: 0
+                    println("DEBUG WizardUIFields: Computed currentIndex=$index, displayedVersion='$displayedVersion', items.size=${items.size}, items[0]='${items.firstOrNull()}'")
+                    index
+                }
                 
             Box(
                 modifier = Modifier
                     .widthIn(min = 200.dp)
                     .weight(1f)
                         ) {
-                            org.jetbrains.jewel.ui.component.ListComboBox(
-                                items = items,
-                                selectedIndex = currentIndex,
-                                onSelectedItemChange = { index ->
-                                    availableVersions?.let { versions ->
-                                        if (versions.isNotEmpty() && index in versions.indices) {
-                                            val newSelection = versions[index]
-                                            println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$currentSelectedVersion'")
-                                            currentSelectedVersion = newSelection
+                            // Force recreation when switching Dev/Stable - ListComboBox keeps internal state
+                            androidx.compose.runtime.key(enableDevVersions) {
+                                org.jetbrains.jewel.ui.component.ListComboBox(
+                                    items = items,
+                                    selectedIndex = currentIndex,
+                                    onSelectedItemChange = { index ->
+                                        availableVersions?.let { versions ->
+                                            if (versions.isNotEmpty() && index in versions.indices) {
+                                                val newSelection = versions[index]
+                                                println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$displayedVersion'")
+                                                displayedVersion = newSelection
+                                                onVersionSelected(newSelection)
+                                            }
                                         }
-                                    }
-                                },
-                                enabled = !isLoading && availableVersions != null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                    maxPopupHeight = 280.dp,
-                    style = transparentComboBoxStyle()
-                )
+                                    },
+                                    enabled = !isLoading && availableVersions != null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                        maxPopupHeight = 280.dp,
+                        style = transparentComboBoxStyle()
+                    )
+                }
             }
 
             Tooltip(
