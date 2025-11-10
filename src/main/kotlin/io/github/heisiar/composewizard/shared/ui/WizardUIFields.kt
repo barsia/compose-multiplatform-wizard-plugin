@@ -786,16 +786,13 @@ private fun CompactSwitch(
         label = "thumbOffset"
     )
     
-    val trackColor = if (checked) {
-        JewelTheme.globalColors.text.info.copy(alpha = 0.3f)
-    } else {
-        JewelTheme.globalColors.text.normal.copy(alpha = 0.2f)
-    }
+    val textFieldBackground = LocalTextFieldStyle.current.colors.background
+    val trackColor = textFieldBackground
     
     val thumbColor = if (checked) {
-        Color(0xFFF44336).copy(alpha = 0.5f)  // Red for Dev
+        Color(0xFFF44336).copy(alpha = 0.75f)  // Red for Dev
     } else {
-        Color(0xFF4CAF50).copy(alpha = 0.5f)  // Green for Stable
+        Color(0xFF4CAF50).copy(alpha = 0.75f)  // Green for Stable
     }
     
     val textColor = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
