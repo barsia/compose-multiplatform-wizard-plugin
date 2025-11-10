@@ -899,21 +899,23 @@ fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier
             )
         }
         
-        Icon(
-            key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
-            contentDescription = "Copy path",
-            modifier = Modifier
-                .size(16.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
-                    val stringSelection = java.awt.datatransfer.StringSelection(finalPath)
-                    clipboard.setContents(stringSelection, null)
-                }
-                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
-        )
+        if (!io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            Icon(
+                key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
+                contentDescription = "Copy path",
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                        val stringSelection = java.awt.datatransfer.StringSelection(finalPath)
+                        clipboard.setContents(stringSelection, null)
+                    }
+                    .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+            )
+        }
     }
 }
 
