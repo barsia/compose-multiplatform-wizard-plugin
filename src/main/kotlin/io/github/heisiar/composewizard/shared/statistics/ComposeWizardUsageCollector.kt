@@ -13,7 +13,11 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
     private val IDE_TYPE = EventFields.String("ide_type", listOf("AI", "IU", "IC", "PS", "WS", "PY", "CL", "GO", "RD", "RM"))
 
     // Wizard lifecycle
-    private val WIZARD_OPENED = GROUP.registerEvent("wizard.opened", IDE_TYPE)
+    private val WIZARD_OPENED = GROUP.registerEvent(
+        "wizard.opened",
+        IDE_TYPE,
+        "Compose Multiplatform wizard dialog opened"
+    )
     
     // Fields for vararg events
     private val PLATFORMS_COUNT = EventFields.Int("platforms_count")
@@ -24,6 +28,7 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
     
     private val WIZARD_COMPLETED = GROUP.registerVarargEvent(
         "wizard.completed",
+        "Compose Multiplatform wizard completed with project configuration",
         IDE_TYPE,
         PLATFORMS_COUNT,
         INCLUDE_TESTS,
@@ -37,47 +42,66 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
         "platform.toggled",
         IDE_TYPE,
         EventFields.String("platform", listOf("Android", "iOS", "Desktop", "Web")),
-        EventFields.Boolean("selected")
+        EventFields.Boolean("selected"),
+        "Platform selection toggled in wizard"
     )
     
     // Options
     private val TESTS_TOGGLED = GROUP.registerEvent(
         "tests.toggled",
         IDE_TYPE,
-        EventFields.Boolean("enabled")
+        EventFields.Boolean("enabled"),
+        "Include tests option toggled"
     )
     
     private val GIT_TOGGLED = GROUP.registerEvent(
         "git.toggled",
         IDE_TYPE,
-        EventFields.Boolean("enabled")
+        EventFields.Boolean("enabled"),
+        "Include git option toggled"
     )
     
     // Dev versions feature
-    private val DEV_VERSIONS_UNLOCKED = GROUP.registerEvent("dev.versions.unlocked", IDE_TYPE)
+    private val DEV_VERSIONS_UNLOCKED = GROUP.registerEvent(
+        "dev.versions.unlocked",
+        IDE_TYPE,
+        "Developer versions feature unlocked"
+    )
     
     private val DEV_VERSIONS_VISIBILITY_TOGGLED = GROUP.registerEvent(
         "dev.versions.visibility.toggled",
         IDE_TYPE,
         EventFields.Boolean("visible"),
-        EventFields.Int("toggle_count")  // How many times user toggled visibility in this session
+        EventFields.Int("toggle_count"),
+        "Developer versions visibility toggled"
     )
     
     private val DEV_VERSIONS_TOGGLED = GROUP.registerEvent(
         "dev.versions.toggled",
         IDE_TYPE,
-        EventFields.Boolean("enabled")
+        EventFields.Boolean("enabled"),
+        "Use developer versions option toggled"
     )
     
     // Compose version selection
-    private val VERSION_DROPDOWN_OPENED = GROUP.registerEvent("version.dropdown.opened", IDE_TYPE)
+    private val VERSION_DROPDOWN_OPENED = GROUP.registerEvent(
+        "version.dropdown.opened",
+        IDE_TYPE,
+        "Compose version dropdown opened"
+    )
     
-    private val VERSION_REFRESH_CLICKED = GROUP.registerEvent("version.refresh.clicked", IDE_TYPE)
+    private val VERSION_REFRESH_CLICKED = GROUP.registerEvent(
+        "version.refresh.clicked",
+        IDE_TYPE,
+        "Compose version refresh button clicked"
+    )
+    
     private val COMPOSE_VERSION = EventFields.StringValidatedByInlineRegexp("version", ".*")
     private val IS_DEV_VERSION = EventFields.Boolean("is_dev_version")
     
     private val COMPOSE_VERSION_SELECTED = GROUP.registerVarargEvent(
         "compose.version.selected",
+        "Compose version selected from dropdown",
         IDE_TYPE,
         COMPOSE_VERSION,
         IS_DEV_VERSION
@@ -88,7 +112,8 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
         "field.edited",
         IDE_TYPE,
         EventFields.String("field", listOf("project_name", "project_location", "project_id")),
-        EventFields.Boolean("has_content")
+        EventFields.Boolean("has_content"),
+        "Text field edited in wizard"
     )
     
     // Validation errors
@@ -106,7 +131,8 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
             "directory_not_empty",
             "invalid_package_format",
             "no_platform_selected"
-        ))
+        )),
+        "Validation error occurred"
     )
 
     // Public logging methods
