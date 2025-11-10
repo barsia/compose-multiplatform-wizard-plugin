@@ -37,7 +37,7 @@ import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 
 private val SPACING_BETWEEN_SECTIONS = 8.dp
-private val SPACING_BEFORE_LOCATION = 0.dp
+private val SPACING_BEFORE_LOCATION = 16.dp
 private val LOCATION_SECTION_VERTICAL_OFFSET = 4.dp
 private val TEXTFIELD_VERTICAL_OFFSET = 8.dp
 private val TEXTFIELD_HEIGHT_REDUCTION = 16.dp

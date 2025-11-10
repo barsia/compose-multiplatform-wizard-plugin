@@ -50,6 +50,7 @@ import org.jetbrains.jewel.ui.component.Tooltip
 import org.jetbrains.jewel.ui.component.styling.ComboBoxColors
 import org.jetbrains.jewel.ui.component.styling.ComboBoxStyle
 import org.jetbrains.jewel.ui.component.styling.LocalDefaultComboBoxStyle
+import org.jetbrains.jewel.ui.component.styling.LocalTextFieldStyle
 import java.awt.Cursor
 import java.io.File
 import java.io.InputStream
@@ -62,18 +63,21 @@ private object ResourceLoader {
 }
 
 @Composable
-private fun transparentComboBoxStyle(): ComboBoxStyle {
+private fun textFieldStyleComboBox(): ComboBoxStyle {
     val defaultStyle = LocalDefaultComboBoxStyle.current
     val defaultColors = defaultStyle.colors
     val defaultMetrics = defaultStyle.metrics
     val defaultIcons = defaultStyle.icons
     
+    val textFieldStyle = LocalTextFieldStyle.current
+    val textFieldBackground = textFieldStyle.colors.background
+    
     return ComboBoxStyle(
         colors = ComboBoxColors(
-            background = Color.Transparent,
-            nonEditableBackground = Color.Transparent,
+            background = textFieldBackground,
+            nonEditableBackground = textFieldBackground,
             backgroundDisabled = defaultColors.backgroundDisabled,
-            backgroundFocused = Color.Transparent,
+            backgroundFocused = textFieldBackground,
             backgroundPressed = defaultColors.backgroundPressed,
             backgroundHovered = defaultColors.backgroundHovered,
             content = defaultColors.content,
@@ -108,7 +112,12 @@ fun ProjectNameField(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Project Name", style = JewelTheme.defaultTextStyle)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Project Name", style = JewelTheme.defaultTextStyle)
+        }
 
         LaunchedEffect(projectNameState.text.toString()) {
             onNameChanged(projectNameState.text.toString())
@@ -175,7 +184,7 @@ fun ComposeVersionField(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -346,7 +355,7 @@ fun ComposeVersionField(
                                         .fillMaxWidth()
                                         .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                         maxPopupHeight = 280.dp,
-                        style = transparentComboBoxStyle()
+                        style = textFieldStyleComboBox()
                     )
                 }
             }
