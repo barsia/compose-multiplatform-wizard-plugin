@@ -611,36 +611,42 @@ fun WizardMainContent(
 
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.lifecycleVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.lifecycleVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = false
+                                        }
+                                        println("DEBUG: Lifecycle version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE]})")
                                     }
-                                    println("DEBUG: Lifecycle version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
 
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -724,36 +730,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.material3Version = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.material3Version = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = false
+                                        }
+                                        println("DEBUG: Material3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3]})")
                                     }
-                                    println("DEBUG: Material3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -837,36 +849,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.material3AdaptiveVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.material3AdaptiveVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = false
+                                        }
+                                        println("DEBUG: Material3 Adaptive version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE]})")
                                     }
-                                    println("DEBUG: Material3 Adaptive version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -947,42 +965,48 @@ fun WizardMainContent(
                                         val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] ?: false
                                         PinnedVersionIndicator(isPinned = isPinned)
                                     }
-                                }
                             }
+                        }
                         }
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.navigationVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.navigationVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = false
+                                        }
+                                        println("DEBUG: Navigation version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION]})")
                                     }
-                                    println("DEBUG: Navigation version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -1069,36 +1093,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.navigation3Version = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.navigation3Version = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = false
+                                        }
+                                        println("DEBUG: Navigation3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3]})")
                                     }
-                                    println("DEBUG: Navigation3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -1185,36 +1215,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.windowVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.windowVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = false
+                                        }
+                                        println("DEBUG: Window version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW]})")
                                     }
-                                    println("DEBUG: Window version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -1301,36 +1337,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.savedStateVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.savedStateVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = false
+                                        }
+                                        println("DEBUG: SavedState version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE]})")
                                     }
-                                    println("DEBUG: SavedState version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
@@ -1417,36 +1459,42 @@ fun WizardMainContent(
                         
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
-                        // Version dropdown using Jewel ListComboBox
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    state.navigationEventVersion = newVersion
-                                    // If user selected the original version, restore original bundle flag
-                                    if (newVersion == originalVersion) {
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = originalIsFromBundle
-                                    } else {
-                                        // User selected different version manually, not from bundle
-                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = false
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.navigationEventVersion = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = false
+                                        }
+                                        println("DEBUG: NavigationEvent version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT]})")
                                     }
-                                    println("DEBUG: NavigationEvent version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT]})")
-                                }
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 120.dp, max = 200.dp)
-                                .pointerHoverIcon(
-                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
-                                ),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                        
-                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                        
-                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
                     }
                 }
                 
