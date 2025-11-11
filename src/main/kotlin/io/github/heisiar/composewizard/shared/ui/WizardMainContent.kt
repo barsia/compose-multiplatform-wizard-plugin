@@ -373,7 +373,7 @@ fun WizardMainContent(
                                 )
                                 
                                 if (libraryFromBundle[type] == true) {
-                                    Spacer(modifier = Modifier.width(3.dp))
+                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
                                     val isPinned = isPinnedMap[type] ?: false
                                     PinnedVersionIndicator(isPinned = isPinned)
                                 }

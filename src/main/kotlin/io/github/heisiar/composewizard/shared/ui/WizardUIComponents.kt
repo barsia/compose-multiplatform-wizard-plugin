@@ -560,6 +560,7 @@ fun SkeletonText(
         modifier = modifier
             .width(width)
             .height(height)
+            .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(skeletonColor)
     )
