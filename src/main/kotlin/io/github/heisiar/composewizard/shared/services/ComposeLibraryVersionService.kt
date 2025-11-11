@@ -18,9 +18,13 @@ class ComposeLibraryVersionService {
     companion object {
         // compose-multiplatform-core Web UI URL for tags
         private const val CORE_TAG_WEB_URL = "https://github.com/JetBrains/compose-multiplatform-core/releases/tag"
+        
+        // compose-multiplatform raw file URL for libs.versions.toml
+        private const val COMPOSE_REPO_RAW_URL = "https://raw.githubusercontent.com/JetBrains/compose-multiplatform"
+        
         private const val TIMEOUT_MS = 5000
         private const val CHECK_TIMEOUT_MS = 3000  // Faster timeout for existence checks
-        private const val MAX_FALLBACK_VERSIONS = 20  // Limit fallback depth
+        private const val MAX_FALLBACK_VERSIONS = 30  // Limit fallback depth (increased for Navigation fallback)
         
         // Regex patterns for all library types
         // Captures full version including qualifiers (alpha, beta, rc) and dev suffix
@@ -28,9 +32,13 @@ class ComposeLibraryVersionService {
         private val MATERIAL3_PATTERN = Regex("""material3\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val MATERIAL3_ADAPTIVE_PATTERN = Regex("""adaptive-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val NAVIGATION_PATTERN = Regex("""navigation-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        private val NAVIGATION3_PATTERN = Regex("""navigation3-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val NAVIGATION_EVENT_PATTERN = Regex("""navigationevent-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val SAVED_STATE_PATTERN = Regex("""savedstate\*?:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
         private val WINDOW_PATTERN = Regex("""window-core:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
+        
+        // Hot reload version pattern for libs.versions.toml
+        private val HOT_RELOAD_PATTERN = Regex("""compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"|\[versions][\s\S]*?compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"|\[libraries][\s\S]*?compose-hot-reload\s*=\s*\{\s*module\s*=\s*"[^"]+"\s*,\s*version\.ref\s*=\s*"compose-hot-reload"\s*\}""")
     }
     
     data class FetchResult(
@@ -113,6 +121,7 @@ class ComposeLibraryVersionService {
             val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
             
             println("DEBUG: 🌐 Fetching library versions from GitHub Web UI: $composeVersion")
+            println("DEBUG: 🔗 URL: $url")
             
             val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = TIMEOUT_MS
@@ -127,7 +136,7 @@ class ComposeLibraryVersionService {
             }
             
             if (responseCode != 200) {
-                println("DEBUG: ❌ Tag page does not exist (code: $responseCode)")
+                println("DEBUG: ❌ Tag page does not exist for $composeVersion (HTTP $responseCode)")
                 return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
             }
             
@@ -155,6 +164,13 @@ class ComposeLibraryVersionService {
             NAVIGATION_PATTERN.find(html)?.groups?.get(1)?.value?.let {
                 versions[LibraryType.NAVIGATION] = it
                 println("DEBUG: ✅ Found navigation: $it")
+            }
+            
+            NAVIGATION3_PATTERN.find(html)?.groups?.get(1)?.value?.let {
+                versions[LibraryType.NAVIGATION3] = it
+                println("DEBUG: ✅ Found navigation3: $it (from GitHub for $composeVersion)")
+            } ?: run {
+                println("DEBUG: ⚠️ Navigation3 NOT found in GitHub HTML for $composeVersion")
             }
             
             NAVIGATION_EVENT_PATTERN.find(html)?.groups?.get(1)?.value?.let {
@@ -277,6 +293,66 @@ class ComposeLibraryVersionService {
             type to num
         } else {
             "" to 0
+        }
+    }
+    
+    /**
+     * Fetch hot reload version from libs.versions.toml in compose-multiplatform repository.
+     * This is for Compose versions >= 10.0.0-beta01 where hot reload is bundled.
+     * 
+     * Example URL: https://raw.githubusercontent.com/JetBrains/compose-multiplatform/v1.10.0-beta01+dev3224/gradle-plugins/gradle/libs.versions.toml
+     * 
+     * Note: URL encoding is handled automatically by URI
+     * 
+     * Returns null if not found or error occurred.
+     */
+    fun fetchHotReloadVersion(composeVersion: String): String? {
+        return try {
+            // URL encode the version to handle special characters like +
+            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
+            val url = "$COMPOSE_REPO_RAW_URL/v$encodedVersion/gradle-plugins/gradle/libs.versions.toml"
+            
+            println("DEBUG: 🌐 Fetching hot reload version from libs.versions.toml for Compose $composeVersion")
+            println("DEBUG: URL: $url")
+            
+            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = TIMEOUT_MS
+            connection.readTimeout = TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
+            
+            val responseCode = connection.responseCode
+            println("DEBUG: Response code: $responseCode")
+            
+            if (responseCode != 200) {
+                println("DEBUG: ❌ libs.versions.toml not found for version $composeVersion")
+                return null
+            }
+            
+            val tomlContent = connection.inputStream.bufferedReader().use { it.readText() }
+            println("DEBUG: 📄 TOML content (first 500 chars): ${tomlContent.take(500)}")
+            
+            // Parse hot reload version from TOML
+            // Format: plugin-hot-reload = { prefer = "1.0.0-rc02" }
+            val preferMatch = Regex("""plugin-hot-reload\s*=\s*\{\s*prefer\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"\s*\}""").find(tomlContent)
+            if (preferMatch != null) {
+                val version = preferMatch.groupValues[1]
+                println("DEBUG: ✅ Found hot reload version (prefer): $version")
+                return version
+            }
+            
+            // Fallback: try old format compose-hot-reload = "1.0.0-rc03"
+            val directMatch = Regex("""compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"""").find(tomlContent)
+            if (directMatch != null) {
+                val version = directMatch.groupValues[1]
+                println("DEBUG: ✅ Found hot reload version (direct): $version")
+                return version
+            }
+            
+            println("DEBUG: ⚠️ Hot reload version not found in libs.versions.toml")
+            null
+        } catch (e: Exception) {
+            logger.info("Failed to fetch hot reload version from libs.versions.toml for $composeVersion: ${e.message}")
+            null
         }
     }
     

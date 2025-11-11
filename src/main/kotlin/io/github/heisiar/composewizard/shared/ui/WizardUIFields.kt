@@ -733,6 +733,19 @@ fun PinnedVersionIndicator(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
+fun BundledLibraryIndicator() {
+    Icon(
+        key = WizardIconKeys.Lock,
+        contentDescription = "Bundled library",
+        modifier = Modifier
+            .size(10.dp)
+            .offset(y = (-4).dp),
+        tint = JewelTheme.globalColors.text.normal
+    )
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
 fun CheckboxOption(
     checked: Boolean,
     onToggle: () -> Unit,
@@ -740,7 +753,8 @@ fun CheckboxOption(
     enabled: Boolean = true,
     iconKey: org.jetbrains.jewel.ui.icon.IconKey? = null,
     useColoredIcon: Boolean = false,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    disabledTooltip: String = "Included in the base template and cannot be disabled"
 ) {
     val content = @Composable {
     Row(
@@ -799,7 +813,7 @@ fun CheckboxOption(
     
     if (!enabled) {
         Tooltip(
-            tooltip = { Text("Included in the base template and cannot be disabled") }
+            tooltip = { Text(disabledTooltip) }
         ) {
             content()
         }

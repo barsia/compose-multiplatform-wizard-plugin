@@ -26,7 +26,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 data class ComposeVersionCacheState(
-    var cacheVersion: Int = 0, // Cache version for invalidation
     var stableVersions: List<String> = emptyList(),
     var stableLastLoadTime: Long = 0L,
     var devVersions: List<String> = emptyList(),
@@ -55,7 +54,10 @@ data class ComposeVersionCacheState(
     var savedStateIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
     
     var windowVersions: LinkedHashMap<String, String> = linkedMapOf(),
-    var windowIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
+    var windowIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var hotReloadVersions: LinkedHashMap<String, String> = linkedMapOf(),
+    var hotReloadIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
 )
 
 /**
@@ -124,11 +126,13 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private val _lifecycleVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
     val lifecycleVersionUpdates = _lifecycleVersionUpdates.asSharedFlow()
     
+    // Emit event when library cache is invalidated (for UI to reload libraries)
+    private val _cacheInvalidated = MutableSharedFlow<Unit>(replay = 0)
+    val cacheInvalidated = _cacheInvalidated.asSharedFlow()
+    
     companion object {
-        // Cache version - increment ONLY when cache DATA STRUCTURE changes (e.g., new fields in ComposeVersionCacheState)
-        // DO NOT increment for version updates - TTL and Refresh button handle that!
-        // Current version 2: LinkedHashMap for lifecycle versions (FIFO cleanup)
-        private const val CURRENT_CACHE_VERSION = 2
+        // Max number of library versions to cache per type (FIFO cleanup when exceeded)
+        private const val MAX_LIBRARY_CACHE_SIZE = 200
         
         // Cache TTL: 24 hours (in milliseconds)
         // Compose stable versions are released every 2-3 weeks
@@ -168,17 +172,6 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         }
         
         initialized = true
-        
-        // Check cache version and invalidate if outdated
-        if (persistentState.cacheVersion != CURRENT_CACHE_VERSION) {
-            println("DEBUG ComposeVersionCache: Cache version mismatch (${persistentState.cacheVersion} != $CURRENT_CACHE_VERSION), invalidating old cache")
-            persistentState.cacheVersion = CURRENT_CACHE_VERSION
-            persistentState.lifecycleVersions.clear()
-            persistentState.stableVersions = emptyList()
-            persistentState.devVersions = emptyList()
-            persistentState.stableLastLoadTime = 0L
-            persistentState.devLastLoadTime = 0L
-        }
         
         println("DEBUG ComposeVersionCache: Initializing after state load, cached stable: ${persistentState.stableVersions.take(3)}")
         
@@ -481,6 +474,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     fun forceReloadStable() {
         logger.info("Force reload stable requested, invalidating cache and reloading")
         persistentState.stableLastLoadTime = 0L
+        invalidateLibraryCache()
         loadStableVersionsInBackground()
     }
     
@@ -494,7 +488,41 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     fun forceReloadDev() {
         logger.info("Force reload dev requested, invalidating cache and reloading")
         persistentState.devLastLoadTime = 0L
+        invalidateLibraryCache()
         loadDevVersionsInBackground()
+    }
+    
+    /**
+     * Invalidate library cache for all Compose versions.
+     * This forces re-fetching of all library versions from GitHub on next access.
+     * Called when user clicks Refresh button.
+     */
+    private fun invalidateLibraryCache() {
+        println("DEBUG ComposeVersionCache: Invalidating all library caches")
+        persistentState.lifecycleVersions.clear()
+        persistentState.lifecycleIsFromBundle.clear()
+        persistentState.material3Versions.clear()
+        persistentState.material3IsFromBundle.clear()
+        persistentState.material3AdaptiveVersions.clear()
+        persistentState.material3AdaptiveIsFromBundle.clear()
+        persistentState.navigationVersions.clear()
+        persistentState.navigationIsFromBundle.clear()
+        persistentState.navigation3Versions.clear()
+        persistentState.navigation3IsFromBundle.clear()
+        persistentState.navigationEventVersions.clear()
+        persistentState.navigationEventIsFromBundle.clear()
+        persistentState.savedStateVersions.clear()
+        persistentState.savedStateIsFromBundle.clear()
+        persistentState.windowVersions.clear()
+        persistentState.windowIsFromBundle.clear()
+        persistentState.hotReloadVersions.clear()
+        persistentState.hotReloadIsFromBundle.clear()
+        logger.info("Library cache invalidated")
+        
+        // Notify UI to reload libraries
+        scope.launch {
+            _cacheInvalidated.emit(Unit)
+        }
     }
     
     private fun loadStableVersionsInBackground() {
@@ -660,7 +688,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventVersions
             LibraryType.SAVED_STATE -> persistentState.savedStateVersions
             LibraryType.WINDOW -> persistentState.windowVersions
-            LibraryType.HOT_RELOAD -> LinkedHashMap()
+            LibraryType.HOT_RELOAD -> persistentState.hotReloadVersions
         }
     }
     
@@ -677,7 +705,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             LibraryType.NAVIGATION_EVENT -> persistentState.navigationEventIsFromBundle
             LibraryType.SAVED_STATE -> persistentState.savedStateIsFromBundle
             LibraryType.WINDOW -> persistentState.windowIsFromBundle
-            LibraryType.HOT_RELOAD -> LinkedHashMap()
+            LibraryType.HOT_RELOAD -> persistentState.hotReloadIsFromBundle
         }
     }
     
@@ -697,11 +725,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         
         // If cached (including empty string = "not found"), return it
         if (cached != null) {
+            val fromBundle = isLibraryFromBundle(composeVersion, type)
+            println("DEBUG: Cache HIT for ${type.displayName} / $composeVersion: '$cached' (fromBundle=$fromBundle)")
             return cached
         }
         
         // Trigger background resolution if not already resolving
         if (!isResolvingLibrary(composeVersion, type)) {
+            println("DEBUG: Cache MISS for ${type.displayName} / $composeVersion, triggering resolution")
             resolveLibraryVersionInBackground(composeVersion, type)
         }
         
@@ -895,6 +926,37 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             try {
                 println("DEBUG: Resolving ${type.displayName} version for Compose $composeVersion in background")
                 
+                // Special handling for NAVIGATION: deprecated for Compose >= 1.10.0 (replaced by NAVIGATION3)
+                if (type == LibraryType.NAVIGATION) {
+                    val baseVersion = composeVersion.split("+").first().split("-").first()
+                    val parts = baseVersion.split(".")
+                    val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                    val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                    
+                    if (major > 1 || (major == 1 && minor >= 10)) {
+                        println("DEBUG: ⚠️ Navigation2 is deprecated for Compose >= 1.10.0 (use Navigation3 instead), caching empty for $composeVersion")
+                        cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
+                        synchronized(lifecycleResolvingVersions) {
+                            lifecycleResolvingVersions.remove(key)
+                        }
+                        return@launch
+                    }
+                }
+                
+                // Special handling for HOT_RELOAD: fetch from libs.versions.toml
+                if (type == LibraryType.HOT_RELOAD) {
+                    val hotReloadVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
+                    if (hotReloadVersion != null) {
+                        println("DEBUG: ✅ Found hot reload version from libs.versions.toml: $hotReloadVersion")
+                        cacheLibraryVersion(composeVersion, type, hotReloadVersion, fromBundle = true)
+                        return@launch
+                    } else {
+                        println("DEBUG: ⚠️ Hot reload version not found in libs.versions.toml, caching empty")
+                        cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
+                        return@launch
+                    }
+                }
+                
                 // Step 1: Fetch all library versions from GitHub
                 val result = libraryVersionService.fetchLibraryVersionsFromWebUI(composeVersion)
                 val version = result.versions[type]
@@ -939,15 +1001,38 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Step 4: Try fallback versions
+                // Step 4: Try fallback versions (Bundle → GitHub for each)
                 val fallbackVersions = libraryVersionService.generateFallbackVersions(composeVersion)
-                for (fallbackVersion in fallbackVersions) {
+                var isRateLimited = false
+                
+                for ((index, fallbackVersion) in fallbackVersions.withIndex()) {
+                    println("DEBUG: Fallback [$index/${fallbackVersions.size}] for ${type.displayName}: $fallbackVersion")
+                    
+                    // 4.1: Check Bundle first (fast, no network)
                     val fallbackBundle = ComposeVersions.getLibraryBundle(fallbackVersion)
                     val fallbackVersionLib = fallbackBundle?.getVersion(type)
                     if (fallbackVersionLib != null) {
                         println("DEBUG: 📦 Found ${type.displayName} in Bundle for fallback version $fallbackVersion: $fallbackVersionLib")
                         cacheLibraryVersion(composeVersion, type, fallbackVersionLib, fromBundle = true)
                         return@launch
+                    }
+                    
+                    // 4.2: Bundle not found → GitHub (if not rate limited)
+                    if (!isRateLimited) {
+                        delay(150) // Small delay between requests
+                        val fallbackResult = libraryVersionService.fetchLibraryVersionsFromWebUI(fallbackVersion)
+                        
+                        if (fallbackResult.isRateLimited) {
+                            isRateLimited = true
+                            println("DEBUG: ⚠️ Rate limited, switching to Bundle-only mode for ${type.displayName}")
+                        } else {
+                            val fallbackLibVersion = fallbackResult.versions[type]
+                            if (fallbackLibVersion != null) {
+                                println("DEBUG: ✅ Found ${type.displayName} in GitHub for fallback $fallbackVersion: $fallbackLibVersion")
+                                cacheLibraryVersion(composeVersion, type, fallbackLibVersion, fromBundle = true)
+                                return@launch
+                            }
+                        }
                     }
                 }
                 
@@ -993,6 +1078,47 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             val source = if (fromBundle) "Bundle 📦" else "GitHub"
             println("DEBUG: Cached ${type.displayName}: $composeVersion → $version from $source (cache size: ${versionsMap.size}/$MAX_LIFECYCLE_CACHE_SIZE)")
         }
+    }
+    
+    /**
+     * Compare two Compose versions.
+     * Returns true if version < threshold.
+     * 
+     * Examples:
+     * - isComposeVersionLessThan("1.9.3", "1.10.0") → true
+     * - isComposeVersionLessThan("1.10.0-beta01", "1.10.0") → true (beta < stable)
+     * - isComposeVersionLessThan("1.10.0", "1.10.0") → false
+     * - isComposeVersionLessThan("1.10.0-beta02+dev3234", "1.10.0") → true
+     */
+    private fun isComposeVersionLessThan(version: String, threshold: String): Boolean {
+        val versionBase = version.split("+").first()
+        val thresholdBase = threshold.split("+").first()
+        
+        val versionNumeric = versionBase.split("-").first()
+        val versionQualifier = versionBase.substringAfter("-", "")
+        
+        val thresholdNumeric = thresholdBase.split("-").first()
+        val thresholdQualifier = thresholdBase.substringAfter("-", "")
+        
+        val versionParts = versionNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+        val thresholdParts = thresholdNumeric.split(".").map { it.toIntOrNull() ?: 0 }
+        
+        for (i in 0 until maxOf(versionParts.size, thresholdParts.size)) {
+            val v = versionParts.getOrNull(i) ?: 0
+            val t = thresholdParts.getOrNull(i) ?: 0
+            if (v < t) return true
+            if (v > t) return false
+        }
+        
+        if (thresholdQualifier.isNotEmpty() && versionQualifier.isEmpty()) {
+            return false
+        }
+        
+        if (versionQualifier.isNotEmpty() && thresholdQualifier.isEmpty()) {
+            return true
+        }
+        
+        return versionQualifier < thresholdQualifier
     }
     
     override fun dispose() {

@@ -45,6 +45,9 @@ private val TEXTFIELD_HEIGHT_REDUCTION = 16.dp
 private val LIBRARIES_SECTION_SPACING = 4.dp
 private val LIBRARY_ITEM_SPACING = 2.dp
 
+private const val LEFT_COLUMN_LIBRARIES_COUNT = 4
+private const val RIGHT_COLUMN_BASE_LIBRARIES_COUNT = 4
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun WizardMainContent(
@@ -202,14 +205,23 @@ fun WizardMainContent(
 
             Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
 
-            val shouldShowHotReload = remember(state.desktop, state.composeVersion) {
+            // Hot reload: < 10.0.0-beta01 - optional, >= 10.0.0-beta01 - bundled
+            val shouldShowOptionalHotReload = remember(state.desktop, state.composeVersion) {
                 state.desktop && isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
             }
             
-            LaunchedEffect(shouldShowHotReload) {
-                if (shouldShowHotReload) {
+            val shouldShowNavigation = remember(state.composeVersion) {
+                isComposeVersionLessThan(state.composeVersion, "1.10.0")
+            }
+            
+            val shouldShowBundledHotReload = remember(state.desktop, state.composeVersion) {
+                state.desktop && !isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01") && state.composeVersion.isNotEmpty()
+            }
+            
+            LaunchedEffect(shouldShowOptionalHotReload, shouldShowBundledHotReload) {
+                if (shouldShowOptionalHotReload) {
                     state.hotReloadVersion = io.github.heisiar.composewizard.shared.ComposeVersions.COMPOSE_HOT_RELOAD_VERSION
-                } else {
+                } else if (!shouldShowBundledHotReload) {
                     state.hotReloadVersion = null
                     state.includeHotReload = false
                 }
@@ -225,65 +237,89 @@ fun WizardMainContent(
             val libraryVersions = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, String>() }
             val libraryFromBundle = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, Boolean>() }
             
-            // Load all library versions and subscribe to lifecycle updates
-            LaunchedEffect(state.composeVersion, state.enableDevVersions) {
-                if (state.composeVersion.isEmpty()) return@LaunchedEffect
+            // Remember version for library loading (snapshot before Refresh)
+            var versionForLibraries by remember { mutableStateOf("") }
+            
+            // Function to load library versions
+            suspend fun loadLibraryVersions(versionToLoad: String) {
+                if (versionToLoad.isEmpty()) return
                 
-                // Load library versions with polling
-                println("DEBUG UI: Loading library versions for Compose ${state.composeVersion} (dev=${state.enableDevVersions})")
+                println("DEBUG UI: Loading library versions for Compose $versionToLoad (dev=${state.enableDevVersions})")
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
-                val jobs = io.github.heisiar.composewizard.shared.LibraryType.values()
-                    .filter { it != io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD }
-                    .map { type ->
+                val typesToLoad = io.github.heisiar.composewizard.shared.LibraryType.values()
+                    .filter { 
+                        when (it) {
+                            io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD -> shouldShowBundledHotReload
+                            io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION -> shouldShowNavigation
+                            else -> true
+                        }
+                    }
+                
+                kotlinx.coroutines.coroutineScope {
+                    typesToLoad.forEach { type ->
                         launch {
-                            var version = cache.getLibraryVersion(state.composeVersion, type)
+                            var version = cache.getLibraryVersion(versionToLoad, type)
                             
                             // Poll if version is still null (being resolved)
                             var attempts = 0
                             while (version == null && attempts < 50) {
                                 kotlinx.coroutines.delay(100)
-                                version = cache.getLibraryVersion(state.composeVersion, type)
+                                version = cache.getLibraryVersion(versionToLoad, type)
                                 attempts++
                             }
                             
-                            // Store version even if empty (not found)
+                            // Handle result
                             if (version != null) {
                                 libraryVersions[type] = version
                                 if (version.isNotEmpty()) {
-                                    libraryFromBundle[type] = cache.isLibraryFromBundle(state.composeVersion, type)
+                                    libraryFromBundle[type] = cache.isLibraryFromBundle(versionToLoad, type)
                                     println("DEBUG UI: Loaded ${type.displayName}: $version (fromBundle=${libraryFromBundle[type]})")
+                                    
+                                    // Update state for hot reload
+                                    if (type == io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD) {
+                                        state.hotReloadVersion = version
+                                        state.includeHotReload = true
+                                    }
                                 } else {
-                                    println("DEBUG UI: ${type.displayName} not found for ${state.composeVersion}")
+                                    println("DEBUG UI: ${type.displayName} not found for $versionToLoad")
                                 }
                             }
                         }
                     }
+                }
+            }
+            
+            // Load libraries when version changes (user selection)
+            // But ignore changes when dev versions are loading (Refresh in progress)
+            LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload) {
+                if (state.composeVersion.isEmpty()) return@LaunchedEffect
                 
-                // Wait for all libraries to finish loading
-                jobs.forEach { it.join() }
+                val devVersions = if (state.enableDevVersions) cache.getDevVersions() else null
+                val isDevLoading = state.enableDevVersions && devVersions == null
                 
-                // Subscribe to real-time Lifecycle updates (for late GitHub API responses)
-                cache.lifecycleVersionUpdates.collect { (version, lifecycle) ->
-                    println("DEBUG UI: Flow event received: version=$version, lifecycle='$lifecycle', current=${state.composeVersion}")
-                    if (version == state.composeVersion) {
-                        println("DEBUG UI: ✅ Received Lifecycle update: '$lifecycle' for Compose $version")
-                        lifecycleVersion = lifecycle
-                        libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = lifecycle
-                        if (lifecycle.isNotEmpty()) {
-                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = 
-                                cache.isLibraryFromBundle(state.composeVersion, io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE)
-                        }
-                        isResolvingLifecycle = false
-                    } else {
-                        println("DEBUG UI: ⚠️ Ignoring Lifecycle update for different version: $version != ${state.composeVersion}")
+                if (isDevLoading) {
+                    println("DEBUG UI: Ignoring version change to ${state.composeVersion} (dev versions loading, Refresh in progress)")
+                } else {
+                    println("DEBUG UI: Version changed to ${state.composeVersion}, saving and loading libraries")
+                    versionForLibraries = state.composeVersion
+                    loadLibraryVersions(state.composeVersion)
+                }
+            }
+            
+            // Reload libraries when cache is invalidated (Refresh button)
+            LaunchedEffect(Unit) {
+                cache.cacheInvalidated.collect {
+                    println("DEBUG UI: Cache invalidation event received, reloading libraries for saved version: $versionForLibraries")
+                    if (versionForLibraries.isNotEmpty()) {
+                        loadLibraryVersions(versionForLibraries)
                     }
                 }
             }
             
-            LaunchedEffect(state.desktop, state.composeVersion, shouldShowHotReload) {
-                println("DEBUG Hot Reload: desktop=${state.desktop}, version=${state.composeVersion}, shouldShow=$shouldShowHotReload, hotReloadVersion=$hotReloadVersion")
+            LaunchedEffect(state.desktop, state.composeVersion, shouldShowOptionalHotReload, shouldShowBundledHotReload) {
+                println("DEBUG Hot Reload: desktop=${state.desktop}, version=${state.composeVersion}, shouldShowOptional=$shouldShowOptionalHotReload, shouldShowBundled=$shouldShowBundledHotReload, hotReloadVersion=$hotReloadVersion")
                 println("DEBUG Lifecycle: compose=${state.composeVersion}, lifecycle=$lifecycleVersion")
             }
             
@@ -311,6 +347,9 @@ fun WizardMainContent(
             
             // Show loading state if compose version not selected yet
             if (state.composeVersion.isEmpty()) {
+                // Always show max possible count (with Hot Reload) since we don't know the version yet
+                val rightColumnMaxCount = RIGHT_COLUMN_BASE_LIBRARIES_COUNT + 1
+                
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -319,7 +358,7 @@ fun WizardMainContent(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                     ) {
-                        repeat(4) {
+                        repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
                             SkeletonText(width = 180.dp)
                         }
                     }
@@ -327,7 +366,7 @@ fun WizardMainContent(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                     ) {
-                        repeat(4) {
+                        repeat(rightColumnMaxCount) {
                             SkeletonText(width = 180.dp)
                         }
                     }
@@ -352,7 +391,8 @@ fun WizardMainContent(
                     checked: Boolean,
                     onToggle: () -> Unit,
                     label: String,
-                    enabled: Boolean = true
+                    enabled: Boolean = true,
+                    disabledTooltip: String? = null
                 ) {
                     val version = libraryVersions[type]
                     
@@ -361,6 +401,9 @@ fun WizardMainContent(
                         SkeletonText(width = 180.dp)
                     } else if (version.isNotEmpty()) {
                         // Show option only if version is found
+                        val isFromBundle = libraryFromBundle[type] == true
+                        val isBundledAndDisabled = !enabled && isFromBundle
+                        
                         val trailingContent: (@Composable () -> Unit) = {
                             androidx.compose.foundation.layout.Row(
                                 verticalAlignment = Alignment.CenterVertically
@@ -372,7 +415,13 @@ fun WizardMainContent(
                                             else org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
                                 )
                                 
-                                if (libraryFromBundle[type] == true) {
+                                // Show bundled indicator for disabled bundled libraries (like hot reload >= 1.10.0)
+                                if (isBundledAndDisabled) {
+                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
+                                    BundledLibraryIndicator()
+                                }
+                                // Show pinned indicator for enabled libraries from bundle fallback
+                                else if (isFromBundle) {
                                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
                                     val isPinned = isPinnedMap[type] ?: false
                                     PinnedVersionIndicator(isPinned = isPinned)
@@ -386,7 +435,8 @@ fun WizardMainContent(
                             onToggle = onToggle,
                             label = label,
                             enabled = enabled,
-                            trailingContent = trailingContent
+                            trailingContent = trailingContent,
+                            disabledTooltip = disabledTooltip ?: "Included in the base template and cannot be disabled"
                         )
                     }
                     // If version not found (empty string) and not loading - don't show anything
@@ -440,12 +490,15 @@ fun WizardMainContent(
                         label = "Material3"
                     )
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION,
-                        checked = state.includeNavigation,
-                        onToggle = { state.includeNavigation = !state.includeNavigation },
-                        label = "Navigation"
-                    )
+                    // Navigation - only for versions < 1.10.0
+                    if (shouldShowNavigation) {
+                        LibraryOption(
+                            type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION,
+                            checked = state.includeNavigation,
+                            onToggle = { state.includeNavigation = !state.includeNavigation },
+                            label = "Navigation"
+                        )
+                    }
                     
                     LibraryOption(
                         type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3,
@@ -461,13 +514,26 @@ fun WizardMainContent(
                         label = "SavedState"
                     )
                     
-                    if (shouldShowHotReload) {
+                    // Optional hot reload for versions < 10.0.0-beta01
+                    if (shouldShowOptionalHotReload) {
                         CheckboxOption(
                             checked = state.includeHotReload,
                             onToggle = { 
                                 state.includeHotReload = !state.includeHotReload
                             },
                             label = "Compose Hot Reload${if (hotReloadVersion.isNotEmpty()) " $hotReloadVersion" else ""}"
+                        )
+                    }
+                    
+                    // Bundled hot reload for versions >= 10.0.0-beta01
+                    if (shouldShowBundledHotReload) {
+                        LibraryOption(
+                            type = io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD,
+                            checked = true,
+                            onToggle = { },
+                            label = "Compose Hot Reload",
+                            enabled = false,
+                            disabledTooltip = "Compose Hot Reload is bundled and cannot be disabled"
                         )
                     }
                 }

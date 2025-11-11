@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
@@ -571,9 +572,17 @@ fun SkeletonText(
 fun LibraryVersionCopyIcon(version: String) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    var isCopied by remember { androidx.compose.runtime.mutableStateOf(false) }
+    
+    androidx.compose.runtime.LaunchedEffect(isCopied) {
+        if (isCopied) {
+            kotlinx.coroutines.delay(1500)
+            isCopied = false
+        }
+    }
     
     org.jetbrains.jewel.ui.component.Tooltip(
-        tooltip = { Text("Copy version") }
+        tooltip = { Text(if (isCopied) "Copied!" else "Copy version") }
     ) {
         Box(
             modifier = Modifier
@@ -585,17 +594,23 @@ fun LibraryVersionCopyIcon(version: String) {
                     val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
                     val stringSelection = java.awt.datatransfer.StringSelection(version)
                     clipboard.setContents(stringSelection, null)
+                    isCopied = true
                 }
                 .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
-                contentDescription = "Copy version",
+                key = if (isCopied) org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Checked 
+                     else org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
+                contentDescription = if (isCopied) "Copied" else "Copy version",
                 modifier = Modifier.size(14.dp),
-                tint = org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(
-                    alpha = if (isHovered) 0.8f else 0.5f
-                )
+                tint = if (isCopied) {
+                    org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.info
+                } else {
+                    org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(
+                        alpha = if (isHovered) 0.8f else 0.5f
+                    )
+                }
             )
         }
     }
