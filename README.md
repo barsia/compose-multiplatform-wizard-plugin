@@ -21,8 +21,13 @@ This plugin uses a unified codebase with platform-specific integrations:
 - `shared/` - Common logic shared across both IDEs:
   - `ui/` - **Shared Compose UI** - Single wizard UI built with Jetpack Compose that works in both IDEA and AS
     - `ComposeWizardStep.kt` - Main wizard step implementation using `ModuleWizardStep`
-    - `WizardMainContent.kt` - Main UI layout and composition
-    - `WizardUIFields.kt` - Reusable UI components (text fields, checkboxes, platform selectors)
+    - `WizardMainContent.kt` - Main UI layout and composition (~1860 lines, libraries section)
+    - `WizardInputFields.kt` - Input components (ProjectNameField, PackageNameField, ProjectLocationField)
+    - `WizardVersionField.kt` - Compose version selection with Dev/Stable toggle
+    - `WizardPlatformsAndOptions.kt` - Platform selection and project options (Git, Tests)
+    - `WizardUIComponents.kt` - Reusable UI components (ValidationPopup, CompactSwitch, indicators, icons)
+    - `WizardVersionUtils.kt` - Version comparison utilities
+    - `WizardLayoutUtils.kt` - Layout constants and modifiers
     - `WizardStateManager.kt` - State management and validation logic
   - `models/` - Data models and builders (`ComposeMultiplatformModuleBuilder`)
   - `services/` - Version caching and other services
