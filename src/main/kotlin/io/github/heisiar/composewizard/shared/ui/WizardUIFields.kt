@@ -32,6 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +65,15 @@ private object ResourceLoader {
     fun loadResource(path: String): InputStream? {
         return Thread.currentThread().contextClassLoader?.getResourceAsStream(path)
             ?: javaClass.classLoader?.getResourceAsStream(path)
+    }
+}
+
+private fun formatBrowseShortcut(): String {
+    val isMac = System.getProperty("os.name").contains("Mac", ignoreCase = true)
+    return if (isMac) {
+        "⇧ ↩"  // Shift symbol + Return symbol for macOS
+    } else {
+        "Shift+Enter"
     }
 }
 
@@ -443,7 +458,21 @@ fun ProjectLocationField(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .onPreviewKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown &&
+                        keyEvent.key == Key.Enter &&
+                        keyEvent.isShiftPressed
+                    ) {
+                        onBrowse()
+                        true
+                    } else {
+                        false
+                    }
+                }
+        ) {
             TextField(
                 state = projectPathState,
                 placeholder = { Text("Location") },
@@ -462,31 +491,41 @@ fun ProjectLocationField(
 
         val interactionSource = remember { MutableInteractionSource() }
         val isHovered by interactionSource.collectIsHoveredAsState()
-
-        Box(
-            modifier = Modifier
-                .background(
-                    color = if (isHovered) JewelTheme.globalColors.text.selected.copy(alpha = 0.08f) else Color.Transparent,
-                    shape = CircleShape
-                )
-                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                .clickable(
-                    indication = null,
-                    interactionSource = interactionSource
-                ) {
-                    onBrowse()
-                }
-                .padding(12.dp),
-            contentAlignment = Alignment.Center
+        
+        Tooltip(
+            tooltip = { Text("Browse... (${formatBrowseShortcut()})") }
         ) {
-            Icon(
-                imageVector = FolderIcon,
-                contentDescription = "Browse folder",
-                tint = JewelTheme.globalColors.text.normal.copy(
-                    alpha = if (isHovered) 0.85f else 0.75f
-                ),
-                modifier = Modifier.size(32.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = if (isHovered) JewelTheme.globalColors.text.selected.copy(alpha = 0.08f) else Color.Transparent,
+                        shape = CircleShape
+                    )
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                    .clickable(
+                        indication = null,
+                        interactionSource = interactionSource
+                    ) {
+                        onBrowse()
+                    }
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val folderIcon = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                    FolderOutlineIcon
+                } else {
+                    FolderIcon
+                }
+                
+                Icon(
+                    imageVector = folderIcon,
+                    contentDescription = "Browse folder",
+                    tint = JewelTheme.globalColors.text.normal.copy(
+                        alpha = if (isHovered) 0.85f else 0.75f
+                    ),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }
@@ -680,7 +719,7 @@ fun PinnedVersionIndicator(
             key = WizardIconKeys.Pin,
             contentDescription = "Pinned version",
             modifier = Modifier
-                .size(16.dp)
+                .size(10.dp)
                 .offset(y = (-6).dp)
                 .clickable(
                     indication = null,

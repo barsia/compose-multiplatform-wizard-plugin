@@ -46,7 +46,7 @@ class ComposeVersionService {
             val mavenUrl = if (includeDevVersions) DEV_MAVEN_URL else STABLE_MAVEN_URL
             val versions = fetchVersionsFromMaven(mavenUrl, includeDevVersions)
             
-            // Filter dev versions to only those with release pages on GitHub
+            // Filter dev versions to only those with tag pages on GitHub
             if (includeDevVersions) {
                 filterDevVersionsWithReleasePage(versions)
             } else {
@@ -62,7 +62,7 @@ class ComposeVersionService {
     private suspend fun filterDevVersionsWithReleasePage(versions: List<String>): List<String> = kotlinx.coroutines.coroutineScope {
         val libraryService = ComposeLibraryVersionService()
         
-        println("DEBUG ComposeVersionService: Filtering ${versions.size} dev versions for GitHub release page existence (parallel checks)...")
+        println("DEBUG ComposeVersionService: Filtering ${versions.size} dev versions for GitHub tag page existence (parallel checks)...")
         val startTime = System.currentTimeMillis()
         
         // Check all versions in parallel using coroutines
@@ -70,7 +70,7 @@ class ComposeVersionService {
             async(Dispatchers.IO) {
                 val hasPage = libraryService.hasReleasePage(version)
                 if (!hasPage) {
-                    println("DEBUG ComposeVersionService: ❌ Excluding $version (no release page)")
+                    println("DEBUG ComposeVersionService: ❌ Excluding $version (no tag page)")
                 }
                 version to hasPage
             }
@@ -80,7 +80,7 @@ class ComposeVersionService {
         val filtered = results.filter { it.second }.map { it.first }
         val elapsed = System.currentTimeMillis() - startTime
         
-        println("DEBUG ComposeVersionService: Filtered to ${filtered.size} dev versions with release pages (took ${elapsed}ms)")
+        println("DEBUG ComposeVersionService: Filtered to ${filtered.size} dev versions with tag pages (took ${elapsed}ms)")
         filtered
     }
     

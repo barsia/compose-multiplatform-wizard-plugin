@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 /**
  * Service for fetching library versions from GitHub Web UI.
  * 
- * Uses HTML scraping from compose-multiplatform-core release pages
+ * Uses HTML scraping from compose-multiplatform-core tag pages
  * because this repository doesn't provide GitHub Releases API access.
  */
 class ComposeLibraryVersionService {
@@ -36,13 +36,13 @@ class ComposeLibraryVersionService {
     data class FetchResult(
         val lifecycle: String? = null,
         val isRateLimited: Boolean = false,
-        val pageExists: Boolean = false  // true if release page exists (200 OK)
+        val pageExists: Boolean = false  // true if tag page exists (200 OK)
     )
     
     data class LibraryVersionsResult(
         val versions: Map<LibraryType, String> = emptyMap(),
         val isRateLimited: Boolean = false,
-        val pageExists: Boolean = false  // true if release page exists (200 OK)
+        val pageExists: Boolean = false  // true if tag page exists (200 OK)
     )
     
     /**
@@ -79,11 +79,11 @@ class ComposeLibraryVersionService {
             }
             
             if (responseCode != 200) {
-                println("DEBUG: ❌ Release page does not exist (code: $responseCode)")
+                println("DEBUG: ❌ Tag page does not exist (code: $responseCode)")
                 return FetchResult(lifecycle = null, isRateLimited = false, pageExists = false)
             }
             
-            // Release page exists! Parse libraries
+            // Tag page exists! Parse libraries
             val html = connection.inputStream.bufferedReader().use { it.readText() }
             
             // Parse lifecycle version from HTML
@@ -91,9 +91,9 @@ class ComposeLibraryVersionService {
             val lifecycleVersion = match?.groups?.get(1)?.value
             
             if (lifecycleVersion != null) {
-                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion (release page exists)")
+                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion (tag page exists)")
             } else {
-                println("DEBUG: ⚠️ Release page exists but lifecycle not published")
+                println("DEBUG: ⚠️ Tag page exists but lifecycle not published")
             }
             
             FetchResult(lifecycle = lifecycleVersion, isRateLimited = false, pageExists = true)
@@ -127,11 +127,11 @@ class ComposeLibraryVersionService {
             }
             
             if (responseCode != 200) {
-                println("DEBUG: ❌ Release page does not exist (code: $responseCode)")
+                println("DEBUG: ❌ Tag page does not exist (code: $responseCode)")
                 return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
             }
             
-            // Release page exists! Parse libraries
+            // Tag page exists! Parse libraries
             val html = connection.inputStream.bufferedReader().use { it.readText() }
             
             // Parse all library versions from HTML
@@ -172,7 +172,7 @@ class ComposeLibraryVersionService {
                 println("DEBUG: ✅ Found window: $it")
             }
             
-            println("DEBUG: Parsed ${versions.size} library versions from release page (page exists)")
+            println("DEBUG: Parsed ${versions.size} library versions from tag page (page exists)")
             
             LibraryVersionsResult(versions = versions, isRateLimited = false, pageExists = true)
         } catch (e: Exception) {
@@ -281,7 +281,7 @@ class ComposeLibraryVersionService {
     }
     
     /**
-     * Check if a Compose version has a release page on GitHub.
+     * Check if a Compose version has a tag page on GitHub.
      * Returns true if the page exists (200 OK), false otherwise.
      * Uses HEAD request for efficiency.
      */
@@ -302,7 +302,7 @@ class ComposeLibraryVersionService {
             
             responseCode == 200
         } catch (e: Exception) {
-            logger.debug("Failed to check release page for $composeVersion: ${e.message}")
+            logger.debug("Failed to check tag page for $composeVersion: ${e.message}")
             false
         }
     }

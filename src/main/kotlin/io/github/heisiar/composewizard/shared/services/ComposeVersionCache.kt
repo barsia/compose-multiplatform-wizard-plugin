@@ -731,6 +731,11 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
      * Add lifecycle version to cache with FIFO cleanup.
      * If cache exceeds MAX_LIFECYCLE_CACHE_SIZE, removes oldest entries.
      * @param fromBundle true if version is from hardcoded bundle (fallback), false if from GitHub
+     * 
+     * NOTE: Even when fromBundle=true, the version was originally fetched from GitHub
+     * and hardcoded in LIBRARY_BUNDLES to avoid unnecessary requests to GitHub.
+     * "fromBundle" only means it's used as a fallback when the version is not published
+     * in the current tag page.
      */
     private fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String, fromBundle: Boolean = false) {
         synchronized(persistentState.lifecycleVersions) {
@@ -781,9 +786,9 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Step 1.5: If release page exists but library not found - try fallback
+                // Step 1.5: If tag page exists but library not found - try fallback
                 if (result.pageExists) {
-                    println("DEBUG: ⚠️ Release page exists for $composeVersion but lifecycle not published")
+                    println("DEBUG: ⚠️ Tag page exists for $composeVersion but lifecycle not published")
                     
                     // For +dev versions: try base version as fallback
                     if (baseVersion != composeVersion) {
@@ -808,8 +813,8 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                         }
                     }
                 } else {
-                    // Release page doesn't exist - skip this version entirely
-                    println("DEBUG: ❌ Release page does not exist for $composeVersion, caching empty")
+                    // Tag page doesn't exist - skip this version entirely
+                    println("DEBUG: ❌ Tag page does not exist for $composeVersion, caching empty")
                     cacheLifecycleVersion(composeVersion, "")
                     _lifecycleVersionUpdates.emit(composeVersion to "")
                     return@launch
@@ -900,9 +905,9 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                     return@launch
                 }
                 
-                // Step 1.5: If release page exists but library not found - try fallback
+                // Step 1.5: If tag page exists but library not found - try fallback
                 if (result.pageExists) {
-                    println("DEBUG: ⚠️ Release page exists for $composeVersion but ${type.displayName} not published")
+                    println("DEBUG: ⚠️ Tag page exists for $composeVersion but ${type.displayName} not published")
                     
                     // Try Bundle for requested version first
                     val bundle = ComposeVersions.getLibraryBundle(composeVersion)
@@ -928,8 +933,8 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
                         }
                     }
                 } else {
-                    // Release page doesn't exist - skip this version entirely
-                    println("DEBUG: ❌ Release page does not exist for $composeVersion, caching empty for ${type.displayName}")
+                    // Tag page doesn't exist - skip this version entirely
+                    println("DEBUG: ❌ Tag page does not exist for $composeVersion, caching empty for ${type.displayName}")
                     cacheLibraryVersion(composeVersion, type, "", fromBundle = false)
                     return@launch
                 }
@@ -963,6 +968,11 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     /**
      * Universal library version caching with FIFO cleanup.
+     * 
+     * NOTE: Even when fromBundle=true, the version was originally fetched from GitHub
+     * and hardcoded in LIBRARY_BUNDLES to avoid unnecessary requests to GitHub.
+     * "fromBundle" only means it's used as a fallback when the version is not published
+     * in the current tag page.
      */
     private fun cacheLibraryVersion(composeVersion: String, type: LibraryType, version: String, fromBundle: Boolean) {
         val versionsMap = getVersionsMap(type)

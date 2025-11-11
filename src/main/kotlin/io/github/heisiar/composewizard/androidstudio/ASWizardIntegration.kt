@@ -42,6 +42,9 @@ class ASWizardIntegration : AbstractWizardIntegration() {
                         "Project Creation Error"
                     )
                 }
+            } catch (e: com.intellij.openapi.progress.ProcessCanceledException) {
+                println("ASWizardIntegration: Project opening was cancelled by user")
+                throw e
             } catch (e: Exception) {
                 println("ERROR: Exception opening project: ${e.message}")
                 e.printStackTrace()

@@ -88,6 +88,9 @@ object ComposeVersions {
      * Based on official JetBrains releases:
      * https://github.com/JetBrains/compose-multiplatform/releases
      * 
+     * NOTE: All library versions in this map were originally fetched from GitHub tag pages
+     * and are hardcoded here to avoid unnecessary requests to GitHub.
+     * 
      * To add new versions: add entry here, everything else updates automatically.
      */
     val LIBRARY_BUNDLES = linkedMapOf(
