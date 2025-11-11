@@ -4,6 +4,9 @@ alwaysApply: true
 
 # Cursor Rules for Compose Multiplatform Wizard Plugin
 
+Logs IJ are here: /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin/build/idea-sandbox/IC-2025.2.4/log
+Logs AS are here: /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin/build/idea-sandbox/AI-AI-252.27397.103.2522.14395761/log
+
 ## Compilation Verification
 
 **IMPORTANT**: Always verify implementation by running BOTH compilation commands:

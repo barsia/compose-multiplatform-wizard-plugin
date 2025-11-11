@@ -31,6 +31,10 @@ data class ComposeVersionCacheState(
     var devVersions: List<String> = emptyList(),
     var devLastLoadTime: Long = 0L,
     
+    // Available Lifecycle versions from Maven Central (for dropdown)
+    var lifecycleAvailableVersions: List<String> = emptyList(),
+    var lifecycleAvailableLastLoadTime: Long = 0L,
+    
     // Library versions cache (LinkedHashMap preserves insertion order for FIFO cleanup)
     var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf(),
     var lifecycleIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
@@ -109,6 +113,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val versionService = ComposeVersionService()
     private val libraryVersionService = ComposeLibraryVersionService()
+    private val lifecycleVersionService = LifecycleVersionService()
     
     private var persistentState = ComposeVersionCacheState()
     
@@ -181,6 +186,12 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             loadDevVersionsInBackground()
         } else {
             println("DEBUG ComposeVersionCache: Using cached versions, no need to reload")
+        }
+        
+        // Always load Lifecycle available versions in background if expired
+        if (isLifecycleAvailableCacheExpired()) {
+            println("DEBUG ComposeVersionCache: Lifecycle available cache expired, loading in background")
+            loadLifecycleAvailableVersions()
         }
     }
     
@@ -442,6 +453,74 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         // Dev versions are never hardcoded, so if we have any versions loaded, it's not fallback
         println("DEBUG isUsingDevFallbackVersions: devLastLoadTime=${persistentState.devLastLoadTime}, devVersions.size=${persistentState.devVersions.size}, returning false")
         return false
+    }
+    
+    /**
+     * Get available Lifecycle versions from Maven Central (for dropdown).
+     * Auto-loads in background if cache is empty or expired.
+     * 
+     * @return List of Lifecycle versions (raw from Maven, unsorted), or empty list if loading
+     */
+    fun getLifecycleAvailableVersions(): List<String> {
+        // Auto-load if cache is expired or empty
+        if (isLifecycleAvailableCacheExpired() && !isLoadingLifecycleAvailable) {
+            println("DEBUG ComposeVersionCache: Lifecycle available versions cache expired, loading in background")
+            loadLifecycleAvailableVersions()
+        }
+        
+        return persistentState.lifecycleAvailableVersions
+    }
+    
+    /**
+     * Check if Lifecycle available versions cache is expired.
+     */
+    private fun isLifecycleAvailableCacheExpired(): Boolean {
+        if (persistentState.lifecycleAvailableLastLoadTime == 0L) return true
+        if (persistentState.lifecycleAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.lifecycleAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingLifecycleAvailable = false
+    
+    /**
+     * Load available Lifecycle versions from Maven Central in background.
+     */
+    private fun loadLifecycleAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingLifecycleAvailable) {
+                println("DEBUG ComposeVersionCache: Lifecycle available versions already loading")
+                return
+            }
+            isLoadingLifecycleAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Lifecycle available versions from Maven...")
+                val versions = lifecycleVersionService.fetchLifecycleVersions()
+                
+                persistentState.lifecycleAvailableVersions = versions
+                persistentState.lifecycleAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Lifecycle versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Lifecycle available versions: ${e.message}")
+                persistentState.lifecycleAvailableVersions = emptyList()
+            } finally {
+                isLoadingLifecycleAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Lifecycle available versions cache.
+     */
+    fun invalidateLifecycleAvailableCache() {
+        logger.info("Lifecycle available cache manually invalidated")
+        persistentState.lifecycleAvailableLastLoadTime = 0L
     }
     
     /**

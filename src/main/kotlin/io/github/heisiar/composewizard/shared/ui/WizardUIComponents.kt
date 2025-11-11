@@ -582,7 +582,7 @@ fun LibraryVersionCopyIcon(version: String) {
     }
     
     org.jetbrains.jewel.ui.component.Tooltip(
-        tooltip = { Text(if (isCopied) "Copied!" else "Copy version") }
+        tooltip = { Text(if (isCopied) "Copied!" else "Copy") }
     ) {
         Box(
             modifier = Modifier
@@ -602,7 +602,7 @@ fun LibraryVersionCopyIcon(version: String) {
             Icon(
                 key = if (isCopied) org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Checked 
                      else org.jetbrains.jewel.ui.icons.AllIconsKeys.Actions.Copy,
-                contentDescription = if (isCopied) "Copied" else "Copy version",
+                contentDescription = if (isCopied) "Copied" else "Copy",
                 modifier = Modifier.size(14.dp),
                 tint = if (isCopied) {
                     org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.info

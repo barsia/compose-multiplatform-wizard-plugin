@@ -27,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
@@ -230,6 +232,7 @@ fun WizardMainContent(
             val hotReloadVersion = state.hotReloadVersion ?: ""
             
             val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
+            val lifecycleVersionService = remember { io.github.heisiar.composewizard.shared.services.LifecycleVersionService() }
             var lifecycleVersion by remember { mutableStateOf("") }
             var isResolvingLifecycle by remember { mutableStateOf(false) }
             
@@ -248,11 +251,15 @@ fun WizardMainContent(
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
+                // Calculate shouldShowNavigation based on versionToLoad (not cached state.composeVersion)
+                val shouldShowNavigationForVersion = isComposeVersionLessThan(versionToLoad, "1.10.0")
+                val shouldShowBundledHotReloadForVersion = state.desktop && !isComposeVersionLessThan(versionToLoad, "1.10.0-beta01") && versionToLoad.isNotEmpty()
+                
                 val typesToLoad = io.github.heisiar.composewizard.shared.LibraryType.values()
                     .filter { 
                         when (it) {
-                            io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD -> shouldShowBundledHotReload
-                            io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION -> shouldShowNavigation
+                            io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD -> shouldShowBundledHotReloadForVersion
+                            io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION -> shouldShowNavigationForVersion
                             else -> true
                         }
                     }
@@ -263,11 +270,17 @@ fun WizardMainContent(
                             var version = cache.getLibraryVersion(versionToLoad, type)
                             
                             // Poll if version is still null (being resolved)
+                            // Navigation may need more time due to fallback chain (up to 30 versions)
+                            val maxAttempts = if (type == io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION) 150 else 50
                             var attempts = 0
-                            while (version == null && attempts < 50) {
+                            while (version == null && attempts < maxAttempts) {
                                 kotlinx.coroutines.delay(100)
                                 version = cache.getLibraryVersion(versionToLoad, type)
                                 attempts++
+                            }
+                            
+                            if (attempts > 0) {
+                                println("DEBUG UI: ${type.displayName} loaded after $attempts attempts (${attempts * 100}ms)")
                             }
                             
                             // Handle result
@@ -285,6 +298,8 @@ fun WizardMainContent(
                                 } else {
                                     println("DEBUG UI: ${type.displayName} not found for $versionToLoad")
                                 }
+                            } else {
+                                println("DEBUG UI: ⚠️ Timeout waiting for ${type.displayName} after $maxAttempts attempts (${maxAttempts * 100}ms)")
                             }
                         }
                     }
@@ -293,7 +308,8 @@ fun WizardMainContent(
             
             // Load libraries when version changes (user selection)
             // But ignore changes when dev versions are loading (Refresh in progress)
-            LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload) {
+            // Include shouldShowNavigation in dependencies to reload when Navigation visibility changes
+            LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload, shouldShowNavigation) {
                 if (state.composeVersion.isEmpty()) return@LaunchedEffect
                 
                 val devVersions = if (state.enableDevVersions) cache.getDevVersions() else null
@@ -442,19 +458,86 @@ fun WizardMainContent(
                     // If version not found (empty string) and not loading - don't show anything
                 }
                 
+                // Lifecycle version dropdown with configurable versions
+                @Composable
+                fun LifecycleVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: ""
+                    
+                    if (currentVersion.isEmpty()) {
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Get available versions from Maven and filter
+                    val allAvailableVersions = cache.getLifecycleAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, currentVersion) {
+                        if (allAvailableVersions.isNotEmpty() && currentVersion.isNotEmpty()) {
+                            lifecycleVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = currentVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(currentVersion)
+                        }
+                    }
+                    
+                    // Find index of current version (should be 0, first in list)
+                    val selectedIndex = remember(currentVersion, filteredVersions) {
+                        filteredVersions.indexOf(currentVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier.height(28.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.Tooltip(
+                            tooltip = { Text("Included in the base template and cannot be disabled") }
+                        ) {
+                            org.jetbrains.jewel.ui.component.CheckboxRow(
+                                checked = true,
+                                onCheckedChange = { },
+                                enabled = false
+                            ) {
+                                Text(
+                                    text = "Lifecycle",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle
+                                )
+                            }
+                        }
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.lifecycleVersion = newVersion
+                                    println("DEBUG: Lifecycle version changed to $newVersion")
+                                }
+                            },
+                            modifier = Modifier
+                                .width(200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp
+                        )
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
                 // Left column
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                 ) {
-                    // Lifecycle - always included (disabled checkbox)
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE,
-                        checked = true,
-                        onToggle = { },
-                        label = "Lifecycle",
-                        enabled = false
-                    )
+                    // Lifecycle - always included with version dropdown
+                    LifecycleVersionDropdown()
                     
                     LibraryOption(
                         type = io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE,
