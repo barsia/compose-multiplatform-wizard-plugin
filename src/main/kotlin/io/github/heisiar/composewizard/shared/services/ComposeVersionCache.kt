@@ -35,6 +35,38 @@ data class ComposeVersionCacheState(
     var lifecycleAvailableVersions: List<String> = emptyList(),
     var lifecycleAvailableLastLoadTime: Long = 0L,
     
+    // Available Material3 versions from Maven Central (for dropdown)
+    var material3AvailableVersions: List<String> = emptyList(),
+    var material3AvailableLastLoadTime: Long = 0L,
+    
+    // Available Material3 Adaptive versions from Maven Central (for dropdown)
+    var material3AdaptiveAvailableVersions: List<String> = emptyList(),
+    var material3AdaptiveAvailableLastLoadTime: Long = 0L,
+    
+    // Available Navigation (v2) versions from Maven Central (for dropdown, only for Compose < 1.10.0)
+    var navigationAvailableVersions: List<String> = emptyList(),
+    var navigationAvailableLastLoadTime: Long = 0L,
+    
+    // Available Navigation3 versions from Maven Central (for dropdown, only for Compose >= 1.10.0)
+    var navigation3AvailableVersions: List<String> = emptyList(),
+    var navigation3AvailableLastLoadTime: Long = 0L,
+    
+    // Available Window versions from Maven Central (for dropdown)
+    var windowAvailableVersions: List<String> = emptyList(),
+    var windowAvailableLastLoadTime: Long = 0L,
+    
+    // Available SavedState versions from Maven Central (for dropdown)
+    var savedStateAvailableVersions: List<String> = emptyList(),
+    var savedStateAvailableLastLoadTime: Long = 0L,
+    
+    // Available NavigationEvent versions from Maven Central (for dropdown, only for Compose >= 1.10.0)
+    var navigationEventAvailableVersions: List<String> = emptyList(),
+    var navigationEventAvailableLastLoadTime: Long = 0L,
+    
+    // Available Hot Reload versions from Maven Central (for dropdown, only for bundled Hot Reload >= 1.10.0-beta01)
+    var hotReloadAvailableVersions: List<String> = emptyList(),
+    var hotReloadAvailableLastLoadTime: Long = 0L,
+    
     // Library versions cache (LinkedHashMap preserves insertion order for FIFO cleanup)
     var lifecycleVersions: LinkedHashMap<String, String> = linkedMapOf(),
     var lifecycleIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
@@ -114,6 +146,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private val versionService = ComposeVersionService()
     private val libraryVersionService = ComposeLibraryVersionService()
     private val lifecycleVersionService = LifecycleVersionService()
+    private val material3VersionService = Material3VersionService()
+    private val material3AdaptiveVersionService = Material3AdaptiveVersionService()
+    private val navigationVersionService = NavigationVersionService()
+    private val navigation3VersionService = Navigation3VersionService()
+    private val windowVersionService = WindowVersionService()
+    private val savedStateVersionService = SavedStateVersionService()
+    private val navigationEventVersionService = NavigationEventVersionService()
+    private val hotReloadVersionService = HotReloadVersionService()
     
     private var persistentState = ComposeVersionCacheState()
     
@@ -130,6 +170,46 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     private val _lifecycleVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
     val lifecycleVersionUpdates = _lifecycleVersionUpdates.asSharedFlow()
+    
+    private val material3ResolvingVersions = mutableSetOf<String>()
+    
+    private val _material3VersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val material3VersionUpdates = _material3VersionUpdates.asSharedFlow()
+    
+    private val material3AdaptiveResolvingVersions = mutableSetOf<String>()
+    
+    private val _material3AdaptiveVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val material3AdaptiveVersionUpdates = _material3AdaptiveVersionUpdates.asSharedFlow()
+    
+    private val navigationResolvingVersions = mutableSetOf<String>()
+    
+    private val _navigationVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val navigationVersionUpdates = _navigationVersionUpdates.asSharedFlow()
+    
+    private val navigation3ResolvingVersions = mutableSetOf<String>()
+    
+    private val _navigation3VersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val navigation3VersionUpdates = _navigation3VersionUpdates.asSharedFlow()
+    
+    private val windowResolvingVersions = mutableSetOf<String>()
+    
+    private val _windowVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val windowVersionUpdates = _windowVersionUpdates.asSharedFlow()
+    
+    private val savedStateResolvingVersions = mutableSetOf<String>()
+    
+    private val _savedStateVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val savedStateVersionUpdates = _savedStateVersionUpdates.asSharedFlow()
+    
+    private val navigationEventResolvingVersions = mutableSetOf<String>()
+    
+    private val _navigationEventVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val navigationEventVersionUpdates = _navigationEventVersionUpdates.asSharedFlow()
+    
+    private val hotReloadResolvingVersions = mutableSetOf<String>()
+    
+    private val _hotReloadVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
+    val hotReloadVersionUpdates = _hotReloadVersionUpdates.asSharedFlow()
     
     // Emit event when library cache is invalidated (for UI to reload libraries)
     private val _cacheInvalidated = MutableSharedFlow<Unit>(replay = 0)
@@ -192,6 +272,54 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         if (isLifecycleAvailableCacheExpired()) {
             println("DEBUG ComposeVersionCache: Lifecycle available cache expired, loading in background")
             loadLifecycleAvailableVersions()
+        }
+        
+        // Always load Material3 available versions in background if expired
+        if (isMaterial3AvailableCacheExpired()) {
+            println("DEBUG ComposeVersionCache: Material3 available cache expired, loading in background")
+            loadMaterial3AvailableVersions()
+        }
+        
+        // Always load Material3 Adaptive available versions in background if expired
+        if (isMaterial3AdaptiveAvailableCacheExpired()) {
+            println("DEBUG ComposeVersionCache: Material3 Adaptive available cache expired, loading in background")
+            loadMaterial3AdaptiveAvailableVersions()
+        }
+        
+        // Always load Navigation (v2) available versions in background if expired
+        if (isNavigationAvailableCacheExpired()) {
+            println("DEBUG ComposeVersionCache: Navigation available cache expired, loading in background")
+            loadNavigationAvailableVersions()
+        }
+        
+        // Always load Navigation3 available versions in background if expired
+        if (isNavigation3AvailableExpired()) {
+            println("DEBUG ComposeVersionCache: Navigation3 available cache expired, loading in background")
+            loadNavigation3AvailableVersions()
+        }
+        
+        // Always load Window available versions in background if expired
+        if (isWindowAvailableExpired()) {
+            println("DEBUG ComposeVersionCache: Window available cache expired, loading in background")
+            loadWindowAvailableVersions()
+        }
+        
+        // Always load SavedState available versions in background if expired
+        if (isSavedStateAvailableExpired()) {
+            println("DEBUG ComposeVersionCache: SavedState available cache expired, loading in background")
+            loadSavedStateAvailableVersions()
+        }
+        
+        // Always load NavigationEvent available versions in background if expired (only for Compose >= 1.10.0)
+        if (isNavigationEventAvailableExpired()) {
+            println("DEBUG ComposeVersionCache: NavigationEvent available cache expired, loading in background")
+            loadNavigationEventAvailableVersions()
+        }
+        
+        // Always load Hot Reload available versions in background if expired (only for bundled Hot Reload >= 1.10.0-beta01)
+        if (isHotReloadAvailableExpired()) {
+            println("DEBUG ComposeVersionCache: Hot Reload available cache expired, loading in background")
+            loadHotReloadAvailableVersions()
         }
     }
     
@@ -521,6 +649,487 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     fun invalidateLifecycleAvailableCache() {
         logger.info("Lifecycle available cache manually invalidated")
         persistentState.lifecycleAvailableLastLoadTime = 0L
+    }
+    
+    /**
+     * Get available Material3 versions from Maven Central (for dropdown).
+     * Auto-loads in background if cache is empty or expired.
+     * 
+     * @return List of Material3 versions (raw from Maven, unsorted), or empty list if loading
+     */
+    fun getMaterial3AvailableVersions(): List<String> {
+        // Auto-load if cache is expired or empty
+        if (isMaterial3AvailableCacheExpired() && !isLoadingMaterial3Available) {
+            println("DEBUG ComposeVersionCache: Material3 available versions cache expired, loading in background")
+            loadMaterial3AvailableVersions()
+        }
+        
+        return persistentState.material3AvailableVersions
+    }
+    
+    /**
+     * Check if Material3 available versions cache is expired.
+     */
+    private fun isMaterial3AvailableCacheExpired(): Boolean {
+        if (persistentState.material3AvailableLastLoadTime == 0L) return true
+        if (persistentState.material3AvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.material3AvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingMaterial3Available = false
+    
+    /**
+     * Load available Material3 versions from Maven Central in background.
+     */
+    private fun loadMaterial3AvailableVersions() {
+        synchronized(this) {
+            if (isLoadingMaterial3Available) {
+                println("DEBUG ComposeVersionCache: Material3 available versions already loading")
+                return
+            }
+            isLoadingMaterial3Available = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Material3 available versions from Maven...")
+                val versions = material3VersionService.fetchMaterial3Versions()
+                
+                persistentState.material3AvailableVersions = versions
+                persistentState.material3AvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Material3 versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Material3 available versions: ${e.message}")
+                persistentState.material3AvailableVersions = emptyList()
+            } finally {
+                isLoadingMaterial3Available = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Material3 available versions cache.
+     */
+    fun invalidateMaterial3AvailableCache() {
+        logger.info("Material3 available cache manually invalidated")
+        persistentState.material3AvailableLastLoadTime = 0L
+    }
+    
+    /**
+     * Get available Material3 Adaptive versions from Maven Central (for dropdown).
+     * Auto-loads in background if cache is empty or expired.
+     * 
+     * @return List of Material3 Adaptive versions (raw from Maven, unsorted), or empty list if loading
+     */
+    fun getMaterial3AdaptiveAvailableVersions(): List<String> {
+        // Auto-load if cache is expired or empty
+        if (isMaterial3AdaptiveAvailableCacheExpired() && !isLoadingMaterial3AdaptiveAvailable) {
+            println("DEBUG ComposeVersionCache: Material3 Adaptive available versions cache expired, loading in background")
+            loadMaterial3AdaptiveAvailableVersions()
+        }
+        
+        return persistentState.material3AdaptiveAvailableVersions
+    }
+    
+    /**
+     * Check if Material3 Adaptive available versions cache is expired.
+     */
+    private fun isMaterial3AdaptiveAvailableCacheExpired(): Boolean {
+        if (persistentState.material3AdaptiveAvailableLastLoadTime == 0L) return true
+        if (persistentState.material3AdaptiveAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.material3AdaptiveAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingMaterial3AdaptiveAvailable = false
+    
+    /**
+     * Load available Material3 Adaptive versions from Maven Central in background.
+     */
+    private fun loadMaterial3AdaptiveAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingMaterial3AdaptiveAvailable) {
+                println("DEBUG ComposeVersionCache: Material3 Adaptive available versions already loading")
+                return
+            }
+            isLoadingMaterial3AdaptiveAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Material3 Adaptive available versions from Maven...")
+                val versions = material3AdaptiveVersionService.fetchMaterial3AdaptiveVersions()
+                
+                persistentState.material3AdaptiveAvailableVersions = versions
+                persistentState.material3AdaptiveAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Material3 Adaptive versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Material3 Adaptive available versions: ${e.message}")
+                persistentState.material3AdaptiveAvailableVersions = emptyList()
+            } finally {
+                isLoadingMaterial3AdaptiveAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Material3 Adaptive available versions cache.
+     */
+    fun invalidateMaterial3AdaptiveAvailableCache() {
+        logger.info("Material3 Adaptive available cache manually invalidated")
+        persistentState.material3AdaptiveAvailableLastLoadTime = 0L
+    }
+    
+    /**
+     * Get available Navigation (v2) versions from Maven Central (for dropdown).
+     * Auto-loads in background if cache is empty or expired.
+     * 
+     * Note: Navigation v2 is only available for Compose < 1.10.0
+     * 
+     * @return List of Navigation versions (raw from Maven, unsorted), or empty list if loading
+     */
+    fun getNavigationAvailableVersions(): List<String> {
+        // Auto-load if cache is expired or empty
+        if (isNavigationAvailableCacheExpired() && !isLoadingNavigationAvailable) {
+            println("DEBUG ComposeVersionCache: Navigation available versions cache expired, loading in background")
+            loadNavigationAvailableVersions()
+        }
+        
+        return persistentState.navigationAvailableVersions
+    }
+    
+    /**
+     * Check if Navigation available versions cache is expired.
+     */
+    private fun isNavigationAvailableCacheExpired(): Boolean {
+        if (persistentState.navigationAvailableLastLoadTime == 0L) return true
+        if (persistentState.navigationAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.navigationAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingNavigationAvailable = false
+    
+    /**
+     * Load available Navigation (v2) versions from Maven Central in background.
+     */
+    private fun loadNavigationAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingNavigationAvailable) {
+                println("DEBUG ComposeVersionCache: Navigation available versions already loading")
+                return
+            }
+            isLoadingNavigationAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Navigation available versions from Maven...")
+                val versions = navigationVersionService.fetchNavigationVersions()
+                
+                persistentState.navigationAvailableVersions = versions
+                persistentState.navigationAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Navigation versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Navigation available versions: ${e.message}")
+                persistentState.navigationAvailableVersions = emptyList()
+            } finally {
+                isLoadingNavigationAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Navigation available versions cache.
+     */
+    fun invalidateNavigationAvailableCache() {
+        logger.info("Navigation available cache manually invalidated")
+        persistentState.navigationAvailableLastLoadTime = 0L
+    }
+    
+    // ========== Navigation3 Available Versions (for dropdown) ==========
+    
+    fun getNavigation3AvailableVersions(): List<String> {
+        return persistentState.navigation3AvailableVersions
+    }
+    
+    fun isNavigation3AvailableExpired(): Boolean {
+        // No versions cached yet
+        if (persistentState.navigation3AvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.navigation3AvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingNavigation3Available = false
+    
+    /**
+     * Load available Navigation3 versions from Maven Central in background.
+     */
+    private fun loadNavigation3AvailableVersions() {
+        synchronized(this) {
+            if (isLoadingNavigation3Available) {
+                println("DEBUG ComposeVersionCache: Navigation3 available versions already loading")
+                return
+            }
+            isLoadingNavigation3Available = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Navigation3 available versions from Maven...")
+                val versions = navigation3VersionService.fetchNavigation3Versions()
+                
+                persistentState.navigation3AvailableVersions = versions
+                persistentState.navigation3AvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Navigation3 versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Navigation3 available versions: ${e.message}")
+                persistentState.navigation3AvailableVersions = emptyList()
+            } finally {
+                isLoadingNavigation3Available = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Navigation3 available versions cache.
+     */
+    fun invalidateNavigation3AvailableCache() {
+        logger.info("Navigation3 available cache manually invalidated")
+        persistentState.navigation3AvailableLastLoadTime = 0L
+    }
+    
+    // ========== Window Available Versions (for dropdown) ==========
+    
+    fun getWindowAvailableVersions(): List<String> {
+        return persistentState.windowAvailableVersions
+    }
+    
+    fun isWindowAvailableExpired(): Boolean {
+        // No versions cached yet
+        if (persistentState.windowAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.windowAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingWindowAvailable = false
+    
+    /**
+     * Load available Window versions from Maven Central in background.
+     */
+    private fun loadWindowAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingWindowAvailable) {
+                println("DEBUG ComposeVersionCache: Window available versions already loading")
+                return
+            }
+            isLoadingWindowAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Window available versions from Maven...")
+                val versions = windowVersionService.fetchWindowVersions()
+                
+                persistentState.windowAvailableVersions = versions
+                persistentState.windowAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Window versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Window available versions: ${e.message}")
+                persistentState.windowAvailableVersions = emptyList()
+            } finally {
+                isLoadingWindowAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Window available versions cache.
+     */
+    fun invalidateWindowAvailableCache() {
+        logger.info("Window available cache manually invalidated")
+        persistentState.windowAvailableLastLoadTime = 0L
+    }
+    
+    // ========== SavedState Available Versions (for dropdown) ==========
+    
+    fun getSavedStateAvailableVersions(): List<String> {
+        return persistentState.savedStateAvailableVersions
+    }
+    
+    fun isSavedStateAvailableExpired(): Boolean {
+        // No versions cached yet
+        if (persistentState.savedStateAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.savedStateAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingSavedStateAvailable = false
+    
+    /**
+     * Load available SavedState versions from Maven Central in background.
+     */
+    private fun loadSavedStateAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingSavedStateAvailable) {
+                println("DEBUG ComposeVersionCache: SavedState available versions already loading")
+                return
+            }
+            isLoadingSavedStateAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading SavedState available versions from Maven...")
+                val versions = savedStateVersionService.fetchSavedStateVersions()
+                
+                persistentState.savedStateAvailableVersions = versions
+                persistentState.savedStateAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} SavedState versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load SavedState available versions: ${e.message}")
+                persistentState.savedStateAvailableVersions = emptyList()
+            } finally {
+                isLoadingSavedStateAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate SavedState available versions cache.
+     */
+    fun invalidateSavedStateAvailableCache() {
+        logger.info("SavedState available cache manually invalidated")
+        persistentState.savedStateAvailableLastLoadTime = 0L
+    }
+    
+    // ========== NavigationEvent Available Versions (for dropdown, only for Compose >= 1.10.0) ==========
+    
+    fun getNavigationEventAvailableVersions(): List<String> {
+        return persistentState.navigationEventAvailableVersions
+    }
+    
+    fun isNavigationEventAvailableExpired(): Boolean {
+        // No versions cached yet
+        if (persistentState.navigationEventAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.navigationEventAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingNavigationEventAvailable = false
+    
+    /**
+     * Load available NavigationEvent versions from Maven Central in background.
+     */
+    private fun loadNavigationEventAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingNavigationEventAvailable) {
+                println("DEBUG ComposeVersionCache: NavigationEvent available versions already loading")
+                return
+            }
+            isLoadingNavigationEventAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading NavigationEvent available versions from Maven...")
+                val versions = navigationEventVersionService.fetchNavigationEventVersions()
+                
+                persistentState.navigationEventAvailableVersions = versions
+                persistentState.navigationEventAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} NavigationEvent versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load NavigationEvent available versions: ${e.message}")
+                persistentState.navigationEventAvailableVersions = emptyList()
+            } finally {
+                isLoadingNavigationEventAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate NavigationEvent available versions cache.
+     */
+    fun invalidateNavigationEventAvailableCache() {
+        logger.info("NavigationEvent available cache manually invalidated")
+        persistentState.navigationEventAvailableLastLoadTime = 0L
+    }
+    
+    // ========== Hot Reload Available Versions (for dropdown, only for bundled Hot Reload >= 1.10.0-beta01) ==========
+    
+    fun getHotReloadAvailableVersions(): List<String> {
+        return persistentState.hotReloadAvailableVersions
+    }
+    
+    fun isHotReloadAvailableExpired(): Boolean {
+        // No versions cached yet
+        if (persistentState.hotReloadAvailableVersions.isEmpty()) return true
+        
+        val age = System.currentTimeMillis() - persistentState.hotReloadAvailableLastLoadTime
+        return age > CACHE_TTL_MS
+    }
+    
+    @Volatile
+    private var isLoadingHotReloadAvailable = false
+    
+    /**
+     * Load available Hot Reload versions from Maven Central in background.
+     */
+    private fun loadHotReloadAvailableVersions() {
+        synchronized(this) {
+            if (isLoadingHotReloadAvailable) {
+                println("DEBUG ComposeVersionCache: Hot Reload available versions already loading")
+                return
+            }
+            isLoadingHotReloadAvailable = true
+        }
+        
+        scope.launch {
+            try {
+                println("DEBUG ComposeVersionCache: Loading Hot Reload available versions from Maven...")
+                val versions = hotReloadVersionService.fetchHotReloadVersions()
+                
+                persistentState.hotReloadAvailableVersions = versions
+                persistentState.hotReloadAvailableLastLoadTime = System.currentTimeMillis()
+                
+                println("DEBUG ComposeVersionCache: Loaded ${versions.size} Hot Reload versions from Maven")
+            } catch (e: Exception) {
+                logger.warn("Failed to load Hot Reload available versions: ${e.message}")
+                persistentState.hotReloadAvailableVersions = emptyList()
+            } finally {
+                isLoadingHotReloadAvailable = false
+            }
+        }
+    }
+    
+    /**
+     * Invalidate Hot Reload available versions cache.
+     */
+    fun invalidateHotReloadAvailableCache() {
+        logger.info("Hot Reload available cache manually invalidated")
+        persistentState.hotReloadAvailableLastLoadTime = 0L
     }
     
     /**

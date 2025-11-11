@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidthIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -213,7 +215,15 @@ fun WizardMainContent(
             }
             
             val shouldShowNavigation = remember(state.composeVersion) {
-                isComposeVersionLessThan(state.composeVersion, "1.10.0")
+                // Navigation v2 available only for versions < 1.10.0 (excluding 1.10.0-alpha/beta)
+                val numericVersion = state.composeVersion.split("-").first().split("+").first()
+                isComposeVersionLessThan(numericVersion, "1.10.0")
+            }
+            
+            val shouldShowNavigation3AndNavigationEvent = remember(state.composeVersion) {
+                // Navigation3 and NavigationEvent available from 1.10.0+ (including 1.10.0-alpha/beta)
+                val numericVersion = state.composeVersion.split("-").first().split("+").first()
+                !isComposeVersionLessThan(numericVersion, "1.10.0") && state.composeVersion.isNotEmpty()
             }
             
             val shouldShowBundledHotReload = remember(state.desktop, state.composeVersion) {
@@ -236,6 +246,38 @@ fun WizardMainContent(
             var lifecycleVersion by remember { mutableStateOf("") }
             var isResolvingLifecycle by remember { mutableStateOf(false) }
             
+            val material3VersionService = remember { io.github.heisiar.composewizard.shared.services.Material3VersionService() }
+            var material3Version by remember { mutableStateOf("") }
+            var isResolvingMaterial3 by remember { mutableStateOf(false) }
+            
+            val material3AdaptiveVersionService = remember { io.github.heisiar.composewizard.shared.services.Material3AdaptiveVersionService() }
+            var material3AdaptiveVersion by remember { mutableStateOf("") }
+            var isResolvingMaterial3Adaptive by remember { mutableStateOf(false) }
+            
+            val navigationVersionService = remember { io.github.heisiar.composewizard.shared.services.NavigationVersionService() }
+            var navigationVersion by remember { mutableStateOf("") }
+            var isResolvingNavigation by remember { mutableStateOf(false) }
+            
+            val navigation3VersionService = remember { io.github.heisiar.composewizard.shared.services.Navigation3VersionService() }
+            var navigation3Version by remember { mutableStateOf("") }
+            var isResolvingNavigation3 by remember { mutableStateOf(false) }
+            
+            val windowVersionService = remember { io.github.heisiar.composewizard.shared.services.WindowVersionService() }
+            var windowVersion by remember { mutableStateOf("") }
+            var isResolvingWindow by remember { mutableStateOf(false) }
+            
+            val savedStateVersionService = remember { io.github.heisiar.composewizard.shared.services.SavedStateVersionService() }
+            var savedStateVersion by remember { mutableStateOf("") }
+            var isResolvingSavedState by remember { mutableStateOf(false) }
+            
+            val navigationEventVersionService = remember { io.github.heisiar.composewizard.shared.services.NavigationEventVersionService() }
+            var navigationEventVersion by remember { mutableStateOf("") }
+            var isResolvingNavigationEvent by remember { mutableStateOf(false) }
+            
+            val hotReloadVersionService = remember { io.github.heisiar.composewizard.shared.services.HotReloadVersionService() }
+            var hotReloadVersionFromDropdown by remember { mutableStateOf("") }
+            var isResolvingHotReload by remember { mutableStateOf(false) }
+            
             // Library versions state
             val libraryVersions = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, String>() }
             val libraryFromBundle = remember { mutableStateMapOf<io.github.heisiar.composewizard.shared.LibraryType, Boolean>() }
@@ -251,18 +293,28 @@ fun WizardMainContent(
                 libraryVersions.clear()
                 libraryFromBundle.clear()
                 
-                // Calculate shouldShowNavigation based on versionToLoad (not cached state.composeVersion)
-                val shouldShowNavigationForVersion = isComposeVersionLessThan(versionToLoad, "1.10.0")
+                // Calculate visibility based on versionToLoad (not cached state.composeVersion)
+                // Navigation v2 available only for versions < 1.10.0 (excluding 1.10.0-alpha/beta)
+                val numericVersionToLoad = versionToLoad.split("-").first().split("+").first()
+                val shouldShowNavigationForVersion = isComposeVersionLessThan(numericVersionToLoad, "1.10.0")
+                // Navigation3 and NavigationEvent available from 1.10.0+ (including 1.10.0-alpha/beta)
+                val shouldShowNavigation3AndNavigationEventForVersion = !isComposeVersionLessThan(numericVersionToLoad, "1.10.0") && versionToLoad.isNotEmpty()
                 val shouldShowBundledHotReloadForVersion = state.desktop && !isComposeVersionLessThan(versionToLoad, "1.10.0-beta01") && versionToLoad.isNotEmpty()
+                
+                println("DEBUG loadLibraryVersions: version=$versionToLoad, shouldShowNavigation=$shouldShowNavigationForVersion, shouldShowNav3AndEvent=$shouldShowNavigation3AndNavigationEventForVersion")
                 
                 val typesToLoad = io.github.heisiar.composewizard.shared.LibraryType.values()
                     .filter { 
                         when (it) {
                             io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD -> shouldShowBundledHotReloadForVersion
                             io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION -> shouldShowNavigationForVersion
+                            io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3 -> shouldShowNavigation3AndNavigationEventForVersion
+                            io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT -> shouldShowNavigation3AndNavigationEventForVersion
                             else -> true
                         }
                     }
+                
+                println("DEBUG loadLibraryVersions: typesToLoad=${typesToLoad.joinToString { it.displayName }}")
                 
                 kotlinx.coroutines.coroutineScope {
                     typesToLoad.forEach { type ->
@@ -308,8 +360,8 @@ fun WizardMainContent(
             
             // Load libraries when version changes (user selection)
             // But ignore changes when dev versions are loading (Refresh in progress)
-            // Include shouldShowNavigation in dependencies to reload when Navigation visibility changes
-            LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload, shouldShowNavigation) {
+            // Include shouldShowNavigation and shouldShowNavigation3AndNavigationEvent to reload when visibility changes
+            LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload, shouldShowNavigation, shouldShowNavigation3AndNavigationEvent) {
                 if (state.composeVersion.isEmpty()) return@LaunchedEffect
                 
                 val devVersions = if (state.enableDevVersions) cache.getDevVersions() else null
@@ -363,15 +415,12 @@ fun WizardMainContent(
             
             // Show loading state if compose version not selected yet
             if (state.composeVersion.isEmpty()) {
-                // Always show max possible count (with Hot Reload) since we don't know the version yet
-                val rightColumnMaxCount = RIGHT_COLUMN_BASE_LIBRARIES_COUNT + 1
-                
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).widthIn(min = 380.dp),
                         verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                     ) {
                         repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
@@ -379,10 +428,10 @@ fun WizardMainContent(
                         }
                     }
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).widthIn(min = 380.dp),
                         verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                     ) {
-                        repeat(rightColumnMaxCount) {
+                        repeat(RIGHT_COLUMN_BASE_LIBRARIES_COUNT) {
                             SkeletonText(width = 180.dp)
                         }
                     }
@@ -408,14 +457,19 @@ fun WizardMainContent(
                     onToggle: () -> Unit,
                     label: String,
                     enabled: Boolean = true,
-                    disabledTooltip: String? = null
+                    disabledTooltip: String? = null,
+                    overrideVersion: String? = null
                 ) {
-                    val version = libraryVersions[type]
+                    val version = overrideVersion ?: libraryVersions[type]
+                    
+                    println("DEBUG LibraryOption: type=$type, version=$version, label=$label, overrideVersion=$overrideVersion")
                     
                     // Show skeleton while this specific library is loading (version not yet in map)
                     if (version == null) {
+                        println("DEBUG LibraryOption: version is null, showing skeleton")
                         SkeletonText(width = 180.dp)
                     } else if (version.isNotEmpty()) {
+                        println("DEBUG LibraryOption: version is not empty, showing CheckboxOption")
                         // Show option only if version is found
                         val isFromBundle = libraryFromBundle[type] == true
                         val isBundledAndDisabled = !enabled && isFromBundle
@@ -431,19 +485,33 @@ fun WizardMainContent(
                                             else org.jetbrains.jewel.foundation.theme.JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
                                 )
                                 
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Icons container - protected from shrinking
+                                androidx.compose.foundation.layout.Row(
+                                    modifier = Modifier.requiredWidthIn(min = 40.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Pin/Bundled icon - always reserve space
+                                    Box(
+                                        modifier = Modifier.size(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                 // Show bundled indicator for disabled bundled libraries (like hot reload >= 1.10.0)
                                 if (isBundledAndDisabled) {
-                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
                                     BundledLibraryIndicator()
                                 }
                                 // Show pinned indicator for enabled libraries from bundle fallback
                                 else if (isFromBundle) {
-                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
                                     val isPinned = isPinnedMap[type] ?: false
                                     PinnedVersionIndicator(isPinned = isPinned)
+                                        }
                                 }
+                                    
+                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
                                 
                                 LibraryVersionCopyIcon(version = version)
+                                }
                             }
                         }
                         CheckboxOption(
@@ -454,8 +522,9 @@ fun WizardMainContent(
                             trailingContent = trailingContent,
                             disabledTooltip = disabledTooltip ?: "Included in the base template and cannot be disabled"
                         )
+                    } else {
+                        println("DEBUG LibraryOption: version is empty string, not showing anything")
                     }
-                    // If version not found (empty string) and not loading - don't show anything
                 }
                 
                 // Lifecycle version dropdown with configurable versions
@@ -469,28 +538,42 @@ fun WizardMainContent(
                         return
                     }
                     
-                    // Get available versions from Maven and filter
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.lifecycleVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
                     val allAvailableVersions = cache.getLifecycleAvailableVersions()
-                    val filteredVersions = remember(allAvailableVersions, currentVersion) {
-                        if (allAvailableVersions.isNotEmpty() && currentVersion.isNotEmpty()) {
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
                             lifecycleVersionService.filterVersionsForDropdown(
                                 allVersions = allAvailableVersions,
-                                currentVersion = currentVersion,
+                                currentVersion = originalVersion,
                                 maxCount = 5
                             )
                         } else {
-                            listOf(currentVersion)
+                            listOf(originalVersion)
                         }
                     }
                     
-                    // Find index of current version (should be 0, first in list)
-                    val selectedIndex = remember(currentVersion, filteredVersions) {
-                        filteredVersions.indexOf(currentVersion).coerceAtLeast(0)
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
                     }
                     
                     Row(
-                        modifier = Modifier.height(28.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         org.jetbrains.jewel.ui.component.Tooltip(
@@ -501,12 +584,32 @@ fun WizardMainContent(
                                 onCheckedChange = { },
                                 enabled = false
                             ) {
+                                androidx.compose.foundation.layout.Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     text = "Lifecycle",
-                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle
+                                    style = JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
                                 )
+
+                                    // Pin icon - always reserve space
+                                    Box(
+                                        modifier = Modifier.size(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: false
+                                        if (isFromBundle) {
+                                            val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] ?: false
+                                            PinnedVersionIndicator(isPinned = isPinned)
+                                        }
+                                    }
+                                }
                             }
                         }
+
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
                         // Version dropdown using Jewel ListComboBox
                         org.jetbrains.jewel.ui.component.ListComboBox(
@@ -516,86 +619,1020 @@ fun WizardMainContent(
                                 if (index in filteredVersions.indices) {
                                     val newVersion = filteredVersions[index]
                                     state.lifecycleVersion = newVersion
-                                    println("DEBUG: Lifecycle version changed to $newVersion")
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE] = false
+                                    }
+                                    println("DEBUG: Lifecycle version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.LIFECYCLE]})")
                                 }
                             },
                             modifier = Modifier
-                                .width(200.dp)
+                                .widthIn(min = 120.dp, max = 200.dp)
                                 .pointerHoverIcon(
                                     PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
                                 ),
-                            maxPopupHeight = 280.dp
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
                         )
+
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                         
                         LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
                     }
                 }
                 
+                @Composable
+                fun Material3VersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] ?: ""
+                    
+                    if (currentVersion.isEmpty()) {
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.material3Version?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getMaterial3AvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            material3VersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                            checked = state.includeMaterial3,
+                            onCheckedChange = { state.includeMaterial3 = !state.includeMaterial3 }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Material3",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.material3Version = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3] = false
+                                    }
+                                    println("DEBUG: Material3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun Material3AdaptiveVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] ?: ""
+                    
+                    if (currentVersion.isEmpty()) {
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.material3AdaptiveVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getMaterial3AdaptiveAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            material3AdaptiveVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                        checked = state.includeMaterial3Adaptive,
+                            onCheckedChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Material3 Adaptive",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.material3AdaptiveVersion = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE] = false
+                                    }
+                                    println("DEBUG: Material3 Adaptive version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun NavigationVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] ?: ""
+                    
+                    println("DEBUG NavigationVersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}', shouldShowNavigation=$shouldShowNavigation")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG NavigationVersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.navigationVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getNavigationAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            navigationVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                            checked = state.includeNavigation,
+                            onCheckedChange = { state.includeNavigation = !state.includeNavigation }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Navigation",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.navigationVersion = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION] = false
+                                    }
+                                    println("DEBUG: Navigation version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun Navigation3VersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] ?: ""
+                    
+                    println("DEBUG Navigation3VersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}', shouldShowNavigation3=$shouldShowNavigation3AndNavigationEvent")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG Navigation3VersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.navigation3Version?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getNavigation3AvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            navigation3VersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                        checked = state.includeNavigation3,
+                            onCheckedChange = { state.includeNavigation3 = !state.includeNavigation3 }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Navigation3",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.navigation3Version = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3] = false
+                                    }
+                                    println("DEBUG: Navigation3 version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun WindowVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] ?: ""
+                    
+                    println("DEBUG WindowVersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}'")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG WindowVersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.windowVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getWindowAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            windowVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                            checked = state.includeWindow,
+                            onCheckedChange = { state.includeWindow = !state.includeWindow }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Window",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.windowVersion = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW] = false
+                                    }
+                                    println("DEBUG: Window version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.WINDOW]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun SavedStateVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] ?: ""
+                    
+                    println("DEBUG SavedStateVersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}'")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG SavedStateVersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.savedStateVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getSavedStateAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            savedStateVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                        checked = state.includeSavedState,
+                            onCheckedChange = { state.includeSavedState = !state.includeSavedState }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "SavedState",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.savedStateVersion = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE] = false
+                                    }
+                                    println("DEBUG: SavedState version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun NavigationEventVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] ?: ""
+                    
+                    println("DEBUG NavigationEventVersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}'")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG NavigationEventVersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user)
+                    val selectedVersion = state.navigationEventVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val allAvailableVersions = cache.getNavigationEventAvailableVersions()
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            navigationEventVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.CheckboxRow(
+                            checked = state.includeNavigationEvent,
+                            onCheckedChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "NavigationEvent",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                                
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                                
+                                // Pin icon - always reserve space
+                                Box(
+                                    modifier = Modifier.size(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] ?: false
+                                    if (isFromBundle) {
+                                        val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] ?: false
+                                        PinnedVersionIndicator(isPinned = isPinned)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Version dropdown using Jewel ListComboBox
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    state.navigationEventVersion = newVersion
+                                    // If user selected the original version, restore original bundle flag
+                                    if (newVersion == originalVersion) {
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = originalIsFromBundle
+                                    } else {
+                                        // User selected different version manually, not from bundle
+                                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT] = false
+                                    }
+                                    println("DEBUG: NavigationEvent version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT]})")
+                                }
+                            },
+                            modifier = Modifier
+                                .widthIn(min = 120.dp, max = 200.dp)
+                                .pointerHoverIcon(
+                                    PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                ),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                    }
+                }
+                
+                @Composable
+                fun HotReloadVersionDropdown() {
+                    val currentVersion = libraryVersions[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] ?: ""
+                    
+                    println("DEBUG HotReloadVersionDropdown: currentVersion='$currentVersion', composeVersion='${state.composeVersion}'")
+                    
+                    if (currentVersion.isEmpty()) {
+                        println("DEBUG HotReloadVersionDropdown: Showing skeleton because currentVersion is empty")
+                        // Show skeleton while loading
+                        SkeletonText(width = 180.dp)
+                        return
+                    }
+                    
+                    // Check if we have multiple stable versions to show dropdown
+                    val allAvailableVersions = cache.getHotReloadAvailableVersions()
+                    val hasMultipleStableVersions = remember(allAvailableVersions, currentVersion) {
+                        hotReloadVersionService.hasMultipleStableVersions(
+                            allVersions = allAvailableVersions,
+                            currentVersion = currentVersion
+                        )
+                    }
+                    
+                    println("DEBUG HotReloadVersionDropdown: hasMultipleStableVersions=$hasMultipleStableVersions, allVersionsCount=${allAvailableVersions.size}")
+                    
+                    // If no stable versions or only one stable version - show LibraryOption
+                    if (!hasMultipleStableVersions) {
+                        LibraryOption(
+                            type = io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD,
+                            checked = true,
+                            onToggle = { },
+                            label = "Compose Hot Reload",
+                            enabled = false,
+                            disabledTooltip = "Compose Hot Reload is bundled and cannot be disabled",
+                            overrideVersion = currentVersion
+                        )
+                        return
+                    }
+                    
+                    // Remember the original version (determined from Compose version) for filtering
+                    val originalVersion = remember(state.composeVersion, currentVersion) {
+                        if (currentVersion.isNotEmpty()) currentVersion else ""
+                    }
+                    
+                    // Remember the original bundle flag
+                    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
+                        libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] ?: false
+                    }
+                    
+                    // Currently selected version (may be changed by user or from hotReloadVersionFromDropdown)
+                    val selectedVersion = state.hotReloadVersion?.takeIf { it.isNotEmpty() } ?: currentVersion
+                    
+                    // Get available versions from Maven and filter based on ORIGINAL version
+                    val filteredVersions = remember(allAvailableVersions, originalVersion) {
+                        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty()) {
+                            hotReloadVersionService.filterVersionsForDropdown(
+                                allVersions = allAvailableVersions,
+                                currentVersion = originalVersion,
+                                maxCount = 5
+                            )
+                        } else {
+                            listOf(originalVersion)
+                        }
+                    }
+                    
+                    // Find index of selected version in the list
+                    val selectedIndex = remember(selectedVersion, filteredVersions) {
+                        filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        org.jetbrains.jewel.ui.component.Tooltip(
+                            tooltip = { Text("Compose Hot Reload is bundled and cannot be disabled") }
+                        ) {
+                            org.jetbrains.jewel.ui.component.CheckboxRow(
+                                checked = true,
+                                onCheckedChange = { },
+                                enabled = false
+                            ) {
+                                Text(
+                                    text = "Compose Hot Reload",
+                                    style = org.jetbrains.jewel.foundation.theme.JewelTheme.defaultTextStyle,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Version dropdown using Jewel ListComboBox
+                            org.jetbrains.jewel.ui.component.ListComboBox(
+                                items = filteredVersions,
+                                selectedIndex = selectedIndex,
+                                onSelectedItemChange = { index ->
+                                    if (index in filteredVersions.indices) {
+                                        val newVersion = filteredVersions[index]
+                                        state.hotReloadVersion = newVersion
+                                        hotReloadVersionFromDropdown = newVersion
+                                        // If user selected the original version, restore original bundle flag
+                                        if (newVersion == originalVersion) {
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] = originalIsFromBundle
+                                        } else {
+                                            // User selected different version manually, not from bundle
+                                            libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] = false
+                                        }
+                                        println("DEBUG: Hot Reload version changed to $newVersion (original=$originalVersion, isFromBundle=${libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD]})")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .widthIn(min = 120.dp, max = 200.dp)
+                                    .pointerHoverIcon(
+                                        PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))
+                                    ),
+                                maxPopupHeight = 280.dp,
+                                style = textFieldStyleComboBox()
+                            )
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                            
+                            // Pin icon - show when from bundle
+                            val isFromBundle = libraryFromBundle[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] ?: false
+                            if (isFromBundle) {
+                                val isPinned = isPinnedMap[io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD] ?: false
+                                PinnedVersionIndicator(isPinned = isPinned)
+                            }
+                            
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                            
+                            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+                        }
+                    }
+                }
+                
                 // Left column
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).widthIn(min = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                 ) {
                     // Lifecycle - always included with version dropdown
                     LifecycleVersionDropdown()
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3_ADAPTIVE,
-                        checked = state.includeMaterial3Adaptive,
-                        onToggle = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive },
-                        label = "Material3 Adaptive"
-                    )
+                    // Material3 Adaptive - with version dropdown
+                    Material3AdaptiveVersionDropdown()
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION_EVENT,
-                        checked = state.includeNavigationEvent,
-                        onToggle = { state.includeNavigationEvent = !state.includeNavigationEvent },
-                        label = "NavigationEvent"
-                    )
+                    // NavigationEvent - only for versions >= 1.10.0, with version dropdown
+                    if (shouldShowNavigation3AndNavigationEvent) {
+                        NavigationEventVersionDropdown()
+                    }
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.WINDOW,
-                        checked = state.includeWindow,
-                        onToggle = { state.includeWindow = !state.includeWindow },
-                        label = "Window"
-                    )
+                    // Window - with version dropdown
+                    WindowVersionDropdown()
                 }
                 
                 // Right column
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).widthIn(min = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
                 ) {
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.MATERIAL3,
-                        checked = state.includeMaterial3,
-                        onToggle = { state.includeMaterial3 = !state.includeMaterial3 },
-                        label = "Material3"
-                    )
+                    // Material3 - with version dropdown
+                    Material3VersionDropdown()
                     
-                    // Navigation - only for versions < 1.10.0
+                    // Navigation (v2) - only for versions < 1.10.0, with version dropdown
                     if (shouldShowNavigation) {
-                        LibraryOption(
-                            type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION,
-                            checked = state.includeNavigation,
-                            onToggle = { state.includeNavigation = !state.includeNavigation },
-                            label = "Navigation"
-                        )
+                        NavigationVersionDropdown()
                     }
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.NAVIGATION3,
-                        checked = state.includeNavigation3,
-                        onToggle = { state.includeNavigation3 = !state.includeNavigation3 },
-                        label = "Navigation3"
-                    )
+                    // Navigation3 - only for versions >= 1.10.0
+                    if (shouldShowNavigation3AndNavigationEvent) {
+                        Navigation3VersionDropdown()
+                    }
                     
-                    LibraryOption(
-                        type = io.github.heisiar.composewizard.shared.LibraryType.SAVED_STATE,
-                        checked = state.includeSavedState,
-                        onToggle = { state.includeSavedState = !state.includeSavedState },
-                        label = "SavedState"
-                    )
+                    // SavedState - with version dropdown
+                    SavedStateVersionDropdown()
                     
                     // Optional hot reload for versions < 10.0.0-beta01
                     if (shouldShowOptionalHotReload) {
@@ -608,16 +1645,9 @@ fun WizardMainContent(
                         )
                     }
                     
-                    // Bundled hot reload for versions >= 10.0.0-beta01
+                    // Bundled hot reload for versions >= 10.0.0-beta01 with version dropdown (if stable versions available)
                     if (shouldShowBundledHotReload) {
-                        LibraryOption(
-                            type = io.github.heisiar.composewizard.shared.LibraryType.HOT_RELOAD,
-                            checked = true,
-                            onToggle = { },
-                            label = "Compose Hot Reload",
-                            enabled = false,
-                            disabledTooltip = "Compose Hot Reload is bundled and cannot be disabled"
-                        )
+                        HotReloadVersionDropdown()
                     }
                 }
                 }

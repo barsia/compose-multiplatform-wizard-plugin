@@ -78,7 +78,7 @@ private fun formatBrowseShortcut(): String {
 }
 
 @Composable
-private fun textFieldStyleComboBox(): ComboBoxStyle {
+fun textFieldStyleComboBox(): ComboBoxStyle {
     val defaultStyle = LocalDefaultComboBoxStyle.current
     val defaultColors = defaultStyle.colors
     val defaultMetrics = defaultStyle.metrics
@@ -719,8 +719,7 @@ fun PinnedVersionIndicator(
             key = WizardIconKeys.Pin,
             contentDescription = "Pinned version",
             modifier = Modifier
-                .size(10.dp)
-                .offset(y = (-6).dp)
+                .size(12.dp)
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -738,8 +737,7 @@ fun BundledLibraryIndicator() {
         key = WizardIconKeys.Lock,
         contentDescription = "Bundled library",
         modifier = Modifier
-            .size(10.dp)
-            .offset(y = (-4).dp),
+            .size(12.dp),
         tint = JewelTheme.globalColors.text.normal
     )
 }
@@ -779,7 +777,7 @@ fun CheckboxOption(
             Spacer(modifier = Modifier.width(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f, fill = false)
+                modifier = Modifier.weight(1f)
             ) {
                 if (iconKey != null) {
                     Icon(
