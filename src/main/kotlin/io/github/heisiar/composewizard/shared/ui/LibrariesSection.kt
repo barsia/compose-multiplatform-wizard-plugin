@@ -171,52 +171,6 @@ private fun LibrariesContent(
             )
             
             LibraryVersionDropdown(
-                libraryType = LibraryType.MATERIAL3_ADAPTIVE,
-                label = "Material3 Adaptive",
-                currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3_ADAPTIVE] ?: "",
-                cache = cache,
-                state = state,
-                librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
-                versionService = material3AdaptiveVersionService,
-                checked = state.includeMaterial3Adaptive,
-                onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
-            )
-            
-            if (shouldShowNavigation3AndNavigationEvent) {
-                LibraryVersionDropdown(
-                    libraryType = LibraryType.NAVIGATION_EVENT,
-                    label = "NavigationEvent",
-                    currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION_EVENT] ?: "",
-                    cache = cache,
-                    state = state,
-                    librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
-                    versionService = navigationEventVersionService,
-                    checked = state.includeNavigationEvent,
-                    onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
-                )
-            }
-            
-            LibraryVersionDropdown(
-                libraryType = LibraryType.WINDOW,
-                label = "Window",
-                currentVersion = librariesState.libraryVersions[LibraryType.WINDOW] ?: "",
-                cache = cache,
-                state = state,
-                librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
-                versionService = windowVersionService,
-                checked = state.includeWindow,
-                onVersionChange = { state.includeWindow = !state.includeWindow }
-            )
-        }
-        
-        Column(
-            modifier = Modifier.weight(1f).widthIn(min = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
-        ) {
-            LibraryVersionDropdown(
                 libraryType = LibraryType.MATERIAL3,
                 label = "Material3",
                 currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3] ?: "",
@@ -227,6 +181,19 @@ private fun LibrariesContent(
                 versionService = material3VersionService,
                 checked = state.includeMaterial3,
                 onVersionChange = { state.includeMaterial3 = !state.includeMaterial3 }
+            )
+            
+            LibraryVersionDropdown(
+                libraryType = LibraryType.MATERIAL3_ADAPTIVE,
+                label = "M3 Adaptive",
+                currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3_ADAPTIVE] ?: "",
+                cache = cache,
+                state = state,
+                librariesState = librariesState,
+                isPinnedMap = isPinnedMap,
+                versionService = material3AdaptiveVersionService,
+                checked = state.includeMaterial3Adaptive,
+                onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
             )
             
             if (shouldShowNavigation) {
@@ -246,6 +213,27 @@ private fun LibrariesContent(
             
             if (shouldShowNavigation3AndNavigationEvent) {
                 LibraryVersionDropdown(
+                    libraryType = LibraryType.NAVIGATION_EVENT,
+                    label = "NavigationEvent",
+                    currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION_EVENT] ?: "",
+                    cache = cache,
+                    state = state,
+                    librariesState = librariesState,
+                    isPinnedMap = isPinnedMap,
+                    versionService = navigationEventVersionService,
+                    checked = state.includeNavigationEvent,
+                    onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
+                )
+            }
+        }
+        
+        Column(
+            modifier = Modifier.weight(1f).widthIn(min = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
+        ) {
+            
+            if (shouldShowNavigation3AndNavigationEvent) {
+                LibraryVersionDropdown(
                     libraryType = LibraryType.NAVIGATION3,
                     label = "Navigation3",
                     currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION3] ?: "",
@@ -258,6 +246,19 @@ private fun LibrariesContent(
                     onVersionChange = { state.includeNavigation3 = !state.includeNavigation3 }
                 )
             }
+            
+            LibraryVersionDropdown(
+                libraryType = LibraryType.WINDOW,
+                label = "Window",
+                currentVersion = librariesState.libraryVersions[LibraryType.WINDOW] ?: "",
+                cache = cache,
+                state = state,
+                librariesState = librariesState,
+                isPinnedMap = isPinnedMap,
+                versionService = windowVersionService,
+                checked = state.includeWindow,
+                onVersionChange = { state.includeWindow = !state.includeWindow }
+            )
             
             LibraryVersionDropdown(
                 libraryType = LibraryType.SAVED_STATE,

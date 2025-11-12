@@ -6,7 +6,7 @@ package io.github.heisiar.composewizard.shared
 enum class LibraryType(val displayName: String) {
     LIFECYCLE("Lifecycle"),
     MATERIAL3("Material3"),
-    MATERIAL3_ADAPTIVE("Material3 Adaptive"),
+    MATERIAL3_ADAPTIVE("M3 Adaptive"),
     NAVIGATION("Navigation"),
     NAVIGATION3("Navigation3"),
     NAVIGATION_EVENT("Navigation Event"),
