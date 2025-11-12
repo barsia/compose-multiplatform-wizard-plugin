@@ -141,53 +141,56 @@ fun LibraryVersionDropdown(
             horizontalArrangement = Arrangement.End,
             modifier = Modifier.weight(1f)
         ) {
-            Tooltip(
-                tooltip = { Text(selectedVersion) },
-                tooltipPlacement = TooltipPlacement.ComponentRect(
-                    anchor = Alignment.BottomCenter,
-                    alignment = Alignment.BottomCenter,
-                    offset = DpOffset(0.dp, 4.dp)
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                org.jetbrains.jewel.ui.component.ListComboBox(
-                    items = filteredVersions,
-                    selectedIndex = selectedIndex,
-                    onSelectedItemChange = { index ->
-                        if (index in filteredVersions.indices) {
-                            val newVersion = filteredVersions[index]
-                            
-                            when (libraryType) {
-                                LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                                LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                                LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                                LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                                LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                                LibraryType.WINDOW -> state.windowVersion = newVersion
-                                LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                                LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                                LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                Tooltip(
+                    tooltip = { Text(selectedVersion) },
+                    tooltipPlacement = TooltipPlacement.ComponentRect(
+                        anchor = Alignment.BottomCenter,
+                        alignment = Alignment.BottomCenter,
+                        offset = DpOffset(0.dp, 4.dp)
+                    )
+                ) {
+                    org.jetbrains.jewel.ui.component.ListComboBox(
+                        items = filteredVersions,
+                        selectedIndex = selectedIndex,
+                        onSelectedItemChange = { index ->
+                            if (index in filteredVersions.indices) {
+                                val newVersion = filteredVersions[index]
+                                
+                                when (libraryType) {
+                                    LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
+                                    LibraryType.MATERIAL3 -> state.material3Version = newVersion
+                                    LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
+                                    LibraryType.NAVIGATION -> state.navigationVersion = newVersion
+                                    LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
+                                    LibraryType.WINDOW -> state.windowVersion = newVersion
+                                    LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
+                                    LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
+                                    LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                                }
+                                
+                                if (newVersion == originalVersion) {
+                                    librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
+                                } else {
+                                    librariesState.libraryFromBundle[libraryType] = false
+                                }
+                                
+                                onVersionChange(newVersion)
                             }
-                            
-                            if (newVersion == originalVersion) {
-                                librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
-                            } else {
-                                librariesState.libraryFromBundle[libraryType] = false
-                            }
-                            
-                            onVersionChange(newVersion)
-                        }
-                    },
-                    modifier = Modifier
-                        .widthIn(min = 120.dp, max = 200.dp)
-                        .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
-                    maxPopupHeight = 280.dp,
-                    style = textFieldStyleComboBox()
-                )
+                        },
+                        modifier = Modifier
+                            .widthIn(min = 120.dp, max = 200.dp)
+                            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+                        maxPopupHeight = 280.dp,
+                        style = textFieldStyleComboBox()
+                    )
+                }
+                
+                LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
             }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
         }
     }
 }

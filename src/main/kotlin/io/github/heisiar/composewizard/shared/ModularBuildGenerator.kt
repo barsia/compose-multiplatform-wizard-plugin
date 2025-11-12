@@ -212,4 +212,3 @@ androidx-material3-adaptive-navigation = { module = "org.jetbrains.compose.mater
         return content.replace("{{$placeholder}}", replacement)
     }
 }
-

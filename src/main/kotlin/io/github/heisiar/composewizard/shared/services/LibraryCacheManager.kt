@@ -99,4 +99,3 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         return state.lifecycleIsFromBundle[composeVersion] == true
     }
 }
-

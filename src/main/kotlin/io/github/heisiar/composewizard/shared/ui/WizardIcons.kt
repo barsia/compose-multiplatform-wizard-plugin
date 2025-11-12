@@ -177,4 +177,3 @@ val AppleIcon: ImageVector
             close()
         }
     }.build()
-

@@ -30,4 +30,3 @@ internal fun isComposeVersionLessThan(version: String, threshold: String): Boole
     
     return versionQualifier < thresholdQualifier
 }
-

@@ -24,4 +24,3 @@ internal fun Modifier.compactVerticalSpacing(): Modifier = this.layout { measura
         placeable.place(0, -verticalOffset)
     }
 }
-

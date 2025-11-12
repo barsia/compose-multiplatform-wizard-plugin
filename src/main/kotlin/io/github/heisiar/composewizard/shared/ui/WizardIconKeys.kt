@@ -15,4 +15,3 @@ object WizardIconKeys {
     val Pin: PathIconKey = PathIconKey("icons/pin.svg", WizardIconKeys::class.java)
     val Lock: PathIconKey = PathIconKey("icons/lock.svg", WizardIconKeys::class.java)
 }
-
