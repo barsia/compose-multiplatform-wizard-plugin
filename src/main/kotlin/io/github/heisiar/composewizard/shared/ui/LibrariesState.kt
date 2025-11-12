@@ -18,6 +18,7 @@ class LibrariesState(
     val libraryVersions = mutableStateMapOf<LibraryType, String>()
     val isFromFallback = mutableStateMapOf<LibraryType, Boolean>()
     var versionForLibraries by mutableStateOf("")
+    var hotReloadGithubVersion by mutableStateOf<String?>(null)
     
     suspend fun loadLibraryVersions(versionToLoad: String) {
         if (versionToLoad.isEmpty()) return
@@ -62,6 +63,7 @@ class LibrariesState(
                             if (type == LibraryType.HOT_RELOAD) {
                                 wizardState.hotReloadVersion = version
                                 wizardState.includeHotReload = true
+                                hotReloadGithubVersion = cache.getHotReloadGithubVersion(versionToLoad)
                             }
                         }
                     }

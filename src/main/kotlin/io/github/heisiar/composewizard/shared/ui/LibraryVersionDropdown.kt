@@ -22,8 +22,11 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
+import io.github.heisiar.composewizard.shared.services.LibraryVersionService
+import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
@@ -37,7 +40,7 @@ fun LibraryVersionDropdown(
     cache: ComposeVersionCache,
     state: WizardState,
     librariesState: LibrariesState,
-    versionService: Any?,
+    versionService: LibraryVersionService?,
     checked: Boolean = true,
     enabled: Boolean = true,
     onCheckedChange: () -> Unit = {},
@@ -91,32 +94,29 @@ fun LibraryVersionDropdown(
     }
     
     val bundledVersion = remember(state.composeVersion, libraryType) {
-        io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)?.getVersion(libraryType)
+        ComposeVersions.getLibraryBundle(state.composeVersion)?.getVersion(libraryType)
     }
     
-    val filteredVersions = remember(allAvailableVersions, originalVersion, bundledVersion, versionService) {
-        if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null) {
-            when (versionService) {
-                is io.github.heisiar.composewizard.shared.services.LifecycleVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.Material3VersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.Material3AdaptiveVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.NavigationVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.Navigation3VersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.WindowVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.SavedStateVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.NavigationEventVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.HotReloadVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
-                else -> listOf(originalVersion)
+    val isOldComposeForHotReload = remember(state.composeVersion, libraryType) {
+        libraryType == LibraryType.HOT_RELOAD && 
+        isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
+    }
+    
+    val versionsToFilter = remember(allAvailableVersions, isOldComposeForHotReload, originalVersion) {
+        if (isOldComposeForHotReload) {
+            val rc02Parsed = ComposeVersionComparator.parse(ComposeVersions.COMPOSE_HOT_RELOAD_VERSION)
+            allAvailableVersions.filter { version ->
+                val versionParsed = ComposeVersionComparator.parse(version)
+                versionParsed.compareTo(rc02Parsed) <= 0
             }
+        } else {
+            allAvailableVersions
+        }
+    }
+    
+    val filteredVersions = remember(versionsToFilter, originalVersion, bundledVersion, versionService) {
+        if (versionsToFilter.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null) {
+            versionService.filterVersionsForDropdown(versionsToFilter, originalVersion, bundledVersion, 5)
         } else {
             listOf(originalVersion)
         }
@@ -128,11 +128,24 @@ fun LibraryVersionDropdown(
     
     val isFromFallback = librariesState.isFromFallback[libraryType] ?: false
     
+    val isNewComposeForHotReload = remember(state.composeVersion, libraryType) {
+        libraryType == LibraryType.HOT_RELOAD && 
+        !isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
+    }
+    
+    val effectiveEnabled = if (isNewComposeForHotReload) false else enabled
+    
+    val showHotReloadLock = remember(libraryType, selectedVersion, librariesState.hotReloadGithubVersion) {
+        libraryType == LibraryType.HOT_RELOAD && 
+        librariesState.hotReloadGithubVersion != null &&
+        selectedVersion == librariesState.hotReloadGithubVersion
+    }
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
-        if (enabled) {
+        if (effectiveEnabled) {
             org.jetbrains.jewel.ui.component.Checkbox(
                 checked = checked,
                 onCheckedChange = { onCheckedChange() },
@@ -166,13 +179,13 @@ fun LibraryVersionDropdown(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                if (isFromFallback) {
+                if (showHotReloadLock || (isFromFallback && libraryType != LibraryType.HOT_RELOAD)) {
                     Spacer(modifier = Modifier.width(3.dp))
                     Box(
                         modifier = Modifier.size(10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (libraryType == LibraryType.HOT_RELOAD) {
+                        if (showHotReloadLock) {
                             BundledLibraryIndicator()
                         } else {
                             PinnedVersionIndicator(isPinned = true)

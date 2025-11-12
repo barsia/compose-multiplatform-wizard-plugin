@@ -269,6 +269,10 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         return cacheManager.isLibraryFromBundle(composeVersion, type)
     }
     
+    fun getHotReloadGithubVersion(composeVersion: String): String? {
+        return cacheManager.getHotReloadGithubVersion(composeVersion)
+    }
+    
     val lifecycleVersionUpdates: SharedFlow<Pair<String, String>>
         get() = versionResolver.lifecycleVersionUpdates
     

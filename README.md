@@ -84,6 +84,185 @@ WizardMainContent (orchestration)
 - Clear responsibility separation
 - Easy navigation and maintenance
 
+## Library Version Resolution Logic
+
+### Overview
+
+The wizard automatically resolves compatible library versions for each selected Compose Multiplatform version. The resolution logic varies by library type and Compose version.
+
+### Standard Libraries (Lifecycle, Material3, Navigation, etc.)
+
+**Resolution Strategy (in order of priority):**
+
+1. **Web UI Scraping** - Primary source
+   - Fetch from `https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html`
+   - Parses official JetBrains compatibility table
+   - Most accurate for official Compose releases
+
+2. **Bundled Versions** - Secondary fallback
+   - If Web UI fetch succeeds but specific library is missing → use `LIBRARY_BUNDLES` (hardcoded)
+   - Pre-validated version bundles embedded in plugin code
+
+3. **Semantic Fallback** - Tertiary fallback
+   - Try previous Compose versions (e.g., `1.10.0-beta01` → `1.10.0-alpha03` → `1.9.3`)
+   - Check Web UI for each fallback version
+   - Use first successful match
+
+4. **Direct Maven Fallback** - Final fallback
+   - Query Maven Central directly
+   - Parse `maven-metadata.xml` for available versions
+   - Use first available version
+
+**Version Filtering for Dropdowns:**
+
+For each library, the dropdown shows:
+- **Current version** (first in list)
+- **Bundled version** (if different from current)
+- **Up to 3 newer published versions** from Maven Central (filtered by semantic version > current)
+- Total: max 5 versions
+
+### Hot Reload - Special Logic
+
+Hot Reload has **different behavior** based on Compose version:
+
+#### For Compose < 1.10.0-beta01 (Optional Library)
+
+**Version Resolution:**
+- Fixed version: `1.0.0-rc02` (hardcoded)
+- No GitHub fetch
+- No bundled indicator
+
+**Checkbox:**
+- `enabled = true` (can be disabled)
+
+**Dropdown Filtering:**
+- Shows only versions `<= 1.0.0-rc02` from Maven
+- Filters using semantic version comparison
+
+**Icon:**
+- No lock icon (optional library)
+
+#### For Compose >= 1.10.0-beta01 (Bundled Library)
+
+**Version Resolution (in order):**
+
+1. **GitHub Fetch** - Primary source
+   ```
+   https://raw.githubusercontent.com/JetBrains/compose-multiplatform/
+   v${composeVersion}/gradle-plugins/gradle/libs.versions.toml
+   ```
+   - Parses `plugin-hot-reload = { prefer = "X.Y.Z" }`
+   - This is the "aligned" version bundled with Compose
+   - Cached separately in `hotReloadGithubVersions`
+
+2. **Maven Fallback** - If GitHub 404
+   - Query Maven Central for Hot Reload plugin
+   - Use first available version (latest)
+
+3. **Hardcoded Fallback** - If Maven fails
+   - Use `1.0.0-rc02` as last resort
+
+**Checkbox:**
+- `enabled = false` (bundled, cannot be disabled)
+- Tooltip: "Included in the base template and cannot be disabled"
+
+**Dropdown Filtering:**
+- Shows ALL versions from Maven (no upper limit)
+- Can manually select any version
+
+**Lock Icon Logic:**
+```kotlin
+showLock = (selectedVersion == githubVersion)
+```
+
+- 🔒 **Lock shown** when selected version matches GitHub version
+- **Lock hidden** when user selects different version from dropdown
+- 🔒 **Lock reappears** when user returns to GitHub version
+
+### Caching Strategy
+
+**Cache Layers:**
+
+1. **In-Memory Cache** (`ComposeVersionCacheState`)
+   - Compose versions (stable/dev)
+   - Library versions per Compose version
+   - Available Maven versions per library
+   - Hot Reload GitHub versions
+   - TTL: 1 hour for remote data
+
+2. **Per-Version Cache** (LinkedHashMap)
+   - Key: Compose version string
+   - Value: Resolved library version
+   - Max size: 200 entries (LRU eviction)
+
+3. **Fallback Indicators** (`isFromFallback`)
+   - Tracks if version came from fallback strategy
+   - Shows pin icon (📌) in UI for non-primary sources
+
+**Cache Invalidation:**
+- Manual: "Refresh versions" button
+- Automatic: After 1 hour
+- Scope: All libraries + Compose versions
+
+### Version Comparison
+
+**Semantic Version Parsing:**
+```
+1.10.0-beta01+dev3245
+│  │  │   │      │
+│  │  │   │      └─ devNum (build number)
+│  │  │   └──────── suffix + suffixNum (beta01)
+│  │  └──────────── patch (0)
+│  └─────────────── minor (10)
+└────────────────── major (1)
+```
+
+**Comparison Order:**
+1. Major → Minor → Patch (numeric)
+2. Suffix (lexicographic): `stable` (zzz) > `rc` > `dev` > `beta` > `alpha`
+3. Suffix number (numeric): `beta02` > `beta01`
+4. Dev number (numeric): `+dev3245` > `+dev3194`
+
+**Example Ordering (newest → oldest):**
+```
+1.10.0          (stable, suffix="zzz")
+1.10.0-rc02
+1.10.0-rc01
+1.10.0-beta02+dev3245
+1.10.0-beta02+dev3194
+1.10.0-beta02
+1.10.0-beta01
+1.10.0-alpha03
+```
+
+### Error Handling
+
+**Network Errors:**
+- Web UI unreachable → fallback to bundled versions
+- Maven unreachable → fallback to hardcoded versions
+- GitHub unreachable (Hot Reload) → fallback to Maven
+
+**Rate Limiting:**
+- Detected via HTTP 429 or specific error patterns
+- Skip remaining fallback attempts for same library
+- Show cached version or empty state
+
+**Invalid Versions:**
+- Parse errors → version treated as "0.0.0-{original}"
+- Comparison still works, but version ranks lowest
+- User sees original string in UI
+
+### UI Indicators
+
+**Icons:**
+- 🔒 **Lock** (`BundledLibraryIndicator`) - Hot Reload aligned with Compose (GitHub version)
+- 📌 **Pin** (`PinnedVersionIndicator`) - Version from fallback strategy (non-primary source)
+
+**States:**
+- **Loading** - Skeleton shimmer animation
+- **Loaded** - Normal dropdown with version
+- **Error** - Empty or fallback version, no visual error indicator
+
 ## Development
 
 ### Requirements

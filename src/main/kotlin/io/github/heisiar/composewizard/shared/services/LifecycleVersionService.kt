@@ -12,7 +12,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * 
  * Fetches from: https://repo1.maven.org/maven2/org/jetbrains/androidx/lifecycle/lifecycle-runtime/
  */
-class LifecycleVersionService {
+class LifecycleVersionService : LibraryVersionService {
     
     private val logger = Logger.getInstance(LifecycleVersionService::class.java)
     
@@ -80,11 +80,11 @@ class LifecycleVersionService {
      * @param maxCount Maximum number of versions to return (default: 5)
      * @return Filtered and sorted list with currentVersion first
      */
-    fun filterVersionsForDropdown(
+    override fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
-        bundledVersion: String? = null,
-        maxCount: Int = 5
+        bundledVersion: String?,
+        maxCount: Int
     ): List<String> {
         val result = mutableListOf<String>()
         val currentParsed = ComposeVersionComparator.parse(currentVersion)

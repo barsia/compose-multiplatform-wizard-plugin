@@ -101,16 +101,31 @@ class LibraryVersionResolver(
                 }
                 
                 if (type == LibraryType.HOT_RELOAD) {
-                    if (!VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
-                        val hotReloadVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
-                        if (hotReloadVersion != null) {
-                            cacheLibrary(composeVersion, type, hotReloadVersion, isFromFallback = true)
-                            return@launch
-                        } else {
-                            cacheLibrary(composeVersion, type, "", isFromFallback = false)
+                    if (VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
+                        cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
+                        return@launch
+                    } else {
+                        val githubVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
+                        
+                        if (githubVersion != null) {
+                            cacheManager.cacheHotReloadGithubVersion(composeVersion, githubVersion)
+                            cacheLibrary(composeVersion, type, githubVersion, isFromFallback = false)
                             return@launch
                         }
-                    } else {
+                        
+                        val mavenVersions = try {
+                            val hotReloadService = HotReloadVersionService()
+                            hotReloadService.fetchHotReloadVersions()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                        
+                        val firstMavenVersion = mavenVersions.firstOrNull()
+                        if (firstMavenVersion != null) {
+                            cacheLibrary(composeVersion, type, firstMavenVersion, isFromFallback = false)
+                            return@launch
+                        }
+                        
                         cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
                         return@launch
                     }

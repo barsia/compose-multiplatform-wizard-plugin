@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
 
-class SavedStateVersionService {
+class SavedStateVersionService : LibraryVersionService {
     
     companion object {
         private const val MAVEN_METADATA_URL = "https://repo1.maven.org/maven2/org/jetbrains/androidx/savedstate/savedstate-core/maven-metadata.xml"
@@ -25,11 +25,11 @@ class SavedStateVersionService {
         }
     }
     
-    fun filterVersionsForDropdown(
+    override fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
-        bundledVersion: String? = null,
-        maxCount: Int = 5
+        bundledVersion: String?,
+        maxCount: Int
     ): List<String> {
         if (allVersions.isEmpty() || currentVersion.isEmpty()) {
             return listOf(currentVersion)

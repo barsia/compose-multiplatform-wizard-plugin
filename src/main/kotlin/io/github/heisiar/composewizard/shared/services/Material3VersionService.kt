@@ -12,7 +12,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * 
  * Fetches from: https://repo1.maven.org/maven2/org/jetbrains/compose/material3/material3/
  */
-class Material3VersionService {
+class Material3VersionService : LibraryVersionService {
     
     private val logger = Logger.getInstance(Material3VersionService::class.java)
     
@@ -80,11 +80,11 @@ class Material3VersionService {
      * @param maxCount Maximum number of versions to return (default: 5)
      * @return Filtered and sorted list with currentVersion first
      */
-    fun filterVersionsForDropdown(
+    override fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
-        bundledVersion: String? = null,
-        maxCount: Int = 5
+        bundledVersion: String?,
+        maxCount: Int
     ): List<String> {
         val result = mutableListOf<String>()
         val currentParsed = ComposeVersionComparator.parse(currentVersion)

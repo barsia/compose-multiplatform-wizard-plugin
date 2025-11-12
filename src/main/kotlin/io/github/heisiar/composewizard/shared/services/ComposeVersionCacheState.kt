@@ -58,5 +58,7 @@ data class ComposeVersionCacheState(
     var windowIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
     
     var hotReloadVersions: LinkedHashMap<String, String> = linkedMapOf(),
-    var hotReloadIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf()
+    var hotReloadIsFromBundle: LinkedHashMap<String, Boolean> = linkedMapOf(),
+    
+    var hotReloadGithubVersions: LinkedHashMap<String, String> = linkedMapOf()
 )
