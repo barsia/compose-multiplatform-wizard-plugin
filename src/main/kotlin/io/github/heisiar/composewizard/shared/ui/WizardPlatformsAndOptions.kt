@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -143,20 +144,22 @@ fun OptionsSection(
     onTestsToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.padding(start = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+    Row(
+        modifier = modifier.fillMaxWidth().padding(start = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         CheckboxOption(
             checked = git,
             onToggle = onGitToggle,
-            label = "Create Git repository"
+            label = "Create Git repository",
+            modifier = Modifier.weight(1f)
         )
 
         CheckboxOption(
             checked = tests,
             onToggle = onTestsToggle,
-            label = "Add sample tests"
+            label = "Add sample tests",
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -167,6 +170,7 @@ fun CheckboxOption(
     checked: Boolean,
     onToggle: () -> Unit,
     label: String,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     iconKey: org.jetbrains.jewel.ui.icon.IconKey? = null,
     useColoredIcon: Boolean = false,
@@ -176,56 +180,55 @@ fun CheckboxOption(
     val content = @Composable {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable(
-                    enabled = enabled,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onToggle() }
-                .pointerHoverIcon(
-                    if (enabled) PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-                    else PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
-                )
+            .height(28.dp)
     ) {
-        Checkbox(
-            checked = checked,
+        Box(modifier = Modifier.weight(1f)) {
+            org.jetbrains.jewel.ui.component.CheckboxRow(
+                checked = checked,
                 onCheckedChange = { onToggle() },
-                enabled = enabled
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                enabled = enabled,
+                modifier = Modifier
+                    .pointerHoverIcon(
+                        if (enabled) PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+                        else PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
+                    )
             ) {
-                if (iconKey != null) {
-                    Icon(
-                        key = iconKey,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (useColoredIcon) {
-                            Color.Unspecified
-                        } else if (enabled) {
-                            JewelTheme.globalColors.text.normal
-                        } else {
-                            JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
-                        }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (iconKey != null) {
+                        Icon(
+                            key = iconKey,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (useColoredIcon) {
+                                Color.Unspecified
+                            } else if (enabled) {
+                                JewelTheme.globalColors.text.normal
+                            } else {
+                                JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = label,
+                        style = JewelTheme.defaultTextStyle,
+                        color = if (enabled) JewelTheme.globalColors.text.normal 
+                                else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = label,
-                    style = JewelTheme.defaultTextStyle,
-                    color = if (enabled) JewelTheme.globalColors.text.normal 
-                            else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (trailingContent != null) {
-                Spacer(modifier = Modifier.width(6.dp))
-                trailingContent()
             }
         }
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(6.dp))
+            trailingContent()
+        }
+    }
     }
     
     if (!enabled) {

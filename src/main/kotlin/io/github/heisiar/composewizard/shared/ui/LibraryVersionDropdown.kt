@@ -2,6 +2,7 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipPlacement
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -151,7 +152,8 @@ fun LibraryVersionDropdown(
         Spacer(modifier = Modifier.width(4.dp))
         
         Column(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -240,7 +242,10 @@ fun LibraryVersionDropdown(
         
         Spacer(modifier = Modifier.width(4.dp))
         
-        Box(modifier = Modifier.size(16.dp)) {
+        Box(
+            modifier = Modifier.width(16.dp).height(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
             LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
         }
     }
