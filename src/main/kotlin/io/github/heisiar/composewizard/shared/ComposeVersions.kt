@@ -12,7 +12,7 @@ enum class LibraryType(val displayName: String) {
     NAVIGATION_EVENT("Navigation Event"),
     SAVED_STATE("SavedState"),
     WINDOW("Window"),
-    HOT_RELOAD("Compose Hot Reload")
+    HOT_RELOAD("Hot Reload")
 }
 
 /**
@@ -196,7 +196,7 @@ object ComposeVersions {
     const val KOTLIN_VERSION_WIZARD = "2.2.21"
     
     /**
-     * Compose Hot Reload version.
+     * Hot Reload version.
      * Used only for Compose versions < 1.10.0-beta01 and Desktop projects.
      * Starting from 1.10.0-beta01, Hot Reload is built into Compose.
      */

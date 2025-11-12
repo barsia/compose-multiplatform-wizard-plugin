@@ -20,15 +20,30 @@ This plugin uses a unified codebase with platform-specific integrations:
 
 - `shared/` - Common logic shared across both IDEs:
   - `ui/` - **Shared Compose UI** - Single wizard UI built with Jetpack Compose that works in both IDEA and AS
-    - `ComposeWizardStep.kt` - Main wizard step implementation using `ModuleWizardStep`
-    - `WizardMainContent.kt` - Main UI layout and composition (~1860 lines, libraries section)
-    - `WizardInputFields.kt` - Input components (ProjectNameField, PackageNameField, ProjectLocationField)
-    - `WizardVersionField.kt` - Compose version selection with Dev/Stable toggle
-    - `WizardPlatformsAndOptions.kt` - Platform selection and project options (Git, Tests)
-    - `WizardUIComponents.kt` - Reusable UI components (ValidationPopup, CompactSwitch, indicators, icons)
-    - `WizardVersionUtils.kt` - Version comparison utilities
-    - `WizardLayoutUtils.kt` - Layout constants and modifiers
-    - `WizardStateManager.kt` - State management and validation logic
+    - **Main Wizard** (164 lines):
+      - `ComposeWizardStep.kt` - Main wizard step implementation using `ModuleWizardStep`
+      - `WizardMainContent.kt` - Main UI layout and composition (orchestration layer)
+    - **Project Fields** (135 lines):
+      - `WizardProjectFields.kt` - Platform-specific field layouts (AS/IDEA)
+      - `WizardInputFields.kt` - Input components (ProjectNameField, PackageNameField, ProjectLocationField)
+    - **Version Selection** (255 lines):
+      - `WizardVersionField.kt` - Compose version selection with Dev/Stable toggle
+    - **Libraries** (state + UI components):
+      - `LibrariesState.kt` - State manager for library versions and loading (73 lines)
+      - `LibraryVersionDropdown.kt` - Dropdown component for library version selection (190 lines)
+      - `LibrariesSection.kt` - Full libraries section UI (278 lines)
+    - **Platforms & Options** (213 lines):
+      - `WizardPlatformsAndOptions.kt` - Platform selection and project options (Git, Tests)
+    - **UI Components**:
+      - `WizardUIComponents.kt` - Reusable UI components (CompactSwitch, ProjectPathHint, PlatformCheckbox)
+      - `WizardIcons.kt` - Icon definitions (175 lines)
+      - `WizardValidationComponents.kt` - Validation popups (196 lines)
+      - `WizardLibraryComponents.kt` - Library-specific UI (SkeletonText, indicators, copy icon) (179 lines)
+      - `WizardFooter.kt` - Footer with version info and error display (79 lines)
+    - **Utilities**:
+      - `WizardVersionUtils.kt` - Version comparison utilities
+      - `WizardLayoutUtils.kt` - Layout constants and modifiers
+      - `WizardStateManager.kt` - State management and validation logic
   - `models/` - Data models and builders (`ComposeMultiplatformModuleBuilder`)
   - `services/` - Version caching and other services
   - Template processing and validation
@@ -43,6 +58,31 @@ Both IntelliJ IDEA and Android Studio use the **same Compose UI components** for
 - Consistent look and feel across platforms using Jewel theme bridge
 - Single source of truth for wizard UI logic
 - Reactive state management with Compose runtime
+
+### Architecture Highlights
+
+**State Management Pattern:**
+- `LibrariesState` - Dedicated state manager for library version loading and caching
+- Separation of concerns: UI components (presentation) vs. state logic (business logic)
+- Reactive updates via Compose state and coroutines
+
+**Component Hierarchy:**
+```
+WizardMainContent (orchestration)
+├── ProjectFields (platform-specific layouts)
+│   ├── AndroidStudioProjectFields
+│   └── IntellijIdeaProjectFields
+├── PlatformsSection (platform toggles)
+├── LibrariesSection (library configuration)
+│   └── LibraryVersionDropdown (per-library UI)
+├── OptionsSection (Git, Tests)
+└── WizardFooter (version info, errors)
+```
+
+**File Size Discipline:**
+- All files strictly under 300 lines (excluding imports)
+- Clear responsibility separation
+- Easy navigation and maintenance
 
 ## Development
 

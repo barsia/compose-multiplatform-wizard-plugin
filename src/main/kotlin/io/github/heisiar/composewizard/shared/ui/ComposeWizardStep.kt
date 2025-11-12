@@ -1,39 +1,14 @@
 package io.github.heisiar.composewizard.shared.ui
 
-/**
- * Main wizard step implementation for Compose Multiplatform project creation.
- * 
- * This class serves as the bridge between IntelliJ Platform's wizard system and the Compose UI:
- * - Extends ModuleWizardStep to integrate with IDEA/AS wizard framework
- * - Uses ComposePanel to embed Jetpack Compose UI in Swing
- * - Manages wizard state and validation
- * - Coordinates with ComposeMultiplatformModuleBuilder for project creation
- * 
- * UI Architecture:
- * - ComposeWizardStep (this file) - Wizard step integration and state management
- * - WizardMainContent - Main UI layout composition
- * - WizardUIFields - Reusable UI components (fields, checkboxes, platform selectors)
- * - WizardStateManager - State management and validation logic
- */
-
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.ComposePanel
-import com.intellij.ide.IdeBundle
 import com.intellij.ide.util.projectWizard.ModuleWizardStep
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.util.ui.UIUtil
 import io.github.heisiar.composewizard.shared.WizardDefaults
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import java.awt.Dimension
-import java.awt.event.KeyEvent
 import java.io.File
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
@@ -74,9 +49,9 @@ class ComposeWizardStep(
     private var includeHotReload = false
     
     private val wizardStartTime = System.currentTimeMillis()
-    
-    // Trigger for re-validation when component becomes visible
     private var revalidationTrigger = androidx.compose.runtime.mutableIntStateOf(0)
+    
+    private val buttonManager by lazy { WizardButtonManager(mainPanel) }
 
     private val mainPanel: ComposePanel by lazy {
         ComposePanel().apply {
@@ -85,119 +60,53 @@ class ComposeWizardStep(
             maximumSize = Dimension(800, 600)
             setContent {
                 org.jetbrains.jewel.bridge.theme.SwingBridgeTheme {
-                    CreateComposeUI()
+                    WizardUIRoot(
+                        projectNameValue = projectNameValue,
+                        projectPathValue = projectPathValue,
+                        projectIdValue = projectIdValue,
+                        composeVersionValue = composeVersionValue,
+                        targetDesktop = targetDesktop,
+                        targetAndroid = targetAndroid,
+                        targetIOS = targetIOS,
+                        targetWeb = targetWeb,
+                        initGit = initGit,
+                        includeTests = includeTests,
+                        enableDevVersionsValue = enableDevVersions,
+                        builder = builder,
+                        revalidationTrigger = revalidationTrigger.intValue,
+                        mainPanel = mainPanel,
+                        onBrowseFolder = ::browseForFolder,
+                        onStateUpdate = { state, isValid ->
+                            syncStateFromUI(state)
+                            buttonManager.updateButtonState(isValid)
+                        }
+                    )
                 }
             }
         }
     }
-
-    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-    @Composable
-    private fun CreateComposeUI() {
-        val projectNameState = androidx.compose.foundation.text.input.rememberTextFieldState(projectNameValue)
-        val projectPathState = androidx.compose.foundation.text.input.rememberTextFieldState(projectPathValue)
-        val projectIdState = androidx.compose.foundation.text.input.rememberTextFieldState(projectIdValue)
-        
-        val settings = io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance()
-        val isInternalMode = com.intellij.openapi.application.ApplicationManager.getApplication().isInternal
-        
-        // Determine dev checkbox visibility and enableDevVersions FIRST
-        val devCheckboxVisible = isInternalMode || settings.devCheckboxVisibleByUser
-        val enableDevVersions = if (devCheckboxVisible && !settings.enableDevVersionsSetByUser) {
-            true
-        } else {
-            settings.enableDevVersions
-        }
-        
-        // Now get versions from the correct list based on enableDevVersions
-        val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
-        val cachedVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
-        
-        // Use saved value if it exists in current list, otherwise use first from list OR empty if cache is empty (will load from GitHub)
-        val initialComposeVersion = if (composeVersionValue.isNotEmpty() && cachedVersions?.contains(composeVersionValue) == true) {
-            // Saved value exists in current list - use it
-            composeVersionValue
-        } else if (cachedVersions != null) {
-            // Cache has versions - use first from list (synced with dropdown)
-            cachedVersions.firstOrNull() ?: ""
-        } else {
-            // Cache is empty - wait for GitHub loading (don't use DEFAULT_VERSION yet)
-            ""
-        }
-        
-        println("DEBUG ComposeWizardStep: devCheckboxVisible=$devCheckboxVisible, enableDevVersions=$enableDevVersions, composeVersionValue='$composeVersionValue', cachedVersions=${cachedVersions?.take(3)}, initialComposeVersion='$initialComposeVersion'")
-        
-        val state = rememberWizardState().apply {
-            projectName = projectNameValue
-            projectPath = projectPathValue
-            projectId = projectIdValue
-            composeVersion = initialComposeVersion
-            desktop = targetDesktop
-            android = targetAndroid
-            ios = targetIOS
-            web = targetWeb
-            git = initGit
-            tests = includeTests
-            this.devCheckboxVisible = devCheckboxVisible
-            this.enableDevVersions = enableDevVersions
-        }
-        
-        val projectNameInteractionSource = remember { MutableInteractionSource() }
-        val projectPathInteractionSource = remember { MutableInteractionSource() }
-        val projectIdInteractionSource = remember { MutableInteractionSource() }
-        
-        val projectNameFocused by projectNameInteractionSource.collectIsFocusedAsState()
-        val projectPathFocused by projectPathInteractionSource.collectIsFocusedAsState()
-        val projectIdFocused by projectIdInteractionSource.collectIsFocusedAsState()
-        
-        SetupValidation(
-            state = state, 
-            projectNameState = projectNameState, 
-            projectPathState = projectPathState, 
-            projectIdState = projectIdState, 
-            builder = builder,
-            revalidationTrigger = revalidationTrigger.intValue
-        ) { isValid ->
-            projectNameValue = state.projectName
-            projectPathValue = state.projectPath
-            projectIdValue = state.projectId
-            composeVersionValue = state.composeVersion
-            this@ComposeWizardStep.enableDevVersions = state.enableDevVersions
-            io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = state.enableDevVersions
-            targetDesktop = state.desktop
-            targetAndroid = state.android
-            targetIOS = state.ios
-            targetWeb = state.web
-            initGit = state.git
-            includeTests = state.tests
-            this@ComposeWizardStep.includeMaterial3 = state.includeMaterial3
-            this@ComposeWizardStep.includeMaterial3Adaptive = state.includeMaterial3Adaptive
-            this@ComposeWizardStep.includeNavigation = state.includeNavigation
-            this@ComposeWizardStep.includeNavigation3 = state.includeNavigation3
-            this@ComposeWizardStep.includeNavigationEvent = state.includeNavigationEvent
-            this@ComposeWizardStep.includeSavedState = state.includeSavedState
-            this@ComposeWizardStep.includeWindow = state.includeWindow
-            this@ComposeWizardStep.includeHotReload = state.includeHotReload
-            updateButtonState(isValid)
-        }
-        
-        SetupPathSynchronization(state, projectNameState, projectPathState, projectNameValue)
-        SetupAnalytics(state, projectIdValue)
-
-        WizardMainContent(
-            state = state,
-            projectNameState = projectNameState,
-            projectPathState = projectPathState,
-            projectIdState = projectIdState,
-            projectNameFocused = projectNameFocused,
-            projectPathFocused = projectPathFocused,
-            projectIdFocused = projectIdFocused,
-            projectNameInteractionSource = projectNameInteractionSource,
-            projectPathInteractionSource = projectPathInteractionSource,
-            projectIdInteractionSource = projectIdInteractionSource,
-            mainPanel = mainPanel,
-            onBrowseFolder = ::browseForFolder
-        )
+    
+    private fun syncStateFromUI(state: WizardState) {
+        projectNameValue = state.projectName
+        projectPathValue = state.projectPath
+        projectIdValue = state.projectId
+        composeVersionValue = state.composeVersion
+        enableDevVersions = state.enableDevVersions
+        io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions = state.enableDevVersions
+        targetDesktop = state.desktop
+        targetAndroid = state.android
+        targetIOS = state.ios
+        targetWeb = state.web
+        initGit = state.git
+        includeTests = state.tests
+        includeMaterial3 = state.includeMaterial3
+        includeMaterial3Adaptive = state.includeMaterial3Adaptive
+        includeNavigation = state.includeNavigation
+        includeNavigation3 = state.includeNavigation3
+        includeNavigationEvent = state.includeNavigationEvent
+        includeSavedState = state.includeSavedState
+        includeWindow = state.includeWindow
+        includeHotReload = state.includeHotReload
     }
     
     override fun getComponent(): JComponent = mainPanel
@@ -216,17 +125,14 @@ class ComposeWizardStep(
         return chosen?.path?.let { WizardPathUtils.collapsePath(it) }
     }
 
-    private var createButton: JButton? = null
-    private var lastButtonState: Boolean? = null
-
     override fun _init() {
         super._init()
         println("ComposeWizardStep: _init() called")
         SwingUtilities.invokeLater {
-            updateButtonText()
+            buttonManager.updateButtonText()
             val isValid = validate()
             println("ComposeWizardStep: _init() - validate returned $isValid")
-            updateButtonState(isValid)
+            buttonManager.updateButtonState(isValid)
         }
     }
     
@@ -236,43 +142,7 @@ class ComposeWizardStep(
         SwingUtilities.invokeLater {
             val isValid = validate()
             println("ComposeWizardStep: updateStep() - validate returned $isValid")
-            updateButtonState(isValid)
-        }
-    }
-
-    private fun updateButtonText() {
-        val comp = component
-        var parent = comp.parent
-        while (parent != null) {
-            val buttons = UIUtil.findComponentsOfType(parent as? JComponent ?: return, JButton::class.java)
-            for (button in buttons) {
-                if (button.text?.contains("Next") == true || button.text?.contains("OK") == true || button.text?.contains("Create") == true) {
-                    button.text = com.intellij.openapi.util.text.StringUtil.replace(
-                        IdeBundle.message("button.create"), "&", ""
-                    )
-                    button.mnemonic = KeyEvent.VK_C
-                    createButton = button
-                    return
-                }
-            }
-            parent = parent.parent
-        }
-    }
-
-    private fun updateButtonState(enabled: Boolean) {
-        if (lastButtonState == false && enabled == true) {
-            println("===== WARNING: Button transitioning from DISABLED to ENABLED =====")
-            println("ComposeWizardStep: This might be the problem - button should stay disabled!")
-            Thread.dumpStack()
-        }
-        println("ComposeWizardStep: updateButtonState called with enabled=$enabled (lastState=$lastButtonState)")
-        lastButtonState = enabled
-        SwingUtilities.invokeLater {
-            if (createButton == null) {
-                updateButtonText()
-            }
-            println("ComposeWizardStep: Setting createButton.isEnabled=$enabled, button=${createButton?.text}")
-            createButton?.isEnabled = enabled
+            buttonManager.updateButtonState(isValid)
         }
     }
 

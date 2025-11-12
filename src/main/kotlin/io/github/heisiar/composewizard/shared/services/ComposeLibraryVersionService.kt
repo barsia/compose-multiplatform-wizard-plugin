@@ -1,385 +1,52 @@
 package io.github.heisiar.composewizard.shared.services
 
-import com.intellij.openapi.diagnostic.Logger
-import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
-import java.net.HttpURLConnection
 
-/**
- * Service for fetching library versions from GitHub Web UI.
- * 
- * Uses HTML scraping from compose-multiplatform-core tag pages
- * because this repository doesn't provide GitHub Releases API access.
- */
 class ComposeLibraryVersionService {
-    
-    private val logger = Logger.getInstance(ComposeLibraryVersionService::class.java)
-    
-    companion object {
-        // compose-multiplatform-core Web UI URL for tags
-        private const val CORE_TAG_WEB_URL = "https://github.com/JetBrains/compose-multiplatform-core/releases/tag"
-        
-        // compose-multiplatform raw file URL for libs.versions.toml
-        private const val COMPOSE_REPO_RAW_URL = "https://raw.githubusercontent.com/JetBrains/compose-multiplatform"
-        
-        private const val TIMEOUT_MS = 5000
-        private const val CHECK_TIMEOUT_MS = 3000  // Faster timeout for existence checks
-        private const val MAX_FALLBACK_VERSIONS = 30  // Limit fallback depth (increased for Navigation fallback)
-        
-        // Regex patterns for all library types
-        // Captures full version including qualifiers (alpha, beta, rc) and dev suffix
-        private val LIFECYCLE_PATTERN = Regex("""lifecycle-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val MATERIAL3_PATTERN = Regex("""material3\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val MATERIAL3_ADAPTIVE_PATTERN = Regex("""adaptive-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val NAVIGATION_PATTERN = Regex("""navigation-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val NAVIGATION3_PATTERN = Regex("""navigation3-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val NAVIGATION_EVENT_PATTERN = Regex("""navigationevent-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val SAVED_STATE_PATTERN = Regex("""savedstate\*?:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        private val WINDOW_PATTERN = Regex("""window-core:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
-        
-        // Hot reload version pattern for libs.versions.toml
-        private val HOT_RELOAD_PATTERN = Regex("""compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"|\[versions][\s\S]*?compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"|\[libraries][\s\S]*?compose-hot-reload\s*=\s*\{\s*module\s*=\s*"[^"]+"\s*,\s*version\.ref\s*=\s*"compose-hot-reload"\s*\}""")
-    }
     
     data class FetchResult(
         val lifecycle: String? = null,
         val isRateLimited: Boolean = false,
-        val pageExists: Boolean = false  // true if tag page exists (200 OK)
+        val pageExists: Boolean = false
     )
     
     data class LibraryVersionsResult(
         val versions: Map<LibraryType, String> = emptyMap(),
         val isRateLimited: Boolean = false,
-        val pageExists: Boolean = false  // true if tag page exists (200 OK)
+        val pageExists: Boolean = false
     )
     
-    /**
-     * Fetch lifecycle version from GitHub Web UI for given Compose version.
-     * Returns null if not found or error occurred.
-     */
     fun fetchLifecycleFromWebUI(composeVersion: String): String? {
         return fetchLifecycleFromWebUIWithStatus(composeVersion).lifecycle
     }
     
-    /**
-     * Fetch lifecycle version from GitHub Web UI with rate limit status.
-     * Returns FetchResult with lifecycle (if found), rate limit flag, and page existence status.
-     */
     fun fetchLifecycleFromWebUIWithStatus(composeVersion: String): FetchResult {
-        return try {
-            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
-            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
-            
-            println("DEBUG: 🌐 Fetching lifecycle from GitHub Web UI: $composeVersion")
-            println("DEBUG: URL: $url")
-            
-            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
-            
-            val responseCode = connection.responseCode
-            println("DEBUG: Response code: $responseCode")
-            
-            if (responseCode == 403 || responseCode == 429) {
-                println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
-                return FetchResult(lifecycle = null, isRateLimited = true, pageExists = false)
-            }
-            
-            if (responseCode != 200) {
-                println("DEBUG: ❌ Tag page does not exist (code: $responseCode)")
-                return FetchResult(lifecycle = null, isRateLimited = false, pageExists = false)
-            }
-            
-            // Tag page exists! Parse libraries
-            val html = connection.inputStream.bufferedReader().use { it.readText() }
-            
-            // Parse lifecycle version from HTML
-            val match = LIFECYCLE_PATTERN.find(html)
-            val lifecycleVersion = match?.groups?.get(1)?.value
-            
-            if (lifecycleVersion != null) {
-                println("DEBUG: ✅ Found lifecycle: $lifecycleVersion (tag page exists)")
-            } else {
-                println("DEBUG: ⚠️ Tag page exists but lifecycle not published")
-            }
-            
-            FetchResult(lifecycle = lifecycleVersion, isRateLimited = false, pageExists = true)
-        } catch (e: Exception) {
-            logger.info("Failed to fetch lifecycle from Web UI for $composeVersion: ${e.message}")
-            FetchResult(lifecycle = null, isRateLimited = false, pageExists = false)
-        }
+        val result = ComposeLibraryVersionFetcher.fetchLifecycleFromWebUIWithStatus(composeVersion)
+        return FetchResult(
+            lifecycle = result.lifecycle,
+            isRateLimited = result.isRateLimited,
+            pageExists = result.pageExists
+        )
     }
     
-    /**
-     * Fetch all library versions from GitHub Web UI for given Compose version.
-     * Returns LibraryVersionsResult with versions map and rate limit status.
-     */
     fun fetchLibraryVersionsFromWebUI(composeVersion: String): LibraryVersionsResult {
-        return try {
-            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
-            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
-            
-            println("DEBUG: 🌐 Fetching library versions from GitHub Web UI: $composeVersion")
-            println("DEBUG: 🔗 URL: $url")
-            
-            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
-            
-            val responseCode = connection.responseCode
-            
-            if (responseCode == 403 || responseCode == 429) {
-                println("DEBUG: ⚠️ Rate limited on GitHub Web UI (code: $responseCode)")
-                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = true, pageExists = false)
-            }
-            
-            if (responseCode != 200) {
-                println("DEBUG: ❌ Tag page does not exist for $composeVersion (HTTP $responseCode)")
-                return LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
-            }
-            
-            // Tag page exists! Parse libraries
-            val html = connection.inputStream.bufferedReader().use { it.readText() }
-            
-            // Parse all library versions from HTML
-            val versions = mutableMapOf<LibraryType, String>()
-            
-            LIFECYCLE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.LIFECYCLE] = it
-                println("DEBUG: ✅ Found lifecycle: $it")
-            }
-            
-            MATERIAL3_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.MATERIAL3] = it
-                println("DEBUG: ✅ Found material3: $it")
-            }
-            
-            MATERIAL3_ADAPTIVE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.MATERIAL3_ADAPTIVE] = it
-                println("DEBUG: ✅ Found material3-adaptive: $it")
-            }
-            
-            NAVIGATION_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.NAVIGATION] = it
-                println("DEBUG: ✅ Found navigation: $it")
-            }
-            
-            NAVIGATION3_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.NAVIGATION3] = it
-                println("DEBUG: ✅ Found navigation3: $it (from GitHub for $composeVersion)")
-            } ?: run {
-                println("DEBUG: ⚠️ Navigation3 NOT found in GitHub HTML for $composeVersion")
-            }
-            
-            NAVIGATION_EVENT_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.NAVIGATION_EVENT] = it
-                println("DEBUG: ✅ Found navigationEvent: $it")
-            }
-            
-            SAVED_STATE_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.SAVED_STATE] = it
-                println("DEBUG: ✅ Found savedState: $it")
-            }
-            
-            WINDOW_PATTERN.find(html)?.groups?.get(1)?.value?.let {
-                versions[LibraryType.WINDOW] = it
-                println("DEBUG: ✅ Found window: $it")
-            }
-            
-            println("DEBUG: Parsed ${versions.size} library versions from tag page (page exists)")
-            
-            LibraryVersionsResult(versions = versions, isRateLimited = false, pageExists = true)
-        } catch (e: Exception) {
-            logger.info("Failed to fetch library versions from Web UI for $composeVersion: ${e.message}")
-            LibraryVersionsResult(versions = emptyMap(), isRateLimited = false, pageExists = false)
-        }
+        val result = ComposeLibraryVersionFetcher.fetchLibraryVersionsFromWebUI(composeVersion)
+        return LibraryVersionsResult(
+            versions = result.versions,
+            isRateLimited = result.isRateLimited,
+            pageExists = result.pageExists
+        )
     }
     
-    /**
-     * Generate fallback versions for given base Compose version.
-     * 
-     * For "1.10.0-beta02" generates:
-     * - 1.10.0-beta01
-     * - 1.10.0-alpha08, alpha07, ..., alpha01
-     * - 1.9.3, 1.9.2, 1.9.1, ...
-     * - 1.8.0, 1.7.1, ...
-     * 
-     * For "1.9.0-rc02" generates:
-     * - 1.9.0-rc01
-     * - 1.9.0-beta08, beta07, ..., beta01
-     * - 1.9.0-alpha08, alpha07, ..., alpha01
-     * - 1.8.3, 1.8.2, ...
-     */
     fun generateFallbackVersions(baseVersion: String): List<String> {
-        val versions = mutableListOf<String>()
-        
-        // Start with known Bundle versions (fast checks first!), excluding dev versions
-        versions.addAll(ComposeVersions.LIBRARY_BUNDLES.keys.filter { !it.contains("+dev") })
-        
-        val parts = baseVersion.split(".")
-        
-        if (parts.size < 3) return versions.distinct().take(MAX_FALLBACK_VERSIONS)
-        
-        val major = parts[0].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
-        val minor = parts[1].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
-        val patchWithQualifier = parts[2]
-        
-        // Extract patch number and qualifier (e.g., "0-beta02" → patch=0, qualifier="beta02")
-        val patchParts = patchWithQualifier.split("-")
-        val patch = patchParts[0].toIntOrNull() ?: return versions.distinct().take(MAX_FALLBACK_VERSIONS)
-        val qualifier = if (patchParts.size > 1) patchParts[1] else ""
-        
-        // If has qualifier (beta/alpha), add decreasing qualifiers for same patch
-        if (qualifier.isNotEmpty()) {
-            val (qualifierType, qualifierNum) = parseQualifier(qualifier)
-            
-            if (qualifierType.isNotEmpty() && qualifierNum > 0) {
-                // Add previous qualifiers of same type (beta02 → beta01, alpha05 → alpha04, ...)
-                for (i in (qualifierNum - 1) downTo 1) {
-                    versions.add("$major.$minor.$patch-$qualifierType${i.toString().padStart(2, '0')}")
-                }
-                
-                // If rc, add betas and alphas for same patch
-                if (qualifierType == "rc") {
-                    for (i in 3 downTo 1) {
-                        versions.add("$major.$minor.$patch-beta${i.toString().padStart(2, '0')}")
-                    }
-                    for (i in 3 downTo 1) {
-                        versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
-                    }
-                }
-                
-                // If beta, add alphas for same patch
-                if (qualifierType == "beta") {
-                    for (i in 3 downTo 1) {
-                        versions.add("$major.$minor.$patch-alpha${i.toString().padStart(2, '0')}")
-                    }
-                }
-            }
-        }
-        
-        // Add ONLY previous patch versions (don't generate "future" versions!)
-        if (patch > 0) {
-            for (p in (patch - 1) downTo maxOf(0, patch - 2)) {  // Max 2 previous patches
-                // Add stable version first
-                versions.add("$major.$minor.$p")
-                // Add ONLY PREVIOUS qualifiers (don't generate beta08 if we're in beta02!)
-                for (q in listOf("rc", "beta", "alpha")) {
-                    for (num in 3 downTo 1) {  // Max 3 of each qualifier type
-                        versions.add("$major.$minor.$p-$q${num.toString().padStart(2, '0')}")
-                    }
-                }
-            }
-        }
-        
-        // Add previous minor versions
-        for (m in (minor - 1) downTo 0) {
-            // Add few most recent patch versions for each minor
-            for (p in 3 downTo 0) {
-                versions.add("$major.$m.$p")
-            }
-        }
-        
-        return versions.distinct().take(MAX_FALLBACK_VERSIONS)
+        return ComposeFallbackVersionGenerator.generateFallbackVersions(baseVersion)
     }
     
-    private fun parseQualifier(qualifier: String): Pair<String, Int> {
-        val match = Regex("""(beta|alpha|rc)(\d+)""").find(qualifier)
-        return if (match != null) {
-            val type = match.groupValues[1]
-            val num = match.groupValues[2].toIntOrNull() ?: 0
-            type to num
-        } else {
-            "" to 0
-        }
-    }
-    
-    /**
-     * Fetch hot reload version from libs.versions.toml in compose-multiplatform repository.
-     * This is for Compose versions >= 10.0.0-beta01 where hot reload is bundled.
-     * 
-     * Example URL: https://raw.githubusercontent.com/JetBrains/compose-multiplatform/v1.10.0-beta01+dev3224/gradle-plugins/gradle/libs.versions.toml
-     * 
-     * Note: URL encoding is handled automatically by URI
-     * 
-     * Returns null if not found or error occurred.
-     */
     fun fetchHotReloadVersion(composeVersion: String): String? {
-        return try {
-            // URL encode the version to handle special characters like +
-            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
-            val url = "$COMPOSE_REPO_RAW_URL/v$encodedVersion/gradle-plugins/gradle/libs.versions.toml"
-            
-            println("DEBUG: 🌐 Fetching hot reload version from libs.versions.toml for Compose $composeVersion")
-            println("DEBUG: URL: $url")
-            
-            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
-            
-            val responseCode = connection.responseCode
-            println("DEBUG: Response code: $responseCode")
-            
-            if (responseCode != 200) {
-                println("DEBUG: ❌ libs.versions.toml not found for version $composeVersion")
-                return null
-            }
-            
-            val tomlContent = connection.inputStream.bufferedReader().use { it.readText() }
-            println("DEBUG: 📄 TOML content (first 500 chars): ${tomlContent.take(500)}")
-            
-            // Parse hot reload version from TOML
-            // Format: plugin-hot-reload = { prefer = "1.0.0-rc02" }
-            val preferMatch = Regex("""plugin-hot-reload\s*=\s*\{\s*prefer\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"\s*\}""").find(tomlContent)
-            if (preferMatch != null) {
-                val version = preferMatch.groupValues[1]
-                println("DEBUG: ✅ Found hot reload version (prefer): $version")
-                return version
-            }
-            
-            // Fallback: try old format compose-hot-reload = "1.0.0-rc03"
-            val directMatch = Regex("""compose-hot-reload\s*=\s*"([\d.]+(?:-[\w\d.]+)?)"""").find(tomlContent)
-            if (directMatch != null) {
-                val version = directMatch.groupValues[1]
-                println("DEBUG: ✅ Found hot reload version (direct): $version")
-                return version
-            }
-            
-            println("DEBUG: ⚠️ Hot reload version not found in libs.versions.toml")
-            null
-        } catch (e: Exception) {
-            logger.info("Failed to fetch hot reload version from libs.versions.toml for $composeVersion: ${e.message}")
-            null
-        }
+        return ComposeHotReloadFetcher.fetchHotReloadVersion(composeVersion)
     }
     
-    /**
-     * Check if a Compose version has a tag page on GitHub.
-     * Returns true if the page exists (200 OK), false otherwise.
-     * Uses HEAD request for efficiency.
-     */
     fun hasReleasePage(composeVersion: String): Boolean {
-        return try {
-            val encodedVersion = java.net.URLEncoder.encode(composeVersion, "UTF-8")
-            val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
-            
-            val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.requestMethod = "HEAD"  // Only check headers, don't download content
-            connection.connectTimeout = CHECK_TIMEOUT_MS
-            connection.readTimeout = CHECK_TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
-            connection.instanceFollowRedirects = true
-            
-            val responseCode = connection.responseCode
-            connection.disconnect()
-            
-            responseCode == 200
-        } catch (e: Exception) {
-            logger.debug("Failed to check tag page for $composeVersion: ${e.message}")
-            false
-        }
+        return ComposeHotReloadFetcher.hasReleasePage(composeVersion)
     }
 }
