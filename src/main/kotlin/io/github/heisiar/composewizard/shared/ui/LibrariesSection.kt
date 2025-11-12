@@ -2,12 +2,8 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -24,8 +20,6 @@ import io.github.heisiar.composewizard.shared.services.NavigationEventVersionSer
 import io.github.heisiar.composewizard.shared.services.NavigationVersionService
 import io.github.heisiar.composewizard.shared.services.SavedStateVersionService
 import io.github.heisiar.composewizard.shared.services.WindowVersionService
-import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.component.Text
 
 @Composable
 fun LibrariesSection(
@@ -76,10 +70,6 @@ fun LibrariesSection(
     }
     
     Column(modifier = modifier) {
-        Text("Libraries", style = JewelTheme.defaultTextStyle)
-        
-        Spacer(modifier = Modifier.height(LIBRARIES_SECTION_SPACING))
-        
         if (state.composeVersion.isEmpty()) {
             LibrariesLoadingPlaceholder()
         } else {
@@ -107,25 +97,12 @@ fun LibrariesSection(
 
 @Composable
 private fun LibrariesLoadingPlaceholder() {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
     ) {
-        Column(
-            modifier = Modifier.weight(1f).widthIn(min = 380.dp),
-            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
-        ) {
-            repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
-                SkeletonText()
-            }
-        }
-        Column(
-            modifier = Modifier.weight(1f).widthIn(min = 380.dp),
-            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
-        ) {
-            repeat(RIGHT_COLUMN_BASE_LIBRARIES_COUNT) {
-                SkeletonText()
-            }
+        repeat(TOTAL_LIBRARIES_COUNT) {
+            SkeletonText()
         }
     }
 }
@@ -149,144 +126,133 @@ private fun LibrariesContent(
     shouldShowNavigation: Boolean,
     shouldShowNavigation3AndNavigationEvent: Boolean
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
     ) {
-        Column(
-            modifier = Modifier.weight(1f).widthIn(min = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
-        ) {
+        LibraryVersionDropdown(
+            libraryType = LibraryType.LIFECYCLE,
+            label = "Lifecycle",
+            currentVersion = librariesState.libraryVersions[LibraryType.LIFECYCLE] ?: "",
+            cache = cache,
+            state = state,
+            librariesState = librariesState,
+            isPinnedMap = isPinnedMap,
+            versionService = lifecycleVersionService,
+            enabled = false,
+            onVersionChange = {}
+        )
+        
+        LibraryVersionDropdown(
+            libraryType = LibraryType.MATERIAL3,
+            label = "Material3",
+            currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3] ?: "",
+            cache = cache,
+            state = state,
+            librariesState = librariesState,
+            isPinnedMap = isPinnedMap,
+            versionService = material3VersionService,
+            checked = state.includeMaterial3,
+            onVersionChange = { state.includeMaterial3 = !state.includeMaterial3 }
+        )
+        
+        LibraryVersionDropdown(
+            libraryType = LibraryType.MATERIAL3_ADAPTIVE,
+            label = "Material3 Adaptive",
+            currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3_ADAPTIVE] ?: "",
+            cache = cache,
+            state = state,
+            librariesState = librariesState,
+            isPinnedMap = isPinnedMap,
+            versionService = material3AdaptiveVersionService,
+            checked = state.includeMaterial3Adaptive,
+            onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
+        )
+        
+        if (shouldShowNavigation) {
             LibraryVersionDropdown(
-                libraryType = LibraryType.LIFECYCLE,
-                label = "Lifecycle",
-                currentVersion = librariesState.libraryVersions[LibraryType.LIFECYCLE] ?: "",
+                libraryType = LibraryType.NAVIGATION,
+                label = "Navigation",
+                currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION] ?: "",
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
                 isPinnedMap = isPinnedMap,
-                versionService = lifecycleVersionService,
-                enabled = false,
-                onVersionChange = {}
+                versionService = navigationVersionService,
+                checked = state.includeNavigation,
+                onVersionChange = { state.includeNavigation = !state.includeNavigation }
             )
-            
-            LibraryVersionDropdown(
-                libraryType = LibraryType.MATERIAL3,
-                label = "Material3",
-                currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3] ?: "",
-                cache = cache,
-                state = state,
-                librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
-                versionService = material3VersionService,
-                checked = state.includeMaterial3,
-                onVersionChange = { state.includeMaterial3 = !state.includeMaterial3 }
-            )
-            
-            LibraryVersionDropdown(
-                libraryType = LibraryType.MATERIAL3_ADAPTIVE,
-                label = "M3 Adaptive",
-                currentVersion = librariesState.libraryVersions[LibraryType.MATERIAL3_ADAPTIVE] ?: "",
-                cache = cache,
-                state = state,
-                librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
-                versionService = material3AdaptiveVersionService,
-                checked = state.includeMaterial3Adaptive,
-                onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
-            )
-            
-            if (shouldShowNavigation) {
-                LibraryVersionDropdown(
-                    libraryType = LibraryType.NAVIGATION,
-                    label = "Navigation",
-                    currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION] ?: "",
-                    cache = cache,
-                    state = state,
-                    librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
-                    versionService = navigationVersionService,
-                    checked = state.includeNavigation,
-                    onVersionChange = { state.includeNavigation = !state.includeNavigation }
-                )
-            }
-            
-            if (shouldShowNavigation3AndNavigationEvent) {
-                LibraryVersionDropdown(
-                    libraryType = LibraryType.NAVIGATION_EVENT,
-                    label = "NavigationEvent",
-                    currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION_EVENT] ?: "",
-                    cache = cache,
-                    state = state,
-                    librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
-                    versionService = navigationEventVersionService,
-                    checked = state.includeNavigationEvent,
-                    onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
-                )
-            }
         }
         
-        Column(
-            modifier = Modifier.weight(1f).widthIn(min = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
-        ) {
-            
-            if (shouldShowNavigation3AndNavigationEvent) {
-                LibraryVersionDropdown(
-                    libraryType = LibraryType.NAVIGATION3,
-                    label = "Navigation3",
-                    currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION3] ?: "",
-                    cache = cache,
-                    state = state,
-                    librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
-                    versionService = navigation3VersionService,
-                    checked = state.includeNavigation3,
-                    onVersionChange = { state.includeNavigation3 = !state.includeNavigation3 }
-                )
-            }
-            
+        if (shouldShowNavigation3AndNavigationEvent) {
             LibraryVersionDropdown(
-                libraryType = LibraryType.WINDOW,
-                label = "Window",
-                currentVersion = librariesState.libraryVersions[LibraryType.WINDOW] ?: "",
+                libraryType = LibraryType.NAVIGATION_EVENT,
+                label = "NavigationEvent",
+                currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION_EVENT] ?: "",
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
                 isPinnedMap = isPinnedMap,
-                versionService = windowVersionService,
-                checked = state.includeWindow,
-                onVersionChange = { state.includeWindow = !state.includeWindow }
+                versionService = navigationEventVersionService,
+                checked = state.includeNavigationEvent,
+                onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
             )
-            
+        }
+        
+        if (shouldShowNavigation3AndNavigationEvent) {
             LibraryVersionDropdown(
-                libraryType = LibraryType.SAVED_STATE,
-                label = "SavedState",
-                currentVersion = librariesState.libraryVersions[LibraryType.SAVED_STATE] ?: "",
+                libraryType = LibraryType.NAVIGATION3,
+                label = "Navigation3",
+                currentVersion = librariesState.libraryVersions[LibraryType.NAVIGATION3] ?: "",
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
                 isPinnedMap = isPinnedMap,
-                versionService = savedStateVersionService,
-                checked = state.includeSavedState,
-                onVersionChange = { state.includeSavedState = !state.includeSavedState }
+                versionService = navigation3VersionService,
+                checked = state.includeNavigation3,
+                onVersionChange = { state.includeNavigation3 = !state.includeNavigation3 }
             )
-            
-            if (shouldShowOptionalHotReload) {
-                val hotReloadVersion = state.hotReloadVersion ?: ""
-                CheckboxOption(
-                    checked = state.includeHotReload,
-                    onToggle = { state.includeHotReload = !state.includeHotReload },
-                    label = "Hot Reload${if (hotReloadVersion.isNotEmpty()) " $hotReloadVersion" else ""}"
-                )
-            }
-            
-            if (shouldShowBundledHotReload) {
-                BundledHotReloadItem(
-                    version = librariesState.libraryVersions[LibraryType.HOT_RELOAD] ?: ""
-                )
-            }
+        }
+        
+        LibraryVersionDropdown(
+            libraryType = LibraryType.WINDOW,
+            label = "Window",
+            currentVersion = librariesState.libraryVersions[LibraryType.WINDOW] ?: "",
+            cache = cache,
+            state = state,
+            librariesState = librariesState,
+            isPinnedMap = isPinnedMap,
+            versionService = windowVersionService,
+            checked = state.includeWindow,
+            onVersionChange = { state.includeWindow = !state.includeWindow }
+        )
+        
+        LibraryVersionDropdown(
+            libraryType = LibraryType.SAVED_STATE,
+            label = "SavedState",
+            currentVersion = librariesState.libraryVersions[LibraryType.SAVED_STATE] ?: "",
+            cache = cache,
+            state = state,
+            librariesState = librariesState,
+            isPinnedMap = isPinnedMap,
+            versionService = savedStateVersionService,
+            checked = state.includeSavedState,
+            onVersionChange = { state.includeSavedState = !state.includeSavedState }
+        )
+        
+        if (shouldShowOptionalHotReload) {
+            val hotReloadVersion = state.hotReloadVersion ?: ""
+            CheckboxOption(
+                checked = state.includeHotReload,
+                onToggle = { state.includeHotReload = !state.includeHotReload },
+                label = "Hot Reload${if (hotReloadVersion.isNotEmpty()) " $hotReloadVersion" else ""}"
+            )
+        }
+        
+        if (shouldShowBundledHotReload) {
+            BundledHotReloadItem(
+                version = librariesState.libraryVersions[LibraryType.HOT_RELOAD] ?: ""
+            )
         }
     }
 }

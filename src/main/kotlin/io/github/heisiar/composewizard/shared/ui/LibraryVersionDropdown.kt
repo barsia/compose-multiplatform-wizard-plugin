@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import io.github.heisiar.composewizard.shared.LibraryType
@@ -95,8 +98,6 @@ fun LibraryVersionDropdown(
                     versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.NavigationEventVersionService ->
                     versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
-                is io.github.heisiar.composewizard.shared.services.HotReloadVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
                 else -> listOf(originalVersion)
             }
         } else {
@@ -111,81 +112,123 @@ fun LibraryVersionDropdown(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(28.dp),
+            .height(26.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (enabled) {
-            org.jetbrains.jewel.ui.component.CheckboxRow(
-                checked = checked,
-                onCheckedChange = { onVersionChange(selectedVersion) },
-                modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
-            ) {
-                LibraryLabelWithIcon(label, libraryType, librariesState, isPinnedMap)
-            }
-        } else {
-            Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
+        Box(modifier = Modifier.width(180.dp)) {
+            if (enabled) {
                 org.jetbrains.jewel.ui.component.CheckboxRow(
-                    checked = true,
-                    onCheckedChange = { },
-                    enabled = false
+                    checked = checked,
+                    onCheckedChange = { onVersionChange(selectedVersion) },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
                 ) {
                     LibraryLabelWithIcon(label, libraryType, librariesState, isPinnedMap)
+                }
+            } else {
+                Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
+                    org.jetbrains.jewel.ui.component.CheckboxRow(
+                        checked = true,
+                        onCheckedChange = { },
+                        enabled = false
+                    ) {
+                        LibraryLabelWithIcon(label, libraryType, librariesState, isPinnedMap)
+                    }
                 }
             }
         }
         
         Spacer(modifier = Modifier.width(8.dp))
         
-        Box(modifier = Modifier.weight(1f)) {
-            Tooltip(
-                tooltip = { Text(selectedVersion) },
-                tooltipPlacement = TooltipPlacement.ComponentRect(
-                    anchor = Alignment.BottomCenter,
-                    alignment = Alignment.BottomCenter,
-                    offset = DpOffset(0.dp, 4.dp)
-                )
-            ) {
-                org.jetbrains.jewel.ui.component.ListComboBox(
-                    items = filteredVersions,
-                    selectedIndex = selectedIndex,
-                    onSelectedItemChange = { index ->
-                        if (index in filteredVersions.indices) {
-                            val newVersion = filteredVersions[index]
-                            
-                            when (libraryType) {
-                                LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                                LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                                LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                                LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                                LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                                LibraryType.WINDOW -> state.windowVersion = newVersion
-                                LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                                LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                                LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+        Box(
+            modifier = Modifier.weight(1f)
+        ) {
+            if (filteredVersions.size > 1) {
+                val comboBox = @Composable {
+                    org.jetbrains.jewel.ui.component.ListComboBox(
+                        items = filteredVersions,
+                        selectedIndex = selectedIndex,
+                        onSelectedItemChange = { index ->
+                            if (index in filteredVersions.indices) {
+                                val newVersion = filteredVersions[index]
+                                
+                                when (libraryType) {
+                                    LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
+                                    LibraryType.MATERIAL3 -> state.material3Version = newVersion
+                                    LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
+                                    LibraryType.NAVIGATION -> state.navigationVersion = newVersion
+                                    LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
+                                    LibraryType.WINDOW -> state.windowVersion = newVersion
+                                    LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
+                                    LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
+                                    LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                                }
+                                
+                                if (newVersion == originalVersion) {
+                                    librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
+                                } else {
+                                    librariesState.libraryFromBundle[libraryType] = false
+                                }
+                                
+                                onVersionChange(newVersion)
                             }
-                            
-                            if (newVersion == originalVersion) {
-                                librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
-                            } else {
-                                librariesState.libraryFromBundle[libraryType] = false
-                            }
-                            
-                            onVersionChange(newVersion)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+                        maxPopupHeight = 280.dp,
+                        style = textFieldStyleComboBox()
+                    )
+                }
+                
+                val isLongVersion = selectedVersion.length > 25
+                if (isLongVersion) {
+                    Tooltip(
+                        tooltip = { Text(selectedVersion) },
+                        tooltipPlacement = TooltipPlacement.ComponentRect(
+                            anchor = Alignment.BottomCenter,
+                            alignment = Alignment.BottomCenter,
+                            offset = DpOffset(0.dp, 4.dp)
+                        )
+                    ) {
+                        comboBox()
+                    }
+                } else {
+                    comboBox()
+                }
+            } else {
+                var isTextTruncated by remember { mutableStateOf(false) }
+                
+                val textContent = @Composable {
+                    Text(
+                        text = selectedVersion,
+                        style = JewelTheme.defaultTextStyle,
+                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isTextTruncated = textLayoutResult.hasVisualOverflow
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(min = 120.dp, max = 200.dp)
-                        .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
-                    maxPopupHeight = 280.dp,
-                    style = textFieldStyleComboBox()
-                )
+                    )
+                }
+                
+                if (isTextTruncated) {
+                    Tooltip(
+                        tooltip = { Text(selectedVersion) }
+                    ) {
+                        textContent()
+                    }
+                } else {
+                    textContent()
+                }
             }
         }
         
         Spacer(modifier = Modifier.width(4.dp))
         
-        LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+        Box(modifier = Modifier.size(16.dp)) {
+            LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+        }
     }
 }
 
@@ -197,24 +240,31 @@ private fun LibraryLabelWithIcon(
     librariesState: LibrariesState,
     isPinnedMap: Map<LibraryType, Boolean>
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = label,
-            style = JewelTheme.defaultTextStyle,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            maxLines = 1
-        )
-        
-        Spacer(modifier = Modifier.width(4.dp))
-        
-        Box(
-            modifier = Modifier.size(16.dp),
-            contentAlignment = Alignment.Center
+    Tooltip(
+        tooltip = { Text(label) }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val isFromBundle = librariesState.libraryFromBundle[libraryType] ?: false
-            if (isFromBundle) {
-                val isPinned = isPinnedMap[libraryType] ?: false
-                PinnedVersionIndicator(isPinned = isPinned)
+            Text(
+                text = label,
+                style = JewelTheme.defaultTextStyle,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                maxLines = 1,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            
+            Spacer(modifier = Modifier.width(4.dp))
+            
+            Box(
+                modifier = Modifier.size(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val isFromBundle = librariesState.libraryFromBundle[libraryType] ?: false
+                if (isFromBundle) {
+                    val isPinned = isPinnedMap[libraryType] ?: false
+                    PinnedVersionIndicator(isPinned = isPinned)
+                }
             }
         }
     }

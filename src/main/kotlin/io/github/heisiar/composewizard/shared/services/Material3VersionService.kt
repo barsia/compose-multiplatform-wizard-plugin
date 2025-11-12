@@ -84,29 +84,50 @@ class Material3VersionService {
     ): List<String> {
         val currentParsed = ComposeVersionComparator.parse(currentVersion)
         
-        // Filter: stable versions only (no qualifiers), and < currentVersion
-        val filtered = allVersions
-            .filter { version ->
-                // No dev suffix
-                if (version.contains("+dev")) return@filter false
-                
-                // No alpha/beta/rc
-                if (version.contains("-alpha") || version.contains("-beta") || version.contains("-rc")) {
-                    return@filter false
-                }
-                
-                // Must be < currentVersion semantically
-                val parsed = ComposeVersionComparator.parse(version)
-                parsed < currentParsed
-            }
+        // Filter out only +dev versions from Maven
+        val publishedVersions = allVersions.filter { version ->
+            !version.contains("+dev", ignoreCase = true)
+        }
         
-        // Sort descending and take top N
-        val sorted = filtered.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-        val limited = sorted.take(maxCount)
+        // Try to find stable versions (no alpha/beta/rc) < currentVersion
+        val stableVersions = publishedVersions.filter { version ->
+            !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
+        }.filter { version ->
+            val parsed = ComposeVersionComparator.parse(version)
+            parsed < currentParsed
+        }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            .take(maxCount)
         
+        if (stableVersions.isNotEmpty()) {
+            return listOf(currentVersion) + stableVersions
+        }
         
-        // Return with currentVersion first
-        return listOf(currentVersion) + limited
+        // No stable versions found - find best unstable version
+        val bestUnstable = findBestPublishedVersion(publishedVersions)
+        
+        // If best unstable is different from current, show both
+        if (bestUnstable != null && bestUnstable != currentVersion) {
+            return listOf(currentVersion, bestUnstable)
+        }
+        
+        // Otherwise show only current version
+        return listOf(currentVersion)
+    }
+    
+    private fun findBestPublishedVersion(versions: List<String>): String? {
+        if (versions.isEmpty()) return null
+        
+        val rc = versions.filter { it.contains("-rc") }
+            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
+        if (rc != null) return rc
+        
+        val beta = versions.filter { it.contains("-beta") }
+            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
+        if (beta != null) return beta
+        
+        val alpha = versions.filter { it.contains("-alpha") }
+            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
+        return alpha
     }
 }
 

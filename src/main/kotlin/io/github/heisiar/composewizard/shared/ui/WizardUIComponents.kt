@@ -219,7 +219,7 @@ fun PinnedVersionIndicator(
     isPinned: Boolean = false
 ) {
     val tooltipText = if (isPinned) {
-        "This version was not published with the selected Compose release, but you can choose an available version in the dropdown"
+        "This version was not published with the selected Compose release"
     } else {
         "Could not retrieve version from GitHub"
     }
