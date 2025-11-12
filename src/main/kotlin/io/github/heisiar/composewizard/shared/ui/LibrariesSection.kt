@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -217,7 +218,7 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
-                SkeletonText()
+                LibrarySkeletonItem()
             }
         }
         
@@ -226,8 +227,43 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(RIGHT_COLUMN_BASE_LIBRARIES_COUNT) {
-                SkeletonText()
+                LibrarySkeletonItem()
             }
+        }
+    }
+}
+
+@Composable
+private fun LibrarySkeletonItem() {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Checkbox skeleton
+        SkeletonText(width = 16.dp, height = 16.dp)
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        // Label + Dropdown skeleton
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            // Label skeleton
+            SkeletonText(width = 80.dp, height = 16.dp)
+            
+            // Dropdown skeleton
+            SkeletonText(height = 24.dp)
+        }
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        // Copy icon skeleton
+        Box(
+            modifier = Modifier.size(16.dp).height(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            SkeletonText(width = 16.dp, height = 16.dp)
         }
     }
 }

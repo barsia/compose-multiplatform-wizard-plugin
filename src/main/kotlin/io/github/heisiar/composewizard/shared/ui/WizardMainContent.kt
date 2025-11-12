@@ -2,7 +2,6 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -155,27 +154,4 @@ fun WizardMainContent(
 
         WizardFooter(state = state)
     }
-}
-
-@Composable
-private fun HorizontalDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                    colors = listOf(
-                        androidx.compose.ui.graphics.Color.Transparent,
-                        JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
-                        JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
-                        JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
-                        JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
-                        androidx.compose.ui.graphics.Color.Transparent
-                    ),
-                    startX = 0f,
-                    endX = Float.POSITIVE_INFINITY
-                )
-            )
-    )
 }

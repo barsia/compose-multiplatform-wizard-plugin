@@ -32,7 +32,7 @@ fun WizardFooter(state: WizardState) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(20.dp)
             .padding(horizontal = if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
     ) {
         Text(

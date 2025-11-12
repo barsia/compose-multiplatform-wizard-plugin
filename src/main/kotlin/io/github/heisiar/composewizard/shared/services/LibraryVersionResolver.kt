@@ -101,12 +101,8 @@ class LibraryVersionResolver(
                 }
                 
                 if (type == LibraryType.HOT_RELOAD) {
-                    val baseVersion = composeVersion.split("+").first().split("-").first()
-                    val parts = baseVersion.split(".")
-                    val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                    val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                    
-                    if (major > 1 || (major == 1 && minor >= 10)) {
+                    // Starting from 1.10.0-beta01, Hot Reload is bundled with Compose
+                    if (!VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
                         val hotReloadVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
                         if (hotReloadVersion != null) {
                             cacheLibrary(composeVersion, type, hotReloadVersion, isFromFallback = true)
@@ -116,6 +112,7 @@ class LibraryVersionResolver(
                             return@launch
                         }
                     } else {
+                        // For versions < 1.10.0-beta01, use standalone Hot Reload
                         cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
                         return@launch
                     }
