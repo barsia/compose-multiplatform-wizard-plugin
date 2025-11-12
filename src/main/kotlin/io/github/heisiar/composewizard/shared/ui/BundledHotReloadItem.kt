@@ -21,7 +21,7 @@ import org.jetbrains.jewel.ui.component.Tooltip
 @Composable
 fun BundledHotReloadItem(version: String) {
     if (version.isEmpty()) {
-        SkeletonText(width = 180.dp)
+        SkeletonText()
         return
     }
     
@@ -31,7 +31,7 @@ fun BundledHotReloadItem(version: String) {
             .height(28.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
+        Tooltip(tooltip = { Text("Bundled in Compose and cannot be disabled") }) {
             org.jetbrains.jewel.ui.component.CheckboxRow(
                 checked = true,
                 onCheckedChange = { },

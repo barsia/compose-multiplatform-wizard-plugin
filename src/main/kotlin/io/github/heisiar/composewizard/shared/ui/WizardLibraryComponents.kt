@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -139,7 +140,7 @@ fun BackgroundPlatformIcon(
 @Composable
 fun SkeletonText(
     modifier: Modifier = Modifier,
-    width: Dp = 80.dp,
+    width: Dp? = null,
     height: Dp = 24.dp
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
@@ -161,7 +162,7 @@ fun SkeletonText(
     
     Box(
         modifier = modifier
-            .width(width)
+            .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .height(height)
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(4.dp))

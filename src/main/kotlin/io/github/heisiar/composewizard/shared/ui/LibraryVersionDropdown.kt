@@ -39,7 +39,7 @@ fun LibraryVersionDropdown(
     onVersionChange: (String) -> Unit
 ) {
     if (currentVersion.isEmpty()) {
-        SkeletonText(width = 180.dp)
+        SkeletonText()
         return
     }
     

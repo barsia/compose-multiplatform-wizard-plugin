@@ -116,7 +116,7 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
-                SkeletonText(width = 180.dp)
+                SkeletonText()
             }
         }
         Column(
@@ -124,7 +124,7 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(RIGHT_COLUMN_BASE_LIBRARIES_COUNT) {
-                SkeletonText(width = 180.dp)
+                SkeletonText()
             }
         }
     }
