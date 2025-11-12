@@ -64,7 +64,9 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
             material3AdaptiveVersionService, navigationVersionService, navigation3VersionService,
             windowVersionService, savedStateVersionService, navigationEventVersionService,
             hotReloadVersionService
-        )
+        ) {
+            coreCache.notifyCacheInvalidated()
+        }
         cacheManager = LibraryCacheManager(persistentState)
         versionResolver = LibraryVersionResolver(scope, cacheManager, libraryVersionService)
     }
@@ -245,7 +247,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     fun isResolvingLifecycle(composeVersion: String): Boolean {
-        return versionResolver.isResolvingLifecycle(composeVersion)
+        return versionResolver.isResolvingLibrary(composeVersion, LibraryType.LIFECYCLE)
     }
     
     fun isLifecycleFallback(composeVersion: String): Boolean {

@@ -70,46 +70,63 @@ class NavigationVersionService {
      * Filter and sort versions for display in dropdown.
      * 
      * Rules:
-     * - Only stable versions (no alpha/beta/rc/dev)
-     * - Only versions < currentVersion (semantically)
-     * - Limited to maxCount versions
+     * - Start with currentVersion (found from GitHub)
+     * - Add bundledVersion if different from current
+     * - Only stable versions (no alpha/beta/rc/dev), only < currentVersion
+     * - If < 2 stable versions, add unstable versions
+     * - Limited to maxCount + 2 versions total
      * - Sorted descending (newest first)
      * 
      * @param allVersions All available versions from Maven
      * @param currentVersion Current automatically detected version (will be first in list)
+     * @param bundledVersion Version from LIBRARY_BUNDLES for current Compose version (optional)
      * @param maxCount Maximum number of versions to return (default: 5)
      * @return Filtered and sorted list with currentVersion first
      */
     fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
+        bundledVersion: String? = null,
         maxCount: Int = 5
     ): List<String> {
+        val result = mutableListOf<String>()
         val currentParsed = ComposeVersionComparator.parse(currentVersion)
         
-        // Filter: stable versions only (no qualifiers), and < currentVersion
-        val filtered = allVersions
-            .filter { version ->
-                // No dev suffix
-                if (version.contains("+dev")) return@filter false
-                
-                // No alpha/beta/rc
-                if (version.contains("-alpha") || version.contains("-beta") || version.contains("-rc")) {
-                    return@filter false
-                }
-                
-                // Must be < currentVersion semantically
+        result.add(currentVersion)
+        
+        if (bundledVersion != null && bundledVersion != currentVersion) {
+            result.add(bundledVersion)
+        }
+        
+        val publishedVersions = allVersions.filter { version ->
+            !version.contains("+dev", ignoreCase = true)
+        }
+        
+        val stableVersions = publishedVersions.filter { version ->
+            !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
+        }.filter { version ->
+            version != currentVersion && version != bundledVersion
+        }.filter { version ->
+            val parsed = ComposeVersionComparator.parse(version)
+            parsed < currentParsed
+        }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+        
+        if (stableVersions.size < 2) {
+            val unstableVersions = publishedVersions.filter { version ->
+                version.contains("-alpha") || version.contains("-beta") || version.contains("-rc")
+            }.filter { version ->
+                version != currentVersion && version != bundledVersion
+            }.filter { version ->
                 val parsed = ComposeVersionComparator.parse(version)
                 parsed < currentParsed
-            }
+            }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            
+            result.addAll(unstableVersions.take(maxCount))
+        } else {
+            result.addAll(stableVersions.take(maxCount))
+        }
         
-        // Sort descending and take top N
-        val sorted = filtered.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-        val limited = sorted.take(maxCount)
-        
-        
-        // Return with currentVersion first
-        return listOf(currentVersion) + limited
+        return result.distinct().take(maxCount + 2)
     }
 }
 

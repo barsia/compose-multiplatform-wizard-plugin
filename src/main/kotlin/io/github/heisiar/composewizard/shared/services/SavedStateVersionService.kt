@@ -1,5 +1,6 @@
 package io.github.heisiar.composewizard.shared.services
 
+import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -27,67 +28,51 @@ class SavedStateVersionService {
     fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
+        bundledVersion: String? = null,
         maxCount: Int = 5
     ): List<String> {
         if (allVersions.isEmpty() || currentVersion.isEmpty()) {
             return listOf(currentVersion)
         }
         
-        // Filter out only +dev versions from Maven
+        val result = mutableListOf<String>()
+        val currentParsed = ComposeVersionComparator.parse(currentVersion)
+        
+        result.add(currentVersion)
+        
+        if (bundledVersion != null && bundledVersion != currentVersion) {
+            result.add(bundledVersion)
+        }
+        
         val publishedVersions = allVersions.filter { version ->
             !version.contains("+dev", ignoreCase = true)
         }
         
-        // Try to find stable versions (no alpha/beta/rc) < currentVersion
         val stableVersions = publishedVersions.filter { version ->
             !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
         }.filter { version ->
-            compareVersions(version, currentVersion) < 0
-        }.sortedWith { a, b -> compareVersions(b, a) }
-            .take(maxCount)
+            version != currentVersion && version != bundledVersion
+        }.filter { version ->
+            val parsed = ComposeVersionComparator.parse(version)
+            parsed < currentParsed
+        }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
         
-        if (stableVersions.isNotEmpty()) {
-            return listOf(currentVersion) + stableVersions
+        if (stableVersions.size < 2) {
+            val unstableVersions = publishedVersions.filter { version ->
+                version.contains("-alpha") || version.contains("-beta") || version.contains("-rc")
+            }.filter { version ->
+                version != currentVersion && version != bundledVersion
+            }.filter { version ->
+                val parsed = ComposeVersionComparator.parse(version)
+                parsed < currentParsed
+            }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            
+            result.addAll(unstableVersions.take(maxCount))
+        } else {
+            result.addAll(stableVersions.take(maxCount))
         }
         
-        // No stable versions found - find best unstable version
-        val bestUnstable = findBestPublishedVersion(publishedVersions)
-        
-        // If best unstable is different from current, show both
-        if (bestUnstable != null && bestUnstable != currentVersion) {
-            return listOf(currentVersion, bestUnstable)
-        }
-        
-        // Otherwise show only current version
-        return listOf(currentVersion)
-    }
-    
-    private fun findBestPublishedVersion(versions: List<String>): String? {
-        if (versions.isEmpty()) return null
-        
-        val rc = versions.filter { it.contains("-rc") }.maxWithOrNull { a, b -> compareVersions(a, b) }
-        if (rc != null) return rc
-        
-        val beta = versions.filter { it.contains("-beta") }.maxWithOrNull { a, b -> compareVersions(a, b) }
-        if (beta != null) return beta
-        
-        val alpha = versions.filter { it.contains("-alpha") }.maxWithOrNull { a, b -> compareVersions(a, b) }
-        return alpha
-    }
-    
-    private fun compareVersions(v1: String, v2: String): Int {
-        val parts1 = v1.split(Regex("[.\\-+]")).mapNotNull { it.toIntOrNull() }
-        val parts2 = v2.split(Regex("[.\\-+]")).mapNotNull { it.toIntOrNull() }
-        
-        val maxLength = maxOf(parts1.size, parts2.size)
-        for (i in 0 until maxLength) {
-            val part1 = parts1.getOrNull(i) ?: 0
-            val part2 = parts2.getOrNull(i) ?: 0
-            if (part1 != part2) {
-                return part1.compareTo(part2)
-            }
-        }
-        return 0
+        return result.distinct().take(maxCount + 2)
     }
 }
 

@@ -16,23 +16,24 @@ class LibrariesState(
     private val wizardState: WizardState
 ) {
     val libraryVersions = mutableStateMapOf<LibraryType, String>()
-    val libraryFromBundle = mutableStateMapOf<LibraryType, Boolean>()
+    val isFromFallback = mutableStateMapOf<LibraryType, Boolean>()
     var versionForLibraries by mutableStateOf("")
     
     suspend fun loadLibraryVersions(versionToLoad: String) {
         if (versionToLoad.isEmpty()) return
         
         libraryVersions.clear()
-        libraryFromBundle.clear()
+        isFromFallback.clear()
         
         val numericVersionToLoad = versionToLoad.split("-").first().split("+").first()
         val shouldShowNavigationForVersion = isComposeVersionLessThan(numericVersionToLoad, "1.10.0")
         val shouldShowNavigation3AndNavigationEventForVersion = !isComposeVersionLessThan(numericVersionToLoad, "1.10.0") && versionToLoad.isNotEmpty()
+        val shouldShowOptionalHotReloadForVersion = wizardState.desktop && isComposeVersionLessThan(versionToLoad, "1.10.0-beta01")
         val shouldShowBundledHotReloadForVersion = wizardState.desktop && !isComposeVersionLessThan(versionToLoad, "1.10.0-beta01") && versionToLoad.isNotEmpty()
         
         val typesToLoad = LibraryType.values().filter { 
             when (it) {
-                LibraryType.HOT_RELOAD -> shouldShowBundledHotReloadForVersion
+                LibraryType.HOT_RELOAD -> shouldShowOptionalHotReloadForVersion || shouldShowBundledHotReloadForVersion
                 LibraryType.NAVIGATION -> shouldShowNavigationForVersion
                 LibraryType.NAVIGATION3 -> shouldShowNavigation3AndNavigationEventForVersion
                 LibraryType.NAVIGATION_EVENT -> shouldShowNavigation3AndNavigationEventForVersion
@@ -56,7 +57,7 @@ class LibrariesState(
                     if (version != null) {
                         libraryVersions[type] = version
                         if (version.isNotEmpty()) {
-                            libraryFromBundle[type] = cache.isLibraryFromBundle(versionToLoad, type)
+                            isFromFallback[type] = cache.isLibraryFromBundle(versionToLoad, type)
                             
                             if (type == LibraryType.HOT_RELOAD) {
                                 wizardState.hotReloadVersion = version

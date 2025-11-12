@@ -15,7 +15,8 @@ class LibraryAvailableVersionsLoader(
     private val windowVersionService: WindowVersionService,
     private val savedStateVersionService: SavedStateVersionService,
     private val navigationEventVersionService: NavigationEventVersionService,
-    private val hotReloadVersionService: HotReloadVersionService
+    private val hotReloadVersionService: HotReloadVersionService,
+    private val onCacheInvalidated: suspend () -> Unit
 ) {
     
     private val logger = Logger.getInstance(LibraryAvailableVersionsLoader::class.java)
@@ -67,6 +68,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = lifecycleVersionService.fetchLifecycleVersions()
                 state.lifecycleAvailableVersions = versions
                 state.lifecycleAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Lifecycle available versions: ${e.message}")
                 state.lifecycleAvailableVersions = emptyList()
@@ -87,6 +89,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = material3VersionService.fetchMaterial3Versions()
                 state.material3AvailableVersions = versions
                 state.material3AvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Material3 available versions: ${e.message}")
                 state.material3AvailableVersions = emptyList()
@@ -107,6 +110,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = material3AdaptiveVersionService.fetchMaterial3AdaptiveVersions()
                 state.material3AdaptiveAvailableVersions = versions
                 state.material3AdaptiveAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Material3 Adaptive available versions: ${e.message}")
                 state.material3AdaptiveAvailableVersions = emptyList()
@@ -127,6 +131,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = navigationVersionService.fetchNavigationVersions()
                 state.navigationAvailableVersions = versions
                 state.navigationAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Navigation available versions: ${e.message}")
                 state.navigationAvailableVersions = emptyList()
@@ -147,6 +152,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = navigation3VersionService.fetchNavigation3Versions()
                 state.navigation3AvailableVersions = versions
                 state.navigation3AvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Navigation3 available versions: ${e.message}")
                 state.navigation3AvailableVersions = emptyList()
@@ -167,6 +173,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = windowVersionService.fetchWindowVersions()
                 state.windowAvailableVersions = versions
                 state.windowAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Window available versions: ${e.message}")
                 state.windowAvailableVersions = emptyList()
@@ -187,6 +194,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = savedStateVersionService.fetchSavedStateVersions()
                 state.savedStateAvailableVersions = versions
                 state.savedStateAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load SavedState available versions: ${e.message}")
                 state.savedStateAvailableVersions = emptyList()
@@ -207,6 +215,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = navigationEventVersionService.fetchNavigationEventVersions()
                 state.navigationEventAvailableVersions = versions
                 state.navigationEventAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load NavigationEvent available versions: ${e.message}")
                 state.navigationEventAvailableVersions = emptyList()
@@ -227,6 +236,7 @@ class LibraryAvailableVersionsLoader(
                 val versions = hotReloadVersionService.fetchHotReloadVersions()
                 state.hotReloadAvailableVersions = versions
                 state.hotReloadAvailableLastLoadTime = System.currentTimeMillis()
+                onCacheInvalidated()
             } catch (e: Exception) {
                 logger.warn("Failed to load Hot Reload available versions: ${e.message}")
                 state.hotReloadAvailableVersions = emptyList()
@@ -236,3 +246,5 @@ class LibraryAvailableVersionsLoader(
         }
     }
 }
+
+

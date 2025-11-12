@@ -67,67 +67,63 @@ class LifecycleVersionService {
      * Filter and sort versions for display in dropdown.
      * 
      * Rules:
-     * - Only stable versions (no alpha/beta/rc/dev)
-     * - Only versions < currentVersion (semantically)
-     * - Limited to maxCount versions
+     * - Start with currentVersion (found from GitHub)
+     * - Add bundledVersion if different from current
+     * - Only stable versions (no alpha/beta/rc/dev), only < currentVersion
+     * - If < 2 stable versions, add unstable versions
+     * - Limited to maxCount + 2 versions total
      * - Sorted descending (newest first)
      * 
      * @param allVersions All available versions from Maven
      * @param currentVersion Current automatically detected version (will be first in list)
+     * @param bundledVersion Version from LIBRARY_BUNDLES for current Compose version (optional)
      * @param maxCount Maximum number of versions to return (default: 5)
      * @return Filtered and sorted list with currentVersion first
      */
     fun filterVersionsForDropdown(
         allVersions: List<String>,
         currentVersion: String,
+        bundledVersion: String? = null,
         maxCount: Int = 5
     ): List<String> {
+        val result = mutableListOf<String>()
         val currentParsed = ComposeVersionComparator.parse(currentVersion)
         
-        // Filter out only +dev versions from Maven
+        result.add(currentVersion)
+        
+        if (bundledVersion != null && bundledVersion != currentVersion) {
+            result.add(bundledVersion)
+        }
+        
         val publishedVersions = allVersions.filter { version ->
             !version.contains("+dev", ignoreCase = true)
         }
         
-        // Try to find stable versions (no alpha/beta/rc) < currentVersion
         val stableVersions = publishedVersions.filter { version ->
             !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
+        }.filter { version ->
+            version != currentVersion && version != bundledVersion
         }.filter { version ->
             val parsed = ComposeVersionComparator.parse(version)
             parsed < currentParsed
         }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-            .take(maxCount)
         
-        if (stableVersions.isNotEmpty()) {
-            return listOf(currentVersion) + stableVersions
+        if (stableVersions.size < 2) {
+            val unstableVersions = publishedVersions.filter { version ->
+                version.contains("-alpha") || version.contains("-beta") || version.contains("-rc")
+            }.filter { version ->
+                version != currentVersion && version != bundledVersion
+            }.filter { version ->
+                val parsed = ComposeVersionComparator.parse(version)
+                parsed < currentParsed
+            }.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            
+            result.addAll(unstableVersions.take(maxCount))
+        } else {
+            result.addAll(stableVersions.take(maxCount))
         }
         
-        // No stable versions found - find best unstable version
-        val bestUnstable = findBestPublishedVersion(publishedVersions)
-        
-        // If best unstable is different from current, show both
-        if (bestUnstable != null && bestUnstable != currentVersion) {
-            return listOf(currentVersion, bestUnstable)
-        }
-        
-        // Otherwise show only current version
-        return listOf(currentVersion)
-    }
-    
-    private fun findBestPublishedVersion(versions: List<String>): String? {
-        if (versions.isEmpty()) return null
-        
-        val rc = versions.filter { it.contains("-rc") }
-            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
-        if (rc != null) return rc
-        
-        val beta = versions.filter { it.contains("-beta") }
-            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
-        if (beta != null) return beta
-        
-        val alpha = versions.filter { it.contains("-alpha") }
-            .maxWithOrNull { a, b -> ComposeVersionComparator.parse(a).compareTo(ComposeVersionComparator.parse(b)) }
-        return alpha
+        return result.distinct().take(maxCount + 2)
     }
 }
 

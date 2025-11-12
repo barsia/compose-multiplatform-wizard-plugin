@@ -14,7 +14,8 @@ class LibraryAvailableVersionsManager(
     windowVersionService: WindowVersionService,
     savedStateVersionService: SavedStateVersionService,
     navigationEventVersionService: NavigationEventVersionService,
-    hotReloadVersionService: HotReloadVersionService
+    hotReloadVersionService: HotReloadVersionService,
+    onCacheInvalidated: suspend () -> Unit
 ) {
     
     private val logger = Logger.getInstance(LibraryAvailableVersionsManager::class.java)
@@ -23,7 +24,7 @@ class LibraryAvailableVersionsManager(
         state, scope, lifecycleVersionService, material3VersionService,
         material3AdaptiveVersionService, navigationVersionService, navigation3VersionService,
         windowVersionService, savedStateVersionService, navigationEventVersionService,
-        hotReloadVersionService
+        hotReloadVersionService, onCacheInvalidated
     )
     
     companion object {

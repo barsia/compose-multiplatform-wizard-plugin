@@ -36,13 +36,13 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         }
     }
     
-    fun cacheLibraryVersion(composeVersion: String, type: LibraryType, version: String, fromBundle: Boolean) {
+    fun cacheLibraryVersion(composeVersion: String, type: LibraryType, version: String, isFromFallback: Boolean) {
         val versionsMap = getVersionsMap(type)
         val isFromBundleMap = getIsFromBundleMap(type)
         
         synchronized(versionsMap) {
             versionsMap[composeVersion] = version
-            isFromBundleMap[composeVersion] = fromBundle
+            isFromBundleMap[composeVersion] = isFromFallback
             
             while (versionsMap.size > MAX_LIBRARY_CACHE_SIZE) {
                 val oldestKey = versionsMap.keys.first()
@@ -52,10 +52,10 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         }
     }
     
-    fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String, fromBundle: Boolean = false) {
+    fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String, isFromFallback: Boolean = false) {
         synchronized(state.lifecycleVersions) {
             state.lifecycleVersions[composeVersion] = lifecycleVersion
-            state.lifecycleIsFromBundle[composeVersion] = fromBundle
+            state.lifecycleIsFromBundle[composeVersion] = isFromFallback
             
             while (state.lifecycleVersions.size > MAX_LIBRARY_CACHE_SIZE) {
                 val oldestKey = state.lifecycleVersions.keys.first()
@@ -99,3 +99,4 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         return state.lifecycleIsFromBundle[composeVersion] == true
     }
 }
+

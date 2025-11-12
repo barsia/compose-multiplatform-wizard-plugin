@@ -3,6 +3,7 @@ package io.github.heisiar.composewizard.shared.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,8 +53,16 @@ fun LibraryVersionDropdown(
         if (currentVersion.isNotEmpty()) currentVersion else ""
     }
     
-    val originalIsFromBundle = remember(state.composeVersion, currentVersion) {
-        librariesState.libraryFromBundle[libraryType] ?: false
+    val originalIsFromFallback = remember(state.composeVersion, currentVersion) {
+        librariesState.isFromFallback[libraryType] ?: false
+    }
+    
+    var cacheVersion by remember { mutableStateOf(0) }
+    
+    LaunchedEffect(Unit) {
+        cache.cacheInvalidated.collect {
+            cacheVersion++
+        }
     }
     
     val selectedVersion = when (libraryType) {
@@ -67,37 +77,45 @@ fun LibraryVersionDropdown(
         LibraryType.HOT_RELOAD -> state.hotReloadVersion?.takeIf { it.isNotEmpty() }
     } ?: currentVersion
     
-    val allAvailableVersions = when (libraryType) {
-        LibraryType.LIFECYCLE -> cache.getLifecycleAvailableVersions()
-        LibraryType.MATERIAL3 -> cache.getMaterial3AvailableVersions()
-        LibraryType.MATERIAL3_ADAPTIVE -> cache.getMaterial3AdaptiveAvailableVersions()
-        LibraryType.NAVIGATION -> cache.getNavigationAvailableVersions()
-        LibraryType.NAVIGATION3 -> cache.getNavigation3AvailableVersions()
-        LibraryType.WINDOW -> cache.getWindowAvailableVersions()
-        LibraryType.SAVED_STATE -> cache.getSavedStateAvailableVersions()
-        LibraryType.NAVIGATION_EVENT -> cache.getNavigationEventAvailableVersions()
-        LibraryType.HOT_RELOAD -> cache.getHotReloadAvailableVersions()
+    val allAvailableVersions = remember(cacheVersion, libraryType) {
+        when (libraryType) {
+            LibraryType.LIFECYCLE -> cache.getLifecycleAvailableVersions()
+            LibraryType.MATERIAL3 -> cache.getMaterial3AvailableVersions()
+            LibraryType.MATERIAL3_ADAPTIVE -> cache.getMaterial3AdaptiveAvailableVersions()
+            LibraryType.NAVIGATION -> cache.getNavigationAvailableVersions()
+            LibraryType.NAVIGATION3 -> cache.getNavigation3AvailableVersions()
+            LibraryType.WINDOW -> cache.getWindowAvailableVersions()
+            LibraryType.SAVED_STATE -> cache.getSavedStateAvailableVersions()
+            LibraryType.NAVIGATION_EVENT -> cache.getNavigationEventAvailableVersions()
+            LibraryType.HOT_RELOAD -> cache.getHotReloadAvailableVersions()
+        }
     }
     
-    val filteredVersions = remember(allAvailableVersions, originalVersion, versionService) {
+    val bundledVersion = remember(state.composeVersion, libraryType) {
+        io.github.heisiar.composewizard.shared.ComposeVersions.getLibraryBundle(state.composeVersion)?.getVersion(libraryType)
+    }
+    
+    val filteredVersions = remember(allAvailableVersions, originalVersion, bundledVersion, versionService) {
         if (allAvailableVersions.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null) {
             when (versionService) {
                 is io.github.heisiar.composewizard.shared.services.LifecycleVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.Material3VersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.Material3AdaptiveVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.NavigationVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.Navigation3VersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.WindowVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.SavedStateVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 is io.github.heisiar.composewizard.shared.services.NavigationEventVersionService ->
-                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, 5)
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
+                is io.github.heisiar.composewizard.shared.services.HotReloadVersionService ->
+                    versionService.filterVersionsForDropdown(allAvailableVersions, originalVersion, bundledVersion, 5)
                 else -> listOf(originalVersion)
             }
         } else {
@@ -109,119 +127,113 @@ fun LibraryVersionDropdown(
         filteredVersions.indexOf(selectedVersion).coerceAtLeast(0)
     }
     
+    val isFromFallback = librariesState.isFromFallback[libraryType] ?: false
+    val isPinned = isPinnedMap[libraryType] ?: false
+    
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(26.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
     ) {
-        Box(modifier = Modifier.width(180.dp)) {
-            if (enabled) {
-                org.jetbrains.jewel.ui.component.CheckboxRow(
-                    checked = checked,
-                    onCheckedChange = { onVersionChange(selectedVersion) },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
-                ) {
-                    LibraryLabelWithIcon(label, libraryType, librariesState, isPinnedMap)
-                }
-            } else {
-                Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
-                    org.jetbrains.jewel.ui.component.CheckboxRow(
-                        checked = true,
-                        onCheckedChange = { },
-                        enabled = false
-                    ) {
-                        LibraryLabelWithIcon(label, libraryType, librariesState, isPinnedMap)
-                    }
-                }
+        if (enabled) {
+            org.jetbrains.jewel.ui.component.Checkbox(
+                checked = checked,
+                onCheckedChange = { onVersionChange(selectedVersion) },
+                modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+            )
+        } else {
+            Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
+                org.jetbrains.jewel.ui.component.Checkbox(
+                    checked = true,
+                    onCheckedChange = { },
+                    enabled = false
+                )
             }
         }
         
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(4.dp))
         
-        Box(
+        Column(
             modifier = Modifier.weight(1f)
         ) {
-            if (filteredVersions.size > 1) {
-                val comboBox = @Composable {
-                    org.jetbrains.jewel.ui.component.ListComboBox(
-                        items = filteredVersions,
-                        selectedIndex = selectedIndex,
-                        onSelectedItemChange = { index ->
-                            if (index in filteredVersions.indices) {
-                                val newVersion = filteredVersions[index]
-                                
-                                when (libraryType) {
-                                    LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                                    LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                                    LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                                    LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                                    LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                                    LibraryType.WINDOW -> state.windowVersion = newVersion
-                                    LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                                    LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                                    LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
-                                }
-                                
-                                if (newVersion == originalVersion) {
-                                    librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
-                                } else {
-                                    librariesState.libraryFromBundle[libraryType] = false
-                                }
-                                
-                                onVersionChange(newVersion)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
-                        maxPopupHeight = 280.dp,
-                        style = textFieldStyleComboBox()
-                    )
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(16.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = JewelTheme.defaultTextStyle.copy(fontSize = JewelTheme.defaultTextStyle.fontSize * 0.85),
+                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.65f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 
-                val isLongVersion = selectedVersion.length > 25
-                if (isLongVersion) {
-                    Tooltip(
-                        tooltip = { Text(selectedVersion) },
-                        tooltipPlacement = TooltipPlacement.ComponentRect(
-                            anchor = Alignment.BottomCenter,
-                            alignment = Alignment.BottomCenter,
-                            offset = DpOffset(0.dp, 4.dp)
-                        )
+                if (isFromFallback) {
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Box(
+                        modifier = Modifier.size(10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        comboBox()
+                        PinnedVersionIndicator(isPinned = isPinned)
                     }
-                } else {
-                    comboBox()
-                }
-            } else {
-                var isTextTruncated by remember { mutableStateOf(false) }
-                
-                val textContent = @Composable {
-                    Text(
-                        text = selectedVersion,
-                        style = JewelTheme.defaultTextStyle,
-                        color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { textLayoutResult ->
-                            isTextTruncated = textLayoutResult.hasVisualOverflow
-                        }
-                    )
-                }
-                
-                if (isTextTruncated) {
-                    Tooltip(
-                        tooltip = { Text(selectedVersion) }
-                    ) {
-                        textContent()
-                    }
-                } else {
-                    textContent()
                 }
             }
+            
+            Box(
+                modifier = Modifier.fillMaxWidth().height(24.dp)
+            ) {
+                val comboBox = @Composable {
+                        org.jetbrains.jewel.ui.component.ListComboBox(
+                            items = filteredVersions,
+                            selectedIndex = selectedIndex,
+                            onSelectedItemChange = { index ->
+                                if (index in filteredVersions.indices) {
+                                    val newVersion = filteredVersions[index]
+                                    
+                                    when (libraryType) {
+                                        LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
+                                        LibraryType.MATERIAL3 -> state.material3Version = newVersion
+                                        LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
+                                        LibraryType.NAVIGATION -> state.navigationVersion = newVersion
+                                        LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
+                                        LibraryType.WINDOW -> state.windowVersion = newVersion
+                                        LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
+                                        LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
+                                        LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                                    }
+                                    
+                                    if (newVersion == originalVersion) {
+                                        librariesState.isFromFallback[libraryType] = originalIsFromFallback
+                                    } else {
+                                        librariesState.isFromFallback[libraryType] = false
+                                    }
+                                    
+                                    onVersionChange(newVersion)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+                            maxPopupHeight = 280.dp,
+                            style = textFieldStyleComboBox()
+                        )
+                    }
+                    
+                    val isLongVersion = selectedVersion.length > 21
+                    if (isLongVersion) {
+                        Tooltip(
+                            tooltip = { Text(selectedVersion) },
+                            tooltipPlacement = TooltipPlacement.ComponentRect(
+                                anchor = Alignment.BottomCenter,
+                                alignment = Alignment.BottomCenter,
+                                offset = DpOffset(0.dp, 4.dp)
+                            )
+                        ) {
+                            comboBox()
+                        }
+                    } else {
+                        comboBox()
+                    }
+                }
         }
         
         Spacer(modifier = Modifier.width(4.dp))
@@ -231,42 +243,3 @@ fun LibraryVersionDropdown(
         }
     }
 }
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun LibraryLabelWithIcon(
-    label: String,
-    libraryType: LibraryType,
-    librariesState: LibrariesState,
-    isPinnedMap: Map<LibraryType, Boolean>
-) {
-    Tooltip(
-        tooltip = { Text(label) }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = JewelTheme.defaultTextStyle,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                maxLines = 1,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            
-            Spacer(modifier = Modifier.width(4.dp))
-            
-            Box(
-                modifier = Modifier.size(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val isFromBundle = librariesState.libraryFromBundle[libraryType] ?: false
-                if (isFromBundle) {
-                    val isPinned = isPinnedMap[libraryType] ?: false
-                    PinnedVersionIndicator(isPinned = isPinned)
-                }
-            }
-        }
-    }
-}
-
