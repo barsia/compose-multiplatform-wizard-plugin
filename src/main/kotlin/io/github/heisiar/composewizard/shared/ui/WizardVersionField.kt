@@ -5,7 +5,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -284,24 +286,25 @@ fun ComposeVersionField(
                                     false
                                 }
                             }
-                            .clickable(
-                                indication = null,
-                                interactionSource = refreshInteractionSource,
-                                enabled = !isLoading
-                            ) {
-                                coroutineScope.launch {
-                                    rotation.snapTo(0f)
-                                    rotation.animateTo(
-                                        targetValue = 360f,
-                                        animationSpec = tween(
-                                            durationMillis = 500,
-                                            easing = LinearEasing
-                                        )
-                                    )
+                            .pointerInput(isLoading) {
+                                if (!isLoading) {
+                                    detectTapGestures {
+                                        coroutineScope.launch {
+                                            rotation.snapTo(0f)
+                                            rotation.animateTo(
+                                                targetValue = 360f,
+                                                animationSpec = tween(
+                                                    durationMillis = 500,
+                                                    easing = LinearEasing
+                                                )
+                                            )
+                                        }
+                                        onRefreshVersions()
+                                        refreshTrigger++
+                                    }
                                 }
-                                onRefreshVersions()
-                                refreshTrigger++
-                            },
+                            }
+                            .focusable(interactionSource = refreshInteractionSource, enabled = !isLoading),
                         tint = JewelTheme.globalColors.text.normal
                     )
                 }

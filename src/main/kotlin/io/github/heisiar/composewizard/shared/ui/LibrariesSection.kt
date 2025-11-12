@@ -6,7 +6,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -143,10 +145,12 @@ private fun CollapsibleHeader(
                         else -> false
                     }
                 }
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null
-                ) { onToggle() }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        onToggle()
+                    }
+                }
+                .focusable(interactionSource = interactionSource)
                 .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -394,8 +398,7 @@ private fun LibrariesContent(
                 state = state,
                 librariesState = librariesState,
                 versionService = lifecycleVersionService,
-                enabled = false,
-                onVersionChange = {}
+                enabled = false
             )
             
             LibraryVersionDropdown(
@@ -407,7 +410,7 @@ private fun LibrariesContent(
                 librariesState = librariesState,
                 versionService = material3VersionService,
                 checked = state.includeMaterial3,
-                onVersionChange = { state.includeMaterial3 = !state.includeMaterial3 }
+                onCheckedChange = { state.includeMaterial3 = !state.includeMaterial3 }
             )
             
             LibraryVersionDropdown(
@@ -419,7 +422,7 @@ private fun LibrariesContent(
                 librariesState = librariesState,
                 versionService = material3AdaptiveVersionService,
                 checked = state.includeMaterial3Adaptive,
-                onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
+                onCheckedChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
             )
             
             if (shouldShowNavigation) {
@@ -432,7 +435,7 @@ private fun LibrariesContent(
                     librariesState = librariesState,
                     versionService = navigationVersionService,
                     checked = state.includeNavigation,
-                    onVersionChange = { state.includeNavigation = !state.includeNavigation }
+                    onCheckedChange = { state.includeNavigation = !state.includeNavigation }
                 )
             }
             
@@ -446,7 +449,7 @@ private fun LibrariesContent(
                     librariesState = librariesState,
                     versionService = navigationEventVersionService,
                     checked = state.includeNavigationEvent,
-                    onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
+                    onCheckedChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
                 )
             }
         }
@@ -465,7 +468,7 @@ private fun LibrariesContent(
                     librariesState = librariesState,
                     versionService = navigation3VersionService,
                     checked = state.includeNavigation3,
-                    onVersionChange = { state.includeNavigation3 = !state.includeNavigation3 }
+                    onCheckedChange = { state.includeNavigation3 = !state.includeNavigation3 }
                 )
             }
             
@@ -478,7 +481,7 @@ private fun LibrariesContent(
                 librariesState = librariesState,
                 versionService = windowVersionService,
                 checked = state.includeWindow,
-                onVersionChange = { state.includeWindow = !state.includeWindow }
+                onCheckedChange = { state.includeWindow = !state.includeWindow }
             )
             
             LibraryVersionDropdown(
@@ -490,7 +493,7 @@ private fun LibrariesContent(
                 librariesState = librariesState,
                 versionService = savedStateVersionService,
                 checked = state.includeSavedState,
-                onVersionChange = { state.includeSavedState = !state.includeSavedState }
+                onCheckedChange = { state.includeSavedState = !state.includeSavedState }
             )
             
             if (shouldShowOptionalHotReload || shouldShowBundledHotReload) {
@@ -504,7 +507,7 @@ private fun LibrariesContent(
                     versionService = hotReloadVersionService,
                     checked = state.includeHotReload,
                     enabled = shouldShowOptionalHotReload,
-                    onVersionChange = { state.includeHotReload = !state.includeHotReload }
+                    onCheckedChange = { state.includeHotReload = !state.includeHotReload }
                 )
             }
         }

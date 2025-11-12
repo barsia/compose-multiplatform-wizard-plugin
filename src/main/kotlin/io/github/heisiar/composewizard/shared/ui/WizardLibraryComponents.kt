@@ -8,7 +8,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -41,6 +42,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -220,15 +222,15 @@ fun LibraryVersionCopyIcon(version: String) {
                         else -> false
                     }
                 }
-                .clickable(
-                    indication = null,
-                    interactionSource = interactionSource
-                ) {
-                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
-                    val stringSelection = java.awt.datatransfer.StringSelection(version)
-                    clipboard.setContents(stringSelection, null)
-                    isCopied = true
+                .pointerInput(version) {
+                    detectTapGestures {
+                        val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                        val stringSelection = java.awt.datatransfer.StringSelection(version)
+                        clipboard.setContents(stringSelection, null)
+                        isCopied = true
+                    }
                 }
+                .focusable(interactionSource = interactionSource)
                 .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
             contentAlignment = Alignment.Center
         ) {

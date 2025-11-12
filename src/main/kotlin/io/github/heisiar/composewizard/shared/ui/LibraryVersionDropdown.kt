@@ -1,7 +1,6 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
@@ -42,7 +40,8 @@ fun LibraryVersionDropdown(
     versionService: Any?,
     checked: Boolean = true,
     enabled: Boolean = true,
-    onVersionChange: (String) -> Unit
+    onCheckedChange: () -> Unit = {},
+    onVersionChange: (String) -> Unit = {}
 ) {
     if (currentVersion.isEmpty()) {
         LibraryVersionDropdownSkeleton()
@@ -136,7 +135,7 @@ fun LibraryVersionDropdown(
         if (enabled) {
             org.jetbrains.jewel.ui.component.Checkbox(
                 checked = checked,
-                onCheckedChange = { onVersionChange(selectedVersion) },
+                onCheckedChange = { onCheckedChange() },
                 modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
             )
         } else {
@@ -185,59 +184,41 @@ fun LibraryVersionDropdown(
             Box(
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             ) {
-                val comboBox = @Composable {
-                        org.jetbrains.jewel.ui.component.ListComboBox(
-                            items = filteredVersions,
-                            selectedIndex = selectedIndex,
-                            onSelectedItemChange = { index ->
-                                if (index in filteredVersions.indices) {
-                                    val newVersion = filteredVersions[index]
-                                    
-                                    when (libraryType) {
-                                        LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                                        LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                                        LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                                        LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                                        LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                                        LibraryType.WINDOW -> state.windowVersion = newVersion
-                                        LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                                        LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                                        LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
-                                    }
-                                    
-                                    if (newVersion == originalVersion) {
-                                        librariesState.isFromFallback[libraryType] = originalIsFromFallback
-                                    } else {
-                                        librariesState.isFromFallback[libraryType] = false
-                                    }
-                                    
-                                    onVersionChange(newVersion)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
-                            maxPopupHeight = 280.dp,
-                            style = textFieldStyleComboBox()
-                        )
-                    }
-                    
-                    val isLongVersion = selectedVersion.length > 21
-                    if (isLongVersion) {
-                        Tooltip(
-                            tooltip = { Text(selectedVersion) },
-                            tooltipPlacement = TooltipPlacement.ComponentRect(
-                                anchor = Alignment.BottomCenter,
-                                alignment = Alignment.BottomCenter,
-                                offset = DpOffset(0.dp, 4.dp)
-                            )
-                        ) {
-                            comboBox()
+                org.jetbrains.jewel.ui.component.ListComboBox(
+                    items = filteredVersions,
+                    selectedIndex = selectedIndex,
+                    onSelectedItemChange = { index ->
+                        if (index in filteredVersions.indices) {
+                            val newVersion = filteredVersions[index]
+                            
+                            when (libraryType) {
+                                LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
+                                LibraryType.MATERIAL3 -> state.material3Version = newVersion
+                                LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
+                                LibraryType.NAVIGATION -> state.navigationVersion = newVersion
+                                LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
+                                LibraryType.WINDOW -> state.windowVersion = newVersion
+                                LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
+                                LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
+                                LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                            }
+                            
+                            if (newVersion == originalVersion) {
+                                librariesState.isFromFallback[libraryType] = originalIsFromFallback
+                            } else {
+                                librariesState.isFromFallback[libraryType] = false
+                            }
+                            
+                            onVersionChange(newVersion)
                         }
-                    } else {
-                        comboBox()
-                    }
-                }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+                    maxPopupHeight = 280.dp,
+                    style = textFieldStyleComboBox()
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(4.dp))

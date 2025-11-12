@@ -6,6 +6,8 @@ import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -131,19 +134,20 @@ internal fun CompactSwitch(
                 color = trackColor,
                 shape = RoundedCornerShape(trackHeight / 2)
             )
-                   .border(
-                       width = if (isFocused) 1.dp else 0.5.dp,
-                       color = if (isFocused) focusBorderColor
-                               else JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                       shape = RoundedCornerShape(trackHeight / 2)
-                   )
-            .clickable(
-                enabled = enabled,
-                indication = null,
-                interactionSource = interactionSource
-            ) {
-                onCheckedChange(!checked)
+            .border(
+                width = if (isFocused) 1.dp else 0.5.dp,
+                color = if (isFocused) focusBorderColor
+                        else JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(trackHeight / 2)
+            )
+            .pointerInput(enabled, checked) {
+                if (enabled) {
+                    detectTapGestures {
+                        onCheckedChange(!checked)
+                    }
+                }
             }
+            .focusable(interactionSource = interactionSource, enabled = enabled)
             .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
     ) {
         Box(
