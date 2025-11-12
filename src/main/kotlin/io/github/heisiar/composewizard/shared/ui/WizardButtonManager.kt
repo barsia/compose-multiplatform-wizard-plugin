@@ -34,9 +34,6 @@ class WizardButtonManager(
     }
     
     fun updateButtonState(enabled: Boolean) {
-        if (lastButtonState == false && enabled == true) {
-            Thread.dumpStack()
-        }
         lastButtonState = enabled
         SwingUtilities.invokeLater {
             if (createButton == null) {
