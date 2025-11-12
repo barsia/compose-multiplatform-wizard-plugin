@@ -38,7 +38,6 @@ fun LibraryVersionDropdown(
     cache: ComposeVersionCache,
     state: WizardState,
     librariesState: LibrariesState,
-    isPinnedMap: Map<LibraryType, Boolean>,
     versionService: Any?,
     checked: Boolean = true,
     enabled: Boolean = true,
@@ -128,7 +127,6 @@ fun LibraryVersionDropdown(
     }
     
     val isFromFallback = librariesState.isFromFallback[libraryType] ?: false
-    val isPinned = isPinnedMap[libraryType] ?: false
     
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -173,7 +171,11 @@ fun LibraryVersionDropdown(
                         modifier = Modifier.size(10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        PinnedVersionIndicator(isPinned = isPinned)
+                        if (libraryType == LibraryType.HOT_RELOAD) {
+                            BundledLibraryIndicator()
+                        } else {
+                            PinnedVersionIndicator(isPinned = true)
+                        }
                     }
                 }
             }

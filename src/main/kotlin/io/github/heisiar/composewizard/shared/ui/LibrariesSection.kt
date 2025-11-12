@@ -1,16 +1,31 @@
 package io.github.heisiar.composewizard.shared.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
-import io.github.heisiar.composewizard.shared.ComposeVersions
+import com.intellij.openapi.application.ApplicationManager
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 import io.github.heisiar.composewizard.shared.services.HotReloadVersionService
@@ -22,6 +37,11 @@ import io.github.heisiar.composewizard.shared.services.NavigationEventVersionSer
 import io.github.heisiar.composewizard.shared.services.NavigationVersionService
 import io.github.heisiar.composewizard.shared.services.SavedStateVersionService
 import io.github.heisiar.composewizard.shared.services.WindowVersionService
+import io.github.heisiar.composewizard.shared.settings.WizardSettings
+import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.icons.AllIconsKeys
 
 @Composable
 fun LibrariesSection(
@@ -33,6 +53,104 @@ fun LibrariesSection(
     shouldShowNavigation: Boolean,
     shouldShowNavigation3AndNavigationEvent: Boolean,
     modifier: Modifier = Modifier
+) {
+    val settings = remember { WizardSettings.getInstance() }
+    val isInternalMode = remember { ApplicationManager.getApplication().isInternal }
+    
+    val defaultExpanded = settings.isLibrariesExpanded ?: isInternalMode
+    var isExpanded by remember { mutableStateOf(defaultExpanded) }
+    
+    LaunchedEffect(isExpanded) {
+        if (settings.isLibrariesExpanded != isExpanded) {
+            settings.isLibrariesExpanded = isExpanded
+        }
+    }
+    
+    Column(modifier = modifier) {
+        CollapsibleHeader(
+            text = "Libraries",
+            isExpanded = isExpanded,
+            onToggle = { isExpanded = !isExpanded }
+        )
+        
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LibrariesSectionContent(
+                state = state,
+                librariesState = librariesState,
+                cache = cache,
+                shouldShowOptionalHotReload = shouldShowOptionalHotReload,
+                shouldShowBundledHotReload = shouldShowBundledHotReload,
+                shouldShowNavigation = shouldShowNavigation,
+                shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
+            )
+        }
+    }
+}
+
+@Composable
+private fun CollapsibleHeader(
+    text: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onToggle() }
+            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            key = if (isExpanded) AllIconsKeys.General.ChevronDown else AllIconsKeys.General.ChevronRight,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            modifier = Modifier.size(16.dp),
+            tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
+        )
+        
+        Text(
+            text = text,
+            style = JewelTheme.defaultTextStyle,
+            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.8f)
+        )
+        
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                            JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                            JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                            JewelTheme.globalColors.text.normal.copy(alpha = 0.05f),
+                            Color.Transparent
+                        ),
+                        startX = 0f,
+                        endX = Float.POSITIVE_INFINITY
+                    )
+                )
+        )
+    }
+}
+
+@Composable
+private fun LibrariesSectionContent(
+    state: WizardState,
+    librariesState: LibrariesState,
+    cache: ComposeVersionCache,
+    shouldShowOptionalHotReload: Boolean,
+    shouldShowBundledHotReload: Boolean,
+    shouldShowNavigation: Boolean,
+    shouldShowNavigation3AndNavigationEvent: Boolean
 ) {
     val lifecycleVersionService = remember { LifecycleVersionService() }
     val material3VersionService = remember { Material3VersionService() }
@@ -64,38 +182,27 @@ fun LibrariesSection(
         }
     }
     
-    val currentBundle = ComposeVersions.getLibraryBundle(state.composeVersion)
-    val isPinnedMap = remember(state.composeVersion) {
-        LibraryType.entries.associateWith { type ->
-            val versionInCurrentBundle = currentBundle?.getVersion(type)
-            versionInCurrentBundle.isNullOrEmpty()
-        }
-    }
-    
-    Column(modifier = modifier) {
-        if (state.composeVersion.isEmpty()) {
-            LibrariesLoadingPlaceholder()
-        } else {
-            LibrariesContent(
-                state = state,
-                librariesState = librariesState,
-                cache = cache,
-                isPinnedMap = isPinnedMap,
-                lifecycleVersionService = lifecycleVersionService,
-                material3VersionService = material3VersionService,
-                material3AdaptiveVersionService = material3AdaptiveVersionService,
-                navigationVersionService = navigationVersionService,
-                navigation3VersionService = navigation3VersionService,
-                windowVersionService = windowVersionService,
-                savedStateVersionService = savedStateVersionService,
-                navigationEventVersionService = navigationEventVersionService,
-                hotReloadVersionService = hotReloadVersionService,
-                shouldShowOptionalHotReload = shouldShowOptionalHotReload,
-                shouldShowBundledHotReload = shouldShowBundledHotReload,
-                shouldShowNavigation = shouldShowNavigation,
-                shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
-            )
-        }
+    if (state.composeVersion.isEmpty()) {
+        LibrariesLoadingPlaceholder()
+    } else {
+        LibrariesContent(
+            state = state,
+            librariesState = librariesState,
+            cache = cache,
+            lifecycleVersionService = lifecycleVersionService,
+            material3VersionService = material3VersionService,
+            material3AdaptiveVersionService = material3AdaptiveVersionService,
+            navigationVersionService = navigationVersionService,
+            navigation3VersionService = navigation3VersionService,
+            windowVersionService = windowVersionService,
+            savedStateVersionService = savedStateVersionService,
+            navigationEventVersionService = navigationEventVersionService,
+            hotReloadVersionService = hotReloadVersionService,
+            shouldShowOptionalHotReload = shouldShowOptionalHotReload,
+            shouldShowBundledHotReload = shouldShowBundledHotReload,
+            shouldShowNavigation = shouldShowNavigation,
+            shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
+        )
     }
 }
 
@@ -130,7 +237,6 @@ private fun LibrariesContent(
     state: WizardState,
     librariesState: LibrariesState,
     cache: ComposeVersionCache,
-    isPinnedMap: Map<LibraryType, Boolean>,
     lifecycleVersionService: LifecycleVersionService,
     material3VersionService: Material3VersionService,
     material3AdaptiveVersionService: Material3AdaptiveVersionService,
@@ -160,7 +266,6 @@ private fun LibrariesContent(
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
                 versionService = lifecycleVersionService,
                 enabled = false,
                 onVersionChange = {}
@@ -173,7 +278,6 @@ private fun LibrariesContent(
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
                 versionService = material3VersionService,
                 checked = state.includeMaterial3,
                 onVersionChange = { state.includeMaterial3 = !state.includeMaterial3 }
@@ -186,7 +290,6 @@ private fun LibrariesContent(
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
                 versionService = material3AdaptiveVersionService,
                 checked = state.includeMaterial3Adaptive,
                 onVersionChange = { state.includeMaterial3Adaptive = !state.includeMaterial3Adaptive }
@@ -200,7 +303,6 @@ private fun LibrariesContent(
                     cache = cache,
                     state = state,
                     librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
                     versionService = navigationVersionService,
                     checked = state.includeNavigation,
                     onVersionChange = { state.includeNavigation = !state.includeNavigation }
@@ -215,7 +317,6 @@ private fun LibrariesContent(
                     cache = cache,
                     state = state,
                     librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
                     versionService = navigationEventVersionService,
                     checked = state.includeNavigationEvent,
                     onVersionChange = { state.includeNavigationEvent = !state.includeNavigationEvent }
@@ -235,7 +336,6 @@ private fun LibrariesContent(
                     cache = cache,
                     state = state,
                     librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
                     versionService = navigation3VersionService,
                     checked = state.includeNavigation3,
                     onVersionChange = { state.includeNavigation3 = !state.includeNavigation3 }
@@ -249,7 +349,6 @@ private fun LibrariesContent(
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
                 versionService = windowVersionService,
                 checked = state.includeWindow,
                 onVersionChange = { state.includeWindow = !state.includeWindow }
@@ -262,7 +361,6 @@ private fun LibrariesContent(
                 cache = cache,
                 state = state,
                 librariesState = librariesState,
-                isPinnedMap = isPinnedMap,
                 versionService = savedStateVersionService,
                 checked = state.includeSavedState,
                 onVersionChange = { state.includeSavedState = !state.includeSavedState }
@@ -276,7 +374,6 @@ private fun LibrariesContent(
                     cache = cache,
                     state = state,
                     librariesState = librariesState,
-                    isPinnedMap = isPinnedMap,
                     versionService = hotReloadVersionService,
                     checked = state.includeHotReload,
                     enabled = shouldShowOptionalHotReload,

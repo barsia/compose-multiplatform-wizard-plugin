@@ -1,6 +1,10 @@
 package io.github.heisiar.composewizard.shared.settings
 
-import com.intellij.openapi.components.*
+import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.State
+import com.intellij.openapi.components.Storage
+import com.intellij.openapi.components.service
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @State(
@@ -14,6 +18,7 @@ class WizardSettings : PersistentStateComponent<WizardSettings> {
     var enableDevVersionsSetByUser: Boolean = false  // Track if user explicitly changed this
     var devCheckboxVisibleByUser: Boolean = false
     var welcomeTooltipShown: Boolean = false
+    var isLibrariesExpanded: Boolean? = null
     
     /**
      * Optional GitHub Personal Access Token (fine-grained) for higher API rate limits.

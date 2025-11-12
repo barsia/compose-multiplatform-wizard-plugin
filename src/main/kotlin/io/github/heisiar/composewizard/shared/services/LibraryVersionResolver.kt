@@ -109,7 +109,7 @@ class LibraryVersionResolver(
                     if (major > 1 || (major == 1 && minor >= 10)) {
                         val hotReloadVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
                         if (hotReloadVersion != null) {
-                            cacheLibrary(composeVersion, type, hotReloadVersion, isFromFallback = false)
+                            cacheLibrary(composeVersion, type, hotReloadVersion, isFromFallback = true)
                             return@launch
                         } else {
                             cacheLibrary(composeVersion, type, "", isFromFallback = false)

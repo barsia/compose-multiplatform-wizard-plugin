@@ -137,12 +137,8 @@ fun WizardMainContent(
                 shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
             )
             
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
-            
-            HorizontalDivider()
-            
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
-            
+            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS * 1.5f))
+
             OptionsSection(
                 git = state.git,
                 tests = state.tests,

@@ -249,12 +249,25 @@ fun PinnedVersionIndicator(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BundledLibraryIndicator() {
-    Icon(
-        key = WizardIconKeys.Lock,
-        contentDescription = "Bundled library",
-        modifier = Modifier
-            .size(12.dp),
-        tint = JewelTheme.globalColors.text.normal
-    )
+    Tooltip(
+        tooltip = { Text("This library is bundled with the Compose release") },
+        tooltipPlacement = TooltipPlacement.ComponentRect(
+            anchor = Alignment.TopCenter,
+            alignment = Alignment.TopCenter
+        )
+    ) {
+        Icon(
+            key = WizardIconKeys.Lock,
+            contentDescription = "Bundled library",
+            modifier = Modifier
+                .size(12.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.DEFAULT_CURSOR))),
+            tint = JewelTheme.globalColors.text.normal
+        )
+    }
 }
 
