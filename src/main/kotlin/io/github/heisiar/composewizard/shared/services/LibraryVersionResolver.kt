@@ -101,7 +101,6 @@ class LibraryVersionResolver(
                 }
                 
                 if (type == LibraryType.HOT_RELOAD) {
-                    // Starting from 1.10.0-beta01, Hot Reload is bundled with Compose
                     if (!VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
                         val hotReloadVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
                         if (hotReloadVersion != null) {
@@ -112,7 +111,6 @@ class LibraryVersionResolver(
                             return@launch
                         }
                     } else {
-                        // For versions < 1.10.0-beta01, use standalone Hot Reload
                         cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
                         return@launch
                     }

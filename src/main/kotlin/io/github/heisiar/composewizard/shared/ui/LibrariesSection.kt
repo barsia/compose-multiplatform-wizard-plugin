@@ -1,5 +1,9 @@
 package io.github.heisiar.composewizard.shared.ui
 
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,10 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.intellij.openapi.application.ApplicationManager
 import io.github.heisiar.composewizard.shared.LibraryType
@@ -239,33 +245,80 @@ private fun LibrarySkeletonItem() {
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Checkbox skeleton
-        SkeletonText(width = 16.dp, height = 16.dp)
+        org.jetbrains.jewel.ui.component.Checkbox(
+            checked = false,
+            onCheckedChange = { },
+            enabled = false
+        )
         
         Spacer(modifier = Modifier.width(4.dp))
         
-        // Label + Dropdown skeleton
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Label skeleton
-            SkeletonText(width = 80.dp, height = 16.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().height(16.dp)
+            ) {
+                SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 13.dp)
+            }
             
-            // Dropdown skeleton
-            SkeletonText(height = 24.dp)
+            Box(
+                modifier = Modifier.fillMaxWidth().height(24.dp)
+            ) {
+                org.jetbrains.jewel.ui.component.ListComboBox(
+                    items = listOf("..."),
+                    selectedIndex = 0,
+                    onSelectedItemChange = { },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = textFieldStyleComboBox()
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(4.dp))
         
-        // Copy icon skeleton
         Box(
-            modifier = Modifier.size(16.dp).height(24.dp),
+            modifier = Modifier.width(16.dp).height(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            SkeletonText(width = 16.dp, height = 16.dp)
+            SkeletonBox(width = 14.dp, height = 14.dp)
         }
     }
+}
+
+@Composable
+private fun SkeletonBox(
+    modifier: Modifier = Modifier,
+    width: Dp? = null,
+    height: Dp
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.03f,
+        targetValue = 0.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "skeletonAlpha"
+    )
+    
+    val skeletonColor = if (isDarkTheme()) {
+        Color.White.copy(alpha = alpha)
+    } else {
+        Color.Gray.copy(alpha = alpha)
+    }
+    
+    Box(
+        modifier = modifier
+            .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
+            .height(height)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .background(skeletonColor)
+    )
 }
 
 @Composable

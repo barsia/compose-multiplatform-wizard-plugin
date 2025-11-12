@@ -45,7 +45,7 @@ fun LibraryVersionDropdown(
     onVersionChange: (String) -> Unit
 ) {
     if (currentVersion.isEmpty()) {
-        SkeletonText()
+        LibraryVersionDropdownSkeleton()
         return
     }
     
@@ -247,6 +247,39 @@ fun LibraryVersionDropdown(
             contentAlignment = Alignment.Center
         ) {
             LibraryVersionCopyIcon(version = filteredVersions.getOrNull(selectedIndex) ?: currentVersion)
+        }
+    }
+}
+
+@Composable
+private fun LibraryVersionDropdownSkeleton() {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        org.jetbrains.jewel.ui.component.Checkbox(
+            checked = false,
+            onCheckedChange = { },
+            enabled = false
+        )
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            SkeletonText(width = 100.dp, height = 16.dp)
+            SkeletonText(height = 24.dp)
+        }
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        Box(
+            modifier = Modifier.width(16.dp).height(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            SkeletonText(width = 14.dp, height = 18.dp)
         }
     }
 }

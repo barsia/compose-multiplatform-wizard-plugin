@@ -164,7 +164,7 @@ fun SkeletonText(
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .height(height)
-            .padding(vertical = 6.dp)
+            .padding(vertical = 2.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(skeletonColor)
     )
