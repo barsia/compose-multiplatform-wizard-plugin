@@ -1,6 +1,8 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -211,7 +213,7 @@ fun ProjectPathHint(projectPath: String, projectName: String, modifier: Modifier
     }
 }
 
-@androidx.compose.foundation.ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PinnedVersionIndicator(
     isPinned: Boolean = false
@@ -223,7 +225,11 @@ fun PinnedVersionIndicator(
     }
     
     Tooltip(
-        tooltip = { Text(tooltipText) }
+        tooltip = { Text(tooltipText) },
+        tooltipPlacement = TooltipPlacement.ComponentRect(
+            anchor = Alignment.TopCenter,
+            alignment = Alignment.TopCenter
+        )
     ) {
         Icon(
             key = WizardIconKeys.Pin,
@@ -240,7 +246,7 @@ fun PinnedVersionIndicator(
     }
 }
 
-@androidx.compose.foundation.ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BundledLibraryIndicator() {
     Icon(

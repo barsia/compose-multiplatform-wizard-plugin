@@ -170,7 +170,12 @@ fun PackageNameField(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("Package Name", style = JewelTheme.defaultTextStyle)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Package Name", style = JewelTheme.defaultTextStyle)
+        }
 
         LaunchedEffect(projectIdState.text.toString()) {
             onIdChanged(projectIdState.text.toString())

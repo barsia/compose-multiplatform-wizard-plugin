@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
@@ -139,40 +141,49 @@ fun LibraryVersionDropdown(
             horizontalArrangement = Arrangement.End,
             modifier = Modifier.weight(1f)
         ) {
-            org.jetbrains.jewel.ui.component.ListComboBox(
-                items = filteredVersions,
-                selectedIndex = selectedIndex,
-                onSelectedItemChange = { index ->
-                    if (index in filteredVersions.indices) {
-                        val newVersion = filteredVersions[index]
-                        
-                        when (libraryType) {
-                            LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                            LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                            LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                            LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                            LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                            LibraryType.WINDOW -> state.windowVersion = newVersion
-                            LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                            LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                            LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+            Tooltip(
+                tooltip = { Text(selectedVersion) },
+                tooltipPlacement = TooltipPlacement.ComponentRect(
+                    anchor = Alignment.BottomCenter,
+                    alignment = Alignment.BottomCenter,
+                    offset = DpOffset(0.dp, 4.dp)
+                )
+            ) {
+                org.jetbrains.jewel.ui.component.ListComboBox(
+                    items = filteredVersions,
+                    selectedIndex = selectedIndex,
+                    onSelectedItemChange = { index ->
+                        if (index in filteredVersions.indices) {
+                            val newVersion = filteredVersions[index]
+                            
+                            when (libraryType) {
+                                LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
+                                LibraryType.MATERIAL3 -> state.material3Version = newVersion
+                                LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
+                                LibraryType.NAVIGATION -> state.navigationVersion = newVersion
+                                LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
+                                LibraryType.WINDOW -> state.windowVersion = newVersion
+                                LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
+                                LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
+                                LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
+                            }
+                            
+                            if (newVersion == originalVersion) {
+                                librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
+                            } else {
+                                librariesState.libraryFromBundle[libraryType] = false
+                            }
+                            
+                            onVersionChange(newVersion)
                         }
-                        
-                        if (newVersion == originalVersion) {
-                            librariesState.libraryFromBundle[libraryType] = originalIsFromBundle
-                        } else {
-                            librariesState.libraryFromBundle[libraryType] = false
-                        }
-                        
-                        onVersionChange(newVersion)
-                    }
-                },
-                modifier = Modifier
-                    .widthIn(min = 120.dp, max = 200.dp)
-                    .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
-                maxPopupHeight = 280.dp,
-                style = textFieldStyleComboBox()
-            )
+                    },
+                    modifier = Modifier
+                        .widthIn(min = 120.dp, max = 200.dp)
+                        .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+                    maxPopupHeight = 280.dp,
+                    style = textFieldStyleComboBox()
+                )
+            }
             
             Spacer(modifier = Modifier.width(8.dp))
             

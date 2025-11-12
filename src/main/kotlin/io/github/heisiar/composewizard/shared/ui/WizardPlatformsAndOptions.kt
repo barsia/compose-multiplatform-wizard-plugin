@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -229,7 +230,11 @@ fun CheckboxOption(
     
     if (!enabled) {
         Tooltip(
-            tooltip = { Text(disabledTooltip) }
+            tooltip = { Text(disabledTooltip) },
+            tooltipPlacement = TooltipPlacement.ComponentRect(
+                anchor = Alignment.TopCenter,
+                alignment = Alignment.TopCenter
+            )
         ) {
             content()
         }

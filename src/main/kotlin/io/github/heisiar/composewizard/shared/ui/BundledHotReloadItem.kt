@@ -1,6 +1,7 @@
 package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,13 @@ fun BundledHotReloadItem(version: String) {
             .height(28.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Tooltip(tooltip = { Text("Bundled in Compose and cannot be disabled") }) {
+        Tooltip(
+            tooltip = { Text("Bundled in Compose and cannot be disabled") },
+            tooltipPlacement = TooltipPlacement.ComponentRect(
+                anchor = Alignment.TopCenter,
+                alignment = Alignment.TopCenter
+            )
+        ) {
             org.jetbrains.jewel.ui.component.CheckboxRow(
                 checked = true,
                 onCheckedChange = { },

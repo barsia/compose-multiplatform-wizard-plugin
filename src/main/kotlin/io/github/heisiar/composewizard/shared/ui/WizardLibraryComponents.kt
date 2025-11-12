@@ -141,7 +141,7 @@ fun BackgroundPlatformIcon(
 fun SkeletonText(
     modifier: Modifier = Modifier,
     width: Dp? = null,
-    height: Dp = 24.dp
+    height: Dp = 28.dp
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
     val alpha by infiniteTransition.animateFloat(
@@ -164,7 +164,7 @@ fun SkeletonText(
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .height(height)
-            .padding(vertical = 4.dp)
+            .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(skeletonColor)
     )
