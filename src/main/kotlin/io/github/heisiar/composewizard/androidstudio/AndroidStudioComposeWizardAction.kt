@@ -37,11 +37,6 @@ class AndroidStudioComposeWizardAction : AnAction(
         val projectLocation = builder.contentEntryPath ?: return
         val projectPath = File(projectLocation).absolutePath
         
-        println("=== Creating Compose Multiplatform Project ===")
-        println("Name: $projectName")
-        println("Location: $projectPath")
-        println("Package: ${builder.projectId}")
-        println("Platforms: Android=${builder.targetAndroid}, iOS=${builder.targetIOS}, Desktop=${builder.targetDesktop}, Web=${builder.targetWeb}")
         
         ProgressManager.getInstance().run(object : Task.Backgroundable(
             event.project,
@@ -60,7 +55,6 @@ class AndroidStudioComposeWizardAction : AnAction(
                 val success = integration.createAndOpenProject(projectPath, projectName, builder)
                 
                 if (success) {
-                                println("=== Project created successfully! ===")
                                 indicator.fraction = 1.0
                 }
             }

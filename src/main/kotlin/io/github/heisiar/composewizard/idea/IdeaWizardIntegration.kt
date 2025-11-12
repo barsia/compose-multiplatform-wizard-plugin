@@ -39,19 +39,16 @@ class IdeaWizardIntegration(
         projectName: String,
         builder: ComposeMultiplatformModuleBuilder
     ) {
-        println("IdeaWizardIntegration: Linking Gradle project")
         linkGradleProject(project, projectPath)
     }
     
     override fun openProject(projectPath: String) {
-        println("IdeaWizardIntegration: Project already opened by platform")
     }
     
     override fun initializeGit(projectPath: String) {
         val gitRepositoryInitializer = GitRepositoryInitializer.getInstance()
         
         if (gitRepositoryInitializer != null) {
-            println("IdeaWizardIntegration: Using GitRepositoryInitializer API")
             runAfterOpened(project) { proj ->
                 proj.service<CoroutineScopeService>().coroutineScope.launchTracked {
                     setupProjectSafe(proj, "Error initializing Git repository") {
@@ -60,7 +57,6 @@ class IdeaWizardIntegration(
                 }
             }
         } else {
-            println("IdeaWizardIntegration: GitRepositoryInitializer not available, using fallback")
             ProjectCreator.initializeGitRepository(projectPath)
         }
     }
@@ -122,7 +118,6 @@ class IdeaWizardIntegration(
         try {
             action()
         } catch (e: Exception) {
-            println("$errorMessage: ${e.message}")
             e.printStackTrace()
         }
     }

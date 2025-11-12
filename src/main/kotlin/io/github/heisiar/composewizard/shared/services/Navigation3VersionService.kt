@@ -19,7 +19,6 @@ class Navigation3VersionService {
                     .map { it.groupValues[1] }
                     .toList()
             } catch (e: Exception) {
-                println("ERROR: Failed to fetch Navigation3 versions: ${e.message}")
                 emptyList()
             }
         }

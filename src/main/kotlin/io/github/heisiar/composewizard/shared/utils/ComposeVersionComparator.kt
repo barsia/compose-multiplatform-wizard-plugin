@@ -44,7 +44,6 @@ object ComposeVersionComparator {
             val result = VersionComparable(major, minor, patch, suffixName, suffixNum, devNum)
             
             if (debug) {
-                println("DEBUG ComposeVersionComparator: '$version' -> major=$major, minor=$minor, patch=$patch, suffix='$suffixName', suffixNum=$suffixNum, devNum=$devNum")
             }
             
             result

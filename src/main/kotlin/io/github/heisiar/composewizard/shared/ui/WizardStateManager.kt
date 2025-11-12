@@ -155,32 +155,20 @@ fun SetupValidation(
         state.enableDevVersions, state.projectNameError, state.projectPathError, 
         state.projectIdError, state.projectLocationWarning, revalidationTrigger) {
         
-        println("WizardStateManager: LaunchedEffect validation check (trigger=$revalidationTrigger)")
-        println("  hasNoTargets=${state.hasNoTargets}")
-        println("  projectNameError=${state.projectNameError}")
-        println("  projectPathError=${state.projectPathError}")
-        println("  projectIdError=${state.projectIdError}")
         
         val isFormValid = !state.hasNoTargets && 
                          state.projectNameError == null && 
                          state.projectPathError == null && 
                          state.projectIdError == null
-        println("  isFormValid=$isFormValid")
         onValidationChanged(isFormValid)
     }
     
     androidx.compose.runtime.SideEffect {
-        println("WizardStateManager: SideEffect validation check")
-        println("  hasNoTargets=${state.hasNoTargets}")
-        println("  projectNameError=${state.projectNameError}")
-        println("  projectPathError=${state.projectPathError}")
-        println("  projectIdError=${state.projectIdError}")
         
         val isFormValid = !state.hasNoTargets && 
                          state.projectNameError == null && 
                          state.projectPathError == null && 
                          state.projectIdError == null
-        println("  isFormValid=$isFormValid")
         onValidationChanged(isFormValid)
     }
 }

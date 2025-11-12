@@ -39,7 +39,6 @@ abstract class AbstractWizardIntegration {
         builder: ComposeMultiplatformModuleBuilder
     ): Boolean {
         try {
-            println("=== AbstractWizardIntegration: Starting project creation workflow ===")
             
             // Step 1: Create project structure (common logic)
             val success = ProjectCreator.createProjectStructure(
@@ -49,30 +48,24 @@ abstract class AbstractWizardIntegration {
             )
             
             if (!success) {
-                println("ERROR: Project structure creation failed")
                 handleCreationError(projectPath, projectName, "Failed to create project structure")
                 return false
             }
             
             // Step 2: Initialize Git if requested (IDE-specific with fallback)
             if (builder.initGit) {
-                println("Initializing Git repository...")
                 initializeGit(projectPath)
             }
             
             // Step 3: IDE-specific setup (Gradle linking, SDK, etc.)
-            println("Performing IDE-specific setup...")
             performIdeSpecificSetup(projectPath, projectName, builder)
             
             // Step 4: Open project (IDE-specific)
-            println("Opening project in IDE...")
             openProject(projectPath)
             
-            println("=== AbstractWizardIntegration: Project creation workflow completed ===")
             return true
             
         } catch (e: Exception) {
-            println("ERROR: Exception during project creation: ${e.message}")
             e.printStackTrace()
             handleCreationError(projectPath, projectName, e.message ?: "Unknown error")
             return false
@@ -134,8 +127,6 @@ abstract class AbstractWizardIntegration {
         projectName: String,
         errorMessage: String
     ) {
-        println("ERROR: Failed to create project '$projectName' at '$projectPath'")
-        println("Reason: $errorMessage")
     }
 }
 

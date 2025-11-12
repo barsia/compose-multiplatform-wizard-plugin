@@ -55,7 +55,6 @@ fun WizardUIRoot(
         ""
     }
     
-    println("DEBUG WizardUIRoot: devCheckboxVisible=$devCheckboxVisible, enableDevVersions=$enableDevVersions, composeVersionValue='$composeVersionValue', cachedVersions=${cachedVersions?.take(3)}, initialComposeVersion='$initialComposeVersion'")
     
     val state = rememberWizardState().apply {
         projectName = projectNameValue

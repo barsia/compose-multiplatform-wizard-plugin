@@ -22,11 +22,9 @@ class ASWizardIntegration : AbstractWizardIntegration() {
         projectName: String,
         builder: ComposeMultiplatformModuleBuilder
     ) {
-        println("ASWizardIntegration: No additional setup needed, AS will auto-sync Gradle")
     }
     
     override fun openProject(projectPath: String) {
-        println("ASWizardIntegration: Opening project via ProjectManager")
         
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -34,19 +32,15 @@ class ASWizardIntegration : AbstractWizardIntegration() {
                 val newProject = projectManager.loadAndOpenProject(projectPath)
                 
                 if (newProject != null) {
-                    println("ASWizardIntegration: Project opened successfully")
                 } else {
-                    println("ERROR: ProjectManager.loadAndOpenProject returned null")
                     Messages.showErrorDialog(
                         "Failed to open the created project",
                         "Project Creation Error"
                     )
                 }
             } catch (e: com.intellij.openapi.progress.ProcessCanceledException) {
-                println("ASWizardIntegration: Project opening was cancelled by user")
                 throw e
             } catch (e: Exception) {
-                println("ERROR: Exception opening project: ${e.message}")
                 e.printStackTrace()
                 Messages.showErrorDialog(
                     "Error opening project: ${e.message}",
@@ -57,7 +51,6 @@ class ASWizardIntegration : AbstractWizardIntegration() {
     }
     
     override fun initializeGit(projectPath: String) {
-        println("ASWizardIntegration: Initializing Git via command line")
         ProjectCreator.initializeGitRepository(projectPath)
     }
     

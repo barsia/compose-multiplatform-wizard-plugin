@@ -30,7 +30,6 @@ class Material3VersionService {
     suspend fun fetchMaterial3Versions(): List<String> = withContext(Dispatchers.IO) {
         try {
             val metadataUrl = "${MAVEN_URL}maven-metadata.xml"
-            println("DEBUG Material3VersionService: Fetching from $metadataUrl")
             
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = TIMEOUT_MS
@@ -52,7 +51,6 @@ class Material3VersionService {
                         versions.add(version)
                     }
                     
-                    println("DEBUG Material3VersionService: Fetched ${versions.size} versions from Maven")
                     versions
                 }
             } else {
@@ -106,8 +104,6 @@ class Material3VersionService {
         val sorted = filtered.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
         val limited = sorted.take(maxCount)
         
-        println("DEBUG Material3VersionService: Filtered ${allVersions.size} → ${filtered.size} stable versions < $currentVersion")
-        println("DEBUG Material3VersionService: Returning top $maxCount: ${limited.take(5)}")
         
         // Return with currentVersion first
         return listOf(currentVersion) + limited

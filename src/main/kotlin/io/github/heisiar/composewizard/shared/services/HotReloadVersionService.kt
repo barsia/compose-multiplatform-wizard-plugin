@@ -19,7 +19,6 @@ class HotReloadVersionService {
                     .map { it.groupValues[1] }
                     .toList()
             } catch (e: Exception) {
-                println("ERROR: Failed to fetch Hot Reload versions: ${e.message}")
                 emptyList()
             }
         }

@@ -93,7 +93,6 @@ class ModularTemplateProcessor(
     private fun updateLibraryVersions(targetPath: String) {
         val libsVersionsFile = File(targetPath, "gradle/libs.versions.toml")
         if (!libsVersionsFile.exists()) {
-            println("WARNING: libs.versions.toml not found at ${libsVersionsFile.absolutePath}")
             return
         }
         
@@ -134,9 +133,7 @@ class ModularTemplateProcessor(
                                                            includeWindow, "androidx-window")
             
             libsVersionsFile.writeText(content)
-            println("Updated libs.versions.toml with Compose version: $composeVersion, Kotlin: $kotlinVersion, Lifecycle: ${lifecycleVersion ?: "2.9.5"}")
         } catch (e: Exception) {
-            println("ERROR updating library versions: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -427,7 +424,6 @@ androidx-material3-adaptive-navigation = { module = "org.jetbrains.compose.mater
                 }
             }
         } catch (e: Exception) {
-            println("ERROR copying $resourcePath: ${e.message}")
         }
     }
     

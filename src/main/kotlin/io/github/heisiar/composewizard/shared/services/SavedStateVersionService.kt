@@ -19,7 +19,6 @@ class SavedStateVersionService {
                     .map { it.groupValues[1] }
                     .toList()
             } catch (e: Exception) {
-                println("ERROR: Failed to fetch SavedState versions: ${e.message}")
                 emptyList()
             }
         }

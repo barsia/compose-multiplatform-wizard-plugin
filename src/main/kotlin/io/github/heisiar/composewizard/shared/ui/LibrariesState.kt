@@ -22,7 +22,6 @@ class LibrariesState(
     suspend fun loadLibraryVersions(versionToLoad: String) {
         if (versionToLoad.isEmpty()) return
         
-        println("DEBUG LibrariesState: Loading library versions for Compose $versionToLoad")
         libraryVersions.clear()
         libraryFromBundle.clear()
         

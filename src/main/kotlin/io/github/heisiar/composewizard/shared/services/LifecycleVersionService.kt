@@ -30,7 +30,6 @@ class LifecycleVersionService {
     suspend fun fetchLifecycleVersions(): List<String> = withContext(Dispatchers.IO) {
         try {
             val metadataUrl = "${MAVEN_URL}maven-metadata.xml"
-            println("DEBUG LifecycleVersionService: Fetching from $metadataUrl")
             
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = TIMEOUT_MS
@@ -52,7 +51,6 @@ class LifecycleVersionService {
                         versions.add(version)
                     }
                     
-                    println("DEBUG LifecycleVersionService: Fetched ${versions.size} versions from Maven")
                     versions
                 }
             } else {
@@ -106,8 +104,6 @@ class LifecycleVersionService {
         val sorted = filtered.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
         val limited = sorted.take(maxCount)
         
-        println("DEBUG LifecycleVersionService: Filtered ${allVersions.size} → ${filtered.size} stable versions < $currentVersion")
-        println("DEBUG LifecycleVersionService: Returning top $maxCount: ${limited.take(5)}")
         
         // Return with currentVersion first
         return listOf(currentVersion) + limited

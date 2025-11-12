@@ -19,7 +19,6 @@ class NavigationEventVersionService {
                     .map { it.groupValues[1] }
                     .toList()
             } catch (e: Exception) {
-                println("ERROR: Failed to fetch NavigationEvent versions: ${e.message}")
                 emptyList()
             }
         }

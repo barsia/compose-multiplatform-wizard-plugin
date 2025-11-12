@@ -35,17 +35,13 @@ class WizardButtonManager(
     
     fun updateButtonState(enabled: Boolean) {
         if (lastButtonState == false && enabled == true) {
-            println("===== WARNING: Button transitioning from DISABLED to ENABLED =====")
-            println("WizardButtonManager: This might be the problem - button should stay disabled!")
             Thread.dumpStack()
         }
-        println("WizardButtonManager: updateButtonState called with enabled=$enabled (lastState=$lastButtonState)")
         lastButtonState = enabled
         SwingUtilities.invokeLater {
             if (createButton == null) {
                 updateButtonText()
             }
-            println("WizardButtonManager: Setting createButton.isEnabled=$enabled, button=${createButton?.text}")
             createButton?.isEnabled = enabled
         }
     }

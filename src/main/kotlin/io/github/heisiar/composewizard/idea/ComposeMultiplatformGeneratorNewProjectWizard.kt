@@ -1,8 +1,13 @@
 package io.github.heisiar.composewizard.idea
 
 import com.intellij.ide.util.projectWizard.WizardContext
-import com.intellij.ide.wizard.*
+import com.intellij.ide.wizard.AbstractNewProjectWizardStep
+import com.intellij.ide.wizard.GeneratorNewProjectWizard
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
+import com.intellij.ide.wizard.NewProjectWizardStep
+import com.intellij.ide.wizard.RootNewProjectWizardStep
+import com.intellij.ide.wizard.newProjectWizardBaseStepWithoutGap
+import com.intellij.ide.wizard.setupProjectFromBuilder
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
@@ -46,7 +51,6 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
                 val showingChanged = java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong()
                 if ((e.changeFlags.toLong() and showingChanged) != 0L) {
                     if (composeStep.component.isShowing) {
-                        println("ComposeMultiplatformWizardStep: component is now showing, triggering re-validation...")
                         javax.swing.SwingUtilities.invokeLater {
                             composeStep.triggerRevalidation()
                         }

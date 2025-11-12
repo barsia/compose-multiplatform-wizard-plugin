@@ -17,8 +17,6 @@ class ComposeWizardStep(
 ) : ModuleWizardStep() {
 
     init {
-        println("===== ComposeWizardStep: init() called =====")
-        println("===== Using Android Studio Module Wizard (ModuleWizardStep) =====")
     }
 
     private var projectNameValue = WizardPathUtils.suggestUniqueName(WizardDefaults.PROJECT_NAME, WizardDefaults.getDefaultProjectPath())
@@ -112,7 +110,6 @@ class ComposeWizardStep(
     override fun getComponent(): JComponent = mainPanel
     
     fun triggerRevalidation() {
-        println("ComposeWizardStep: triggerRevalidation() called, incrementing trigger")
         revalidationTrigger.intValue++
     }
 
@@ -127,21 +124,17 @@ class ComposeWizardStep(
 
     override fun _init() {
         super._init()
-        println("ComposeWizardStep: _init() called")
         SwingUtilities.invokeLater {
             buttonManager.updateButtonText()
             val isValid = validate()
-            println("ComposeWizardStep: _init() - validate returned $isValid")
             buttonManager.updateButtonState(isValid)
         }
     }
     
     override fun updateStep() {
         super.updateStep()
-        println("ComposeWizardStep: updateStep() called - re-validating")
         SwingUtilities.invokeLater {
             val isValid = validate()
-            println("ComposeWizardStep: updateStep() - validate returned $isValid")
             buttonManager.updateButtonState(isValid)
         }
     }
@@ -191,38 +184,31 @@ class ComposeWizardStep(
     }
 
     override fun validate(): Boolean {
-        println("ComposeWizardStep: validate() called")
         val nameError = WizardValidation.validateProjectName(projectNameValue)
-        println("ComposeWizardStep: nameError=$nameError")
         if (nameError != null) {
             return false
         }
         
         val pathError = WizardValidation.validateProjectPath(projectPathValue, WizardPathUtils::expandPath)
-        println("ComposeWizardStep: pathError=$pathError")
         if (pathError != null) {
             return false
         }
         
         val locationError = WizardValidation.validateProjectLocationBlocking(projectNameValue, projectPathValue, WizardPathUtils::expandPath)
-        println("ComposeWizardStep: locationError=$locationError")
         if (locationError != null) {
             return false
         }
         
         val projectIdValidation = builder.validateProjectId(projectIdValue)
-        println("ComposeWizardStep: projectIdValidation.isValid=${projectIdValidation.isValid}")
         if (!projectIdValidation.isValid) {
             return false
         }
         
         val hasTargets = targetDesktop || targetAndroid || targetIOS || targetWeb
-        println("ComposeWizardStep: hasTargets=$hasTargets")
         if (!hasTargets) {
             return false
         }
         
-        println("ComposeWizardStep: validate() returning true")
         return true
     }
 

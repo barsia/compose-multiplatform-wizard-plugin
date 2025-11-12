@@ -86,13 +86,11 @@ fun ComposeVersionField(
         
         var displayedVersion by remember(enableDevVersions) { 
             val firstVersion = initialVersions?.firstOrNull() ?: ""
-            println("DEBUG ComposeVersionField: Initializing displayedVersion (enableDev=$enableDevVersions): '$firstVersion'")
             mutableStateOf(firstVersion)
         }
 
         LaunchedEffect(enableDevVersions) {
             if (displayedVersion.isNotEmpty()) {
-                println("DEBUG ComposeVersionField: Dev/Stable switched (enableDev=$enableDevVersions), notifying parent: '$displayedVersion'")
                 onVersionSelected(displayedVersion)
             }
         }
@@ -100,7 +98,6 @@ fun ComposeVersionField(
         LaunchedEffect(refreshTrigger) {
             if (refreshTrigger == 0) return@LaunchedEffect
             
-            println("DEBUG: Refresh triggered, waiting for new versions...")
             isLoading = true
             
             kotlinx.coroutines.delay(200)
@@ -120,7 +117,6 @@ fun ComposeVersionField(
                     }
                     
                     if (newVersions != null) {
-                        println("DEBUG: Refresh complete, got ${newVersions.size} versions: ${newVersions.take(3)}")
                         availableVersions = newVersions
                         val firstVersion = newVersions.firstOrNull() ?: ""
                         if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
@@ -137,10 +133,8 @@ fun ComposeVersionField(
         }
         
         LaunchedEffect(enableDevVersions) {
-            println("DEBUG: Starting version loading check, enableDev=$enableDevVersions, initialVersions=${initialVersions?.take(3)}")
             
             if (initialVersions != null && !initialLoadingState) {
-                println("DEBUG: Versions already cached and not loading, no need to wait")
                 return@LaunchedEffect
             }
             
@@ -157,14 +151,11 @@ fun ComposeVersionField(
                     cache.getStableVersions()
                 }
                 
-                println("DEBUG: Polling - isLoading=$isCurrentlyLoading, versions: ${newVersions?.take(3)}")
                 
                 if (!isCurrentlyLoading && newVersions != null) {
-                    println("DEBUG: Loading complete, updating UI with ${newVersions.take(3)}")
                     availableVersions = newVersions
                     val firstVersion = newVersions.firstOrNull() ?: ""
                     if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
-                        println("DEBUG: Current selection '$selectedVersion' not in new list or empty, selecting first: $firstVersion")
                         displayedVersion = firstVersion
                         onVersionSelected(firstVersion)
                     }
@@ -185,16 +176,13 @@ fun ComposeVersionField(
                     if (isLoading && availableVersions == null) {
                         listOf("")
                     } else {
-                        println("DEBUG WizardUIFields: availableVersions (enableDev=$enableDevVersions, null=${availableVersions == null}): ${availableVersions?.take(10)}")
                         val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
-                        println("DEBUG WizardUIFields: Final dropdown items (enableDev=$enableDevVersions): ${versions.take(10)}")
                         versions
                     }
                 }
                 
                 val currentIndex = remember(displayedVersion, items, isLoading) {
                     val index = if (isLoading && availableVersions == null) 0 else items.indexOf(displayedVersion).takeIf { it >= 0 } ?: 0
-                    println("DEBUG WizardUIFields: Computed currentIndex=$index, displayedVersion='$displayedVersion', items.size=${items.size}, items[0]='${items.firstOrNull()}'")
                     index
                 }
                 
@@ -211,7 +199,6 @@ fun ComposeVersionField(
                                         availableVersions?.let { versions ->
                                             if (versions.isNotEmpty() && index in versions.indices) {
                                                 val newSelection = versions[index]
-                                                println("DEBUG ComposeVersionField: Dropdown selection changed: index=$index, newSelection='$newSelection', old='$displayedVersion'")
                                                 displayedVersion = newSelection
                                                 onVersionSelected(newSelection)
                                             }

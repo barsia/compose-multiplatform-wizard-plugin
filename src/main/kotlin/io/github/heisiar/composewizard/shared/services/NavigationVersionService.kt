@@ -33,7 +33,6 @@ class NavigationVersionService {
     suspend fun fetchNavigationVersions(): List<String> = withContext(Dispatchers.IO) {
         try {
             val metadataUrl = "${MAVEN_URL}maven-metadata.xml"
-            println("DEBUG NavigationVersionService: Fetching from $metadataUrl")
             
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = TIMEOUT_MS
@@ -55,7 +54,6 @@ class NavigationVersionService {
                         versions.add(version)
                     }
                     
-                    println("DEBUG NavigationVersionService: Fetched ${versions.size} versions from Maven")
                     versions
                 }
             } else {
@@ -109,8 +107,6 @@ class NavigationVersionService {
         val sorted = filtered.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
         val limited = sorted.take(maxCount)
         
-        println("DEBUG NavigationVersionService: Filtered ${allVersions.size} → ${filtered.size} stable versions < $currentVersion")
-        println("DEBUG NavigationVersionService: Returning top $maxCount: ${limited.take(5)}")
         
         // Return with currentVersion first
         return listOf(currentVersion) + limited

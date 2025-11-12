@@ -25,11 +25,6 @@ object ProjectCreator {
         builder: ComposeMultiplatformModuleBuilder
     ): Boolean {
         return try {
-            println("=== ProjectCreator: Creating project structure ===")
-            println("Path: $projectPath")
-            println("Name: $projectName")
-            println("Package: ${builder.projectId}")
-            println("Targets: Desktop=${builder.targetDesktop}, Android=${builder.targetAndroid}, iOS=${builder.targetIOS}, Web=${builder.targetWeb}")
             
             // Get library versions from ComposeVersionCache with fallback to LIBRARY_BUNDLES
             val cache = ComposeVersionCache.getInstance()
@@ -54,8 +49,6 @@ object ProjectCreator {
             val windowVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.WINDOW)
                 ?: libraryVersions.windowVersion
             
-            println("=== ProjectCreator: Using library versions (Cache + LIBRARY_BUNDLES fallback) ===")
-            println("Compose: ${builder.composeVersion}, Kotlin: ${libraryVersions.kotlinVersion}, Lifecycle: $lifecycleVersion")
             
             val processor = TemplateProcessor(
                 projectName = projectName,
@@ -92,10 +85,8 @@ object ProjectCreator {
             // Create .gitignore file
             createGitignoreFile(projectPath)
             
-            println("=== ProjectCreator: Project structure created successfully ===")
             true
         } catch (e: Exception) {
-            println("ERROR in ProjectCreator: ${e.message}")
             e.printStackTrace()
             false
         }
@@ -132,9 +123,7 @@ object ProjectCreator {
             
             val gitignoreFile = File(projectPath, ".gitignore")
             gitignoreFile.writeText(gitignoreContent)
-            println("Created .gitignore file")
         } catch (e: Exception) {
-            println("WARNING: Could not create .gitignore: ${e.message}")
         }
     }
     
@@ -150,7 +139,6 @@ object ProjectCreator {
      */
     fun initializeGitRepository(projectPath: String): Boolean {
         return try {
-            println("=== ProjectCreator: Initializing Git repository ===")
             val projectDir = File(projectPath)
             
             val process = Runtime.getRuntime().exec(
@@ -161,14 +149,11 @@ object ProjectCreator {
             val exitCode = process.waitFor()
             
             if (exitCode == 0) {
-                println("Git repository initialized successfully")
                 true
             } else {
-                println("WARNING: Git init exited with code $exitCode")
                 false
             }
         } catch (e: Exception) {
-            println("WARNING: Could not initialize git: ${e.message}")
             false
         }
     }

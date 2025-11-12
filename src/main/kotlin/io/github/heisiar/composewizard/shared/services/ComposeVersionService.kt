@@ -28,9 +28,6 @@ class ComposeVersionService {
         // Quick test of comparator
         val testVersions = listOf("1.9.0-rc02", "1.10.0-beta02", "1.9.3", "1.8.2")
         val sorted = testVersions.sortedWith(compareByDescending { io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator.parse(it) })
-        println("DEBUG ComposeVersionService INIT TEST:")
-        println("  Original: $testVersions")
-        println("  Sorted:   $sorted")
         testVersions.forEach { v ->
             io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator.parse(v, debug = true)
         }
@@ -62,7 +59,6 @@ class ComposeVersionService {
     private suspend fun filterDevVersionsWithReleasePage(versions: List<String>): List<String> = kotlinx.coroutines.coroutineScope {
         val libraryService = ComposeLibraryVersionService()
         
-        println("DEBUG ComposeVersionService: Filtering ${versions.size} dev versions for GitHub tag page existence (parallel checks)...")
         val startTime = System.currentTimeMillis()
         
         // Check all versions in parallel using coroutines
@@ -70,7 +66,6 @@ class ComposeVersionService {
             async(Dispatchers.IO) {
                 val hasPage = libraryService.hasReleasePage(version)
                 if (!hasPage) {
-                    println("DEBUG ComposeVersionService: ❌ Excluding $version (no tag page)")
                 }
                 version to hasPage
             }
@@ -80,7 +75,6 @@ class ComposeVersionService {
         val filtered = results.filter { it.second }.map { it.first }
         val elapsed = System.currentTimeMillis() - startTime
         
-        println("DEBUG ComposeVersionService: Filtered to ${filtered.size} dev versions with tag pages (took ${elapsed}ms)")
         filtered
     }
     
@@ -112,7 +106,6 @@ class ComposeVersionService {
                     val result = if (isDevMode) {
                         // Dev: Take FIRST 20 from XML as-is (no sorting, no filtering!)
                         val first20 = versions.take(20)
-                        println("DEBUG ComposeVersionService: Dev versions (first 20 from XML, no sorting): ${first20.take(10)}")
                         first20
                     } else {
                         // Stable: Filter versions >= last stable version in LIBRARY_BUNDLES
@@ -124,8 +117,6 @@ class ComposeVersionService {
                             parsed >= minVersionParsed
                         }
                         
-                        println("DEBUG ComposeVersionService: Stable versions from Maven (filtered >= $minVersion): ${filtered.size} versions")
-                        println("DEBUG ComposeVersionService: Filtered stable versions sample: ${filtered.take(5)}")
                         filtered
                     }
                     return result
