@@ -4,9 +4,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.focus.FocusRequester
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 
@@ -79,6 +81,17 @@ fun WizardUIRoot(
     val projectPathFocused by projectPathInteractionSource.collectIsFocusedAsState()
     val projectIdFocused by projectIdInteractionSource.collectIsFocusedAsState()
     
+    val projectNameFocusRequester = remember { FocusRequester() }
+    val projectPathFocusRequester = remember { FocusRequester() }
+    val projectIdFocusRequester = remember { FocusRequester() }
+    
+    LaunchedEffect(Unit) {
+        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            kotlinx.coroutines.delay(100)
+            projectNameFocusRequester.requestFocus()
+        }
+    }
+    
     SetupValidation(
         state = state, 
         projectNameState = projectNameState, 
@@ -104,6 +117,9 @@ fun WizardUIRoot(
         projectNameInteractionSource = projectNameInteractionSource,
         projectPathInteractionSource = projectPathInteractionSource,
         projectIdInteractionSource = projectIdInteractionSource,
+        projectNameFocusRequester = projectNameFocusRequester,
+        projectPathFocusRequester = projectPathFocusRequester,
+        projectIdFocusRequester = projectIdFocusRequester,
         mainPanel = mainPanel,
         onBrowseFolder = onBrowseFolder
     )

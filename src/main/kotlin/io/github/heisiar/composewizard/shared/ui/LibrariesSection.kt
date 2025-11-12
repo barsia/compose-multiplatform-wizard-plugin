@@ -5,8 +5,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,8 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.intellij.openapi.application.ApplicationManager
@@ -102,30 +113,57 @@ private fun CollapsibleHeader(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val focusBorderColor = Color(0xFF3574F0)
+    
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onToggle() }
-            .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
-            .padding(vertical = 4.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            key = if (isExpanded) AllIconsKeys.General.ChevronDown else AllIconsKeys.General.ChevronRight,
-            contentDescription = if (isExpanded) "Collapse" else "Expand",
-            modifier = Modifier.size(16.dp),
-            tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
-        )
-        
-        Text(
-            text = text,
-            style = JewelTheme.defaultTextStyle,
-            color = JewelTheme.globalColors.text.normal.copy(alpha = 0.8f)
-        )
+        Row(
+            modifier = Modifier
+                .border(
+                    width = if (isFocused) 1.dp else 0.dp,
+                    color = if (isFocused) focusBorderColor else Color.Transparent,
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 12.dp)
+                .semantics {
+                    role = Role.Button
+                }
+                .onKeyEvent { keyEvent ->
+                    when {
+                        (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                        keyEvent.type == KeyEventType.KeyDown -> {
+                            onToggle()
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) { onToggle() }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                key = if (isExpanded) AllIconsKeys.General.ChevronDown else AllIconsKeys.General.ChevronRight,
+                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                modifier = Modifier.size(16.dp),
+                tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
+            )
+            
+            Text(
+                text = text,
+                style = JewelTheme.defaultTextStyle,
+                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.8f)
+            )
+        }
         
         Box(
             modifier = Modifier

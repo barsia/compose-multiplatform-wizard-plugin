@@ -3,6 +3,7 @@ package io.github.heisiar.composewizard.shared.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +22,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -96,6 +101,7 @@ fun ProjectNameField(
     projectLocationWarning: String?,
     projectNameFocused: Boolean,
     projectNameInteractionSource: MutableInteractionSource,
+    projectNameFocusRequester: FocusRequester,
     mainPanel: ComposePanel,
     onNameChanged: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -125,7 +131,9 @@ fun ProjectNameField(
                         overflow = TextOverflow.Ellipsis
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(projectNameFocusRequester),
                 outline = Outline.of(
                     warning = projectLocationWarning != null && projectNameError == null,
                     error = projectNameError != null
@@ -163,6 +171,7 @@ fun PackageNameField(
     projectIdError: String?,
     projectIdFocused: Boolean,
     projectIdInteractionSource: MutableInteractionSource,
+    projectIdFocusRequester: FocusRequester,
     onIdChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -185,7 +194,9 @@ fun PackageNameField(
             TextField(
                 state = projectIdState,
                 placeholder = { Text(WizardStrings.PACKAGE_NAME_LABEL) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(projectIdFocusRequester),
                 outline = if (projectIdError != null) Outline.Error else Outline.None,
                 interactionSource = projectIdInteractionSource
             )
@@ -207,6 +218,7 @@ fun ProjectLocationField(
     projectPathError: String?,
     projectPathFocused: Boolean,
     projectPathInteractionSource: MutableInteractionSource,
+    projectPathFocusRequester: FocusRequester,
     onPathChanged: (String) -> Unit,
     onBrowse: () -> Unit,
     modifier: Modifier = Modifier
@@ -238,7 +250,9 @@ fun ProjectLocationField(
             TextField(
                 state = projectPathState,
                 placeholder = { Text("Location") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(projectPathFocusRequester),
                 outline = if (projectPathError != null) Outline.Error else Outline.None,
                 interactionSource = projectPathInteractionSource
             )
@@ -259,6 +273,17 @@ fun ProjectLocationField(
         ) {
             Box(
                 modifier = Modifier
+                    .focusable()
+                    .onKeyEvent { keyEvent: KeyEvent ->
+                        when {
+                            (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                            keyEvent.type == KeyEventType.KeyDown -> {
+                                onBrowse()
+                                true
+                            }
+                            else -> false
+                        }
+                    }
                     .background(
                         color = if (isHovered) JewelTheme.globalColors.text.selected.copy(alpha = 0.08f) else Color.Transparent,
                         shape = CircleShape

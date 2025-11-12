@@ -29,6 +29,8 @@ fun AndroidStudioProjectFields(
     projectPathFocused: Boolean,
     projectNameInteractionSource: MutableInteractionSource,
     projectPathInteractionSource: MutableInteractionSource,
+    projectNameFocusRequester: androidx.compose.ui.focus.FocusRequester,
+    projectPathFocusRequester: androidx.compose.ui.focus.FocusRequester,
     mainPanel: ComposePanel,
     onBrowseFolder: () -> String?
 ) {
@@ -43,6 +45,7 @@ fun AndroidStudioProjectFields(
             projectLocationWarning = state.projectLocationWarning,
             projectNameFocused = projectNameFocused,
             projectNameInteractionSource = projectNameInteractionSource,
+            projectNameFocusRequester = projectNameFocusRequester,
             mainPanel = mainPanel,
             onNameChanged = { },
             modifier = Modifier.weight(0.6f)
@@ -59,6 +62,7 @@ fun AndroidStudioProjectFields(
             projectPathState = projectPathState,
             projectPathFocused = projectPathFocused,
             projectPathInteractionSource = projectPathInteractionSource,
+            projectPathFocusRequester = projectPathFocusRequester,
             onBrowseFolder = onBrowseFolder
         )
     }
@@ -72,7 +76,8 @@ fun IntellijIdeaProjectFields(
     state: WizardState,
     projectIdState: androidx.compose.foundation.text.input.TextFieldState,
     projectIdFocused: Boolean,
-    projectIdInteractionSource: MutableInteractionSource
+    projectIdInteractionSource: MutableInteractionSource,
+    projectIdFocusRequester: androidx.compose.ui.focus.FocusRequester
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -84,6 +89,7 @@ fun IntellijIdeaProjectFields(
             projectIdError = state.projectIdError,
             projectIdFocused = projectIdFocused,
             projectIdInteractionSource = projectIdInteractionSource,
+            projectIdFocusRequester = projectIdFocusRequester,
             onIdChanged = { },
             modifier = Modifier.weight(0.5f)
         )
@@ -126,6 +132,7 @@ fun ProjectLocationSection(
     projectPathState: androidx.compose.foundation.text.input.TextFieldState,
     projectPathFocused: Boolean,
     projectPathInteractionSource: MutableInteractionSource,
+    projectPathFocusRequester: androidx.compose.ui.focus.FocusRequester,
     onBrowseFolder: () -> String?
 ) {
     Column {
@@ -137,6 +144,7 @@ fun ProjectLocationSection(
                 projectPathError = state.projectPathError,
                 projectPathFocused = projectPathFocused,
                 projectPathInteractionSource = projectPathInteractionSource,
+                projectPathFocusRequester = projectPathFocusRequester,
                 onPathChanged = { },
                 onBrowse = {
                     onBrowseFolder()?.let { state.projectPath = it }
@@ -150,3 +158,4 @@ fun ProjectLocationSection(
         )
     }
 }
+

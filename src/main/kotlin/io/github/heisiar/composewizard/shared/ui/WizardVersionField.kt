@@ -4,9 +4,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipPlacement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -26,16 +28,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.component.Tooltip
 import java.awt.Cursor
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,14 +73,10 @@ fun ComposeVersionField(
             Spacer(modifier = Modifier.weight(1f))
             
             if (devCheckboxVisible) {
-                org.jetbrains.jewel.ui.component.Tooltip(
-                    tooltip = { Text(if (enableDevVersions) "Dev versions" else "Stable versions") }
-                ) {
-                    CompactSwitch(
-                        checked = enableDevVersions,
-                        onCheckedChange = { onDevVersionsToggle(it) }
-                    )
-                }
+                CompactSwitch(
+                    checked = enableDevVersions,
+                    onCheckedChange = { onDevVersionsToggle(it) }
+                )
                 Spacer(modifier = Modifier.width(16.dp))
             }
         }
@@ -214,46 +217,76 @@ fun ComposeVersionField(
                 }
             }
 
-            Tooltip(
-                tooltip = { Text("Refresh versions") },
-                tooltipPlacement = TooltipPlacement.ComponentRect(
-                    anchor = androidx.compose.ui.Alignment.BottomCenter,
-                    alignment = androidx.compose.ui.Alignment.BottomCenter,
-                    offset = DpOffset(0.dp, 4.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                ) {
-                    val coroutineScope = rememberCoroutineScope()
-                    val rotation = remember { Animatable(0f) }
+                val coroutineScope = rememberCoroutineScope()
+                val rotation = remember { Animatable(0f) }
+                val refreshInteractionSource = remember { MutableInteractionSource() }
+                val isRefreshFocused by refreshInteractionSource.collectIsFocusedAsState()
 
-                    LaunchedEffect(isLoading) {
-                        if (isLoading) {
-                            while (isLoading) {
-                                rotation.animateTo(
-                                    targetValue = 360f,
-                                    animationSpec = tween(
-                                        durationMillis = 1000,
-                                        easing = LinearEasing
-                                    )
+                LaunchedEffect(isLoading) {
+                    if (isLoading) {
+                        while (isLoading) {
+                            rotation.animateTo(
+                                targetValue = 360f,
+                                animationSpec = tween(
+                                    durationMillis = 1000,
+                                    easing = LinearEasing
                                 )
-                                rotation.snapTo(0f)
-                            }
+                            )
+                            rotation.snapTo(0f)
                         }
                     }
+                }
+                
+                val focusBorderColor = Color(0xFF3574F0)
 
+               Box(
+                   modifier = Modifier
+                       .size(20.dp)
+                       .border(
+                           width = if (isRefreshFocused) 1.dp else 0.dp,
+                           color = if (isRefreshFocused) focusBorderColor else Color.Transparent,
+                           shape = androidx.compose.foundation.shape.CircleShape
+                       )
+                       .padding(2.dp),
+                   contentAlignment = Alignment.Center
+               ) {
                     Icon(
                         key = WizardIconKeys.RefreshVersions,
                         contentDescription = "Refresh versions",
                         modifier = Modifier
                             .size(16.dp)
                             .graphicsLayer { rotationZ = rotation.value }
+                            .onKeyEvent { keyEvent: KeyEvent ->
+                                if (!isLoading && 
+                                    (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                                    keyEvent.type == KeyEventType.KeyDown
+                                ) {
+                                    coroutineScope.launch {
+                                        rotation.snapTo(0f)
+                                        rotation.animateTo(
+                                            targetValue = 360f,
+                                            animationSpec = tween(
+                                                durationMillis = 500,
+                                                easing = LinearEasing
+                                            )
+                                        )
+                                    }
+                                    onRefreshVersions()
+                                    refreshTrigger++
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                             .clickable(
                                 indication = null,
-                                interactionSource = remember { MutableInteractionSource() },
+                                interactionSource = refreshInteractionSource,
                                 enabled = !isLoading
                             ) {
                                 coroutineScope.launch {
@@ -276,3 +309,4 @@ fun ComposeVersionField(
         }
     }
 }
+

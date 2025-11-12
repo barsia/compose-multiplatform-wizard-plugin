@@ -34,6 +34,9 @@ fun WizardMainContent(
     projectNameInteractionSource: MutableInteractionSource,
     projectPathInteractionSource: MutableInteractionSource,
     projectIdInteractionSource: MutableInteractionSource,
+    projectNameFocusRequester: androidx.compose.ui.focus.FocusRequester,
+    projectPathFocusRequester: androidx.compose.ui.focus.FocusRequester,
+    projectIdFocusRequester: androidx.compose.ui.focus.FocusRequester,
     mainPanel: ComposePanel,
     onBrowseFolder: () -> String?
 ) {
@@ -89,6 +92,8 @@ fun WizardMainContent(
                     projectPathFocused = projectPathFocused,
                     projectNameInteractionSource = projectNameInteractionSource,
                     projectPathInteractionSource = projectPathInteractionSource,
+                    projectNameFocusRequester = projectNameFocusRequester,
+                    projectPathFocusRequester = projectPathFocusRequester,
                     mainPanel = mainPanel,
                     onBrowseFolder = onBrowseFolder
                 )
@@ -97,7 +102,8 @@ fun WizardMainContent(
                     state = state,
                     projectIdState = projectIdState,
                     projectIdFocused = projectIdFocused,
-                    projectIdInteractionSource = projectIdInteractionSource
+                    projectIdInteractionSource = projectIdInteractionSource,
+                    projectIdFocusRequester = projectIdFocusRequester
                 )
             }
 

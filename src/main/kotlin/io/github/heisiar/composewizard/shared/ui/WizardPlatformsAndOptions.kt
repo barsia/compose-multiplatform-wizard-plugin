@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -114,12 +115,7 @@ private fun PlatformItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onToggle() }
-            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+        modifier = Modifier.padding(4.dp)
     ) {
         Checkbox(
             checked = checked,
@@ -127,12 +123,28 @@ private fun PlatformItem(
         )
         Box(
             modifier = Modifier
-                .size(width = 56.dp, height = 48.dp),
+                .size(width = 56.dp, height = 48.dp)
+                .focusProperties { canFocus = false }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() }
+                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
             contentAlignment = Alignment.Center
         ) {
             icon()
         }
-        Text(label, style = JewelTheme.defaultTextStyle)
+        Text(
+            text = label,
+            style = JewelTheme.defaultTextStyle,
+            modifier = Modifier
+                .focusProperties { canFocus = false }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onToggle() }
+                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+        )
     }
 }
 
@@ -201,7 +213,7 @@ fun CheckboxOption(
                     if (iconKey != null) {
                         Icon(
                             key = iconKey,
-                            contentDescription = null,
+                            contentDescription = label,
                             modifier = Modifier.size(16.dp),
                             tint = if (useColoredIcon) {
                                 Color.Unspecified

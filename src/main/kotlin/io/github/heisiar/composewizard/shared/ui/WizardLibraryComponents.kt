@@ -7,8 +7,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextAlign
@@ -41,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.component.Tooltip
 
 @Composable
 fun BackgroundPlatformIcon(
@@ -175,6 +181,7 @@ fun SkeletonText(
 fun LibraryVersionCopyIcon(version: String) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    val isFocused by interactionSource.collectIsFocusedAsState()
     var isCopied by remember { mutableStateOf(false) }
     
     LaunchedEffect(isCopied) {
@@ -184,12 +191,35 @@ fun LibraryVersionCopyIcon(version: String) {
         }
     }
     
-    Tooltip(
-        tooltip = { Text(if (isCopied) "Copied!" else "Copy") }
+    val focusBorderColor = Color(0xFF3574F0)
+    
+    Box(
+        modifier = Modifier
+            .size(20.dp)
+            .border(
+                width = if (isFocused) 1.dp else 0.dp,
+                color = if (isFocused) focusBorderColor else Color.Transparent,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
                 .size(16.dp)
+                .onKeyEvent { keyEvent ->
+                    when {
+                        (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                        keyEvent.type == KeyEventType.KeyDown -> {
+                            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                            val stringSelection = java.awt.datatransfer.StringSelection(version)
+                            clipboard.setContents(stringSelection, null)
+                            isCopied = true
+                            true
+                        }
+                        else -> false
+                    }
+                }
                 .clickable(
                     indication = null,
                     interactionSource = interactionSource

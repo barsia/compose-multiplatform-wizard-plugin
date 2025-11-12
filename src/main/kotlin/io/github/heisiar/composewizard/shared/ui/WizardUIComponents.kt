@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -25,8 +26,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -77,6 +87,9 @@ internal fun CompactSwitch(
     val thumbSize = 12.dp
     val thumbPadding = 2.dp
     
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    
     val thumbOffset by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         label = "thumbOffset"
@@ -93,23 +106,41 @@ internal fun CompactSwitch(
     
     val textColor = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
     
+    val focusBorderColor = Color(0xFF3574F0)
+    
     Box(
         modifier = modifier
             .width(trackWidth)
             .height(trackHeight)
+            .semantics {
+                role = Role.Switch
+                stateDescription = if (checked) "Dev" else "Stable"
+            }
+            .onKeyEvent { keyEvent ->
+                if (enabled && 
+                    (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                    keyEvent.type == KeyEventType.KeyDown
+                ) {
+                    onCheckedChange(!checked)
+                    true
+                } else {
+                    false
+                }
+            }
             .background(
                 color = trackColor,
                 shape = RoundedCornerShape(trackHeight / 2)
             )
-            .border(
-                width = 0.5.dp,
-                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(trackHeight / 2)
-            )
+                   .border(
+                       width = if (isFocused) 1.dp else 0.5.dp,
+                       color = if (isFocused) focusBorderColor
+                               else JewelTheme.globalColors.text.normal.copy(alpha = 0.3f),
+                       shape = RoundedCornerShape(trackHeight / 2)
+                   )
             .clickable(
                 enabled = enabled,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ) {
                 onCheckedChange(!checked)
             }
