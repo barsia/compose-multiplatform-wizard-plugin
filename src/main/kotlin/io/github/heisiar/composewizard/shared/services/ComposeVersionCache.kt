@@ -1,5 +1,6 @@
 package io.github.heisiar.composewizard.shared.services
 
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
@@ -7,8 +8,10 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.LibraryType
+import io.github.heisiar.composewizard.shared.settings.WizardSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,13 +51,20 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private var initialized = false
     
     companion object {
+        private const val PLUGIN_ID = "io.github.heisiar.compose-multiplatform-wizard"
+        
         fun getInstance(): ComposeVersionCache {
             return ApplicationManager.getApplication().getService(ComposeVersionCache::class.java)
+        }
+        
+        private fun getCurrentPluginVersion(): String? {
+            return PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.version
         }
     }
     
     init {
         initializeComponents()
+        checkPluginUpdate()
     }
     
     private fun initializeComponents() {
@@ -71,12 +81,79 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         versionResolver = LibraryVersionResolver(scope, cacheManager, libraryVersionService)
     }
     
+    private fun checkPluginUpdate() {
+        val currentVersion = getCurrentPluginVersion()
+        if (currentVersion == null) {
+            logger.warn("Unable to determine current plugin version")
+            return
+        }
+        
+        val settings = WizardSettings.getInstance()
+        val lastVersion = settings.lastPluginVersion
+        
+        if (lastVersion.isNotEmpty() && lastVersion != currentVersion) {
+            logger.info("Plugin updated from $lastVersion to $currentVersion, clearing cache")
+            clearAllCache()
+        }
+        
+        settings.lastPluginVersion = currentVersion
+    }
+    
+    private fun clearAllCache() {
+        persistentState.stableVersions = emptyList()
+        persistentState.devVersions = emptyList()
+        persistentState.stableLastLoadTime = 0L
+        persistentState.devLastLoadTime = 0L
+        
+        persistentState.lifecycleVersions = linkedMapOf()
+        persistentState.lifecycleIsFromBundle = linkedMapOf()
+        persistentState.material3Versions = linkedMapOf()
+        persistentState.material3IsFromBundle = linkedMapOf()
+        persistentState.material3AdaptiveVersions = linkedMapOf()
+        persistentState.material3AdaptiveIsFromBundle = linkedMapOf()
+        persistentState.navigationVersions = linkedMapOf()
+        persistentState.navigationIsFromBundle = linkedMapOf()
+        persistentState.navigation3Versions = linkedMapOf()
+        persistentState.navigation3IsFromBundle = linkedMapOf()
+        persistentState.windowVersions = linkedMapOf()
+        persistentState.windowIsFromBundle = linkedMapOf()
+        persistentState.savedStateVersions = linkedMapOf()
+        persistentState.savedStateIsFromBundle = linkedMapOf()
+        persistentState.navigationEventVersions = linkedMapOf()
+        persistentState.navigationEventIsFromBundle = linkedMapOf()
+        persistentState.hotReloadVersions = linkedMapOf()
+        persistentState.hotReloadIsFromBundle = linkedMapOf()
+        persistentState.hotReloadGithubVersions = linkedMapOf()
+        
+        persistentState.lifecycleAvailableVersions = emptyList()
+        persistentState.lifecycleAvailableLastLoadTime = 0L
+        persistentState.material3AvailableVersions = emptyList()
+        persistentState.material3AvailableLastLoadTime = 0L
+        persistentState.material3AdaptiveAvailableVersions = emptyList()
+        persistentState.material3AdaptiveAvailableLastLoadTime = 0L
+        persistentState.navigationAvailableVersions = emptyList()
+        persistentState.navigationAvailableLastLoadTime = 0L
+        persistentState.navigation3AvailableVersions = emptyList()
+        persistentState.navigation3AvailableLastLoadTime = 0L
+        persistentState.windowAvailableVersions = emptyList()
+        persistentState.windowAvailableLastLoadTime = 0L
+        persistentState.savedStateAvailableVersions = emptyList()
+        persistentState.savedStateAvailableLastLoadTime = 0L
+        persistentState.navigationEventAvailableVersions = emptyList()
+        persistentState.navigationEventAvailableLastLoadTime = 0L
+        persistentState.hotReloadAvailableVersions = emptyList()
+        persistentState.hotReloadAvailableLastLoadTime = 0L
+        
+        logger.info("All cache cleared after plugin update")
+    }
+    
     override fun getState(): ComposeVersionCacheState {
         return persistentState
     }
     
     override fun loadState(state: ComposeVersionCacheState) {
         XmlSerializerUtil.copyBean(state, persistentState)
+        checkPluginUpdate()
         initializeCache()
     }
     

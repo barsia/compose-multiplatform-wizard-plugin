@@ -121,7 +121,8 @@ fun ComposeVersionFieldWrapper(state: WizardState, modifier: Modifier = Modifier
             state.enableDevVersions = it
             io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersionsSetByUser = true
             ComposeWizardUsageCollector.logDevVersionsToggled(it)
-        }
+        },
+        state = state
     )
 }
 

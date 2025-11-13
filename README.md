@@ -263,6 +263,79 @@ showLock = (selectedVersion == githubVersion)
 - **Loaded** - Normal dropdown with version
 - **Error** - Empty or fallback version, no visual error indicator
 
+## Dev/Stable Compose Versions Toggle
+
+### Overview
+
+The wizard displays a **Dev/Stable toggle** (switcher) above the Compose version dropdown, allowing users to switch between stable releases and development/preview versions.
+
+### Visibility Logic
+
+**For Regular Users (non-internal mode):**
+- Toggle is **hidden by default**
+- Can be **revealed** via triple-click on version footer (`v1.0.0` in bottom-left corner)
+- Can be **hidden again** via triple-click (with restrictions - see below)
+
+**For Internal Mode (`idea.is.internal=true`):**
+- Toggle is **always visible**
+- **Cannot be hidden** (triple-click is blocked)
+
+### Triple-Click Behavior
+
+**Activation Method:**
+- Triple-click on version text in footer (`v1.0.0`)
+- Clicks must be within 600ms of each other
+- Counter resets after successful action or timeout
+
+**For Regular Users:**
+
+| Current State | Triple-Click Action | Result | Feedback |
+|---------------|---------------------|--------|----------|
+| Toggle hidden | Triple-click | ✅ Toggle shown | Logged to usage statistics |
+| Toggle shown + **Stable** selected | Triple-click | ✅ Toggle hidden | Auto-switches to Stable mode + saves setting |
+| Toggle shown + **Dev** selected | Triple-click | ❌ **Blocked** | Shake animation + Tooltip: "You can hide the toggle after switching to Stable" |
+
+**For Internal Mode:**
+
+| Current State | Triple-Click Action | Result | Feedback |
+|---------------|---------------------|--------|----------|
+| Any state (Dev/Stable) | Triple-click | ❌ **Always blocked** | Shake animation + Tooltip: "Dev/Stable toggle is always visible in internal mode" |
+
+### Protection Logic
+
+**Why block hiding toggle in Dev mode?**
+- Prevents accidental loss of Dev versions when user has Dev mode active
+- Forces explicit switch to Stable before hiding the toggle
+- Ensures user is aware they're leaving Dev mode
+
+**Why block hiding in internal mode?**
+- Internal mode users need persistent access to Dev versions
+- Consistency: internal mode = advanced features always available
+
+### Visual Feedback
+
+**Shake Animation:**
+- Horizontal oscillation: ±8dp
+- 4 repetitions, 50ms each direction
+- Triggers when hide action is blocked
+
+**Tooltip:**
+- Auto-displays for 3 seconds
+- Different messages for regular users vs. internal mode
+- Uses Jewel UI `Tooltip` component
+
+### Settings Persistence
+
+**Tracked in `WizardSettings`:**
+- `devCheckboxVisibleByUser: Boolean` - Whether user manually toggled visibility
+- `enableDevVersions: Boolean` - Whether Dev mode is currently active
+- `enableDevVersionsSetByUser: Boolean` - Whether user manually toggled Dev/Stable
+
+**Behavior:**
+- Settings persist across IDE restarts
+- Hiding toggle automatically disables Dev mode
+- Internal mode overrides user preference for visibility
+
 ## Development
 
 ### Requirements

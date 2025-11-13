@@ -85,7 +85,7 @@ internal fun CompactSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    val trackWidth = 46.dp
+    val trackWidth = 52.dp
     val trackHeight = 16.dp
     val thumbSize = 12.dp
     val thumbPadding = 2.dp
@@ -181,7 +181,7 @@ internal fun CompactSwitch(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Stable",
+                        text = "Release",
                         fontSize = 8.sp,
                         color = textColor,
                         style = JewelTheme.defaultTextStyle

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.Tooltip
 import java.awt.Cursor
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -57,7 +59,8 @@ fun ComposeVersionField(
     onRefreshVersions: () -> Unit,
     modifier: Modifier = Modifier,
     devCheckboxVisible: Boolean = false,
-    onDevVersionsToggle: (Boolean) -> Unit = {}
+    onDevVersionsToggle: (Boolean) -> Unit = {},
+    state: WizardState
 ) {
     var refreshTrigger by remember { mutableStateOf(0) }
     
@@ -67,7 +70,7 @@ fun ComposeVersionField(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Compose Version", style = JewelTheme.defaultTextStyle)
@@ -75,10 +78,29 @@ fun ComposeVersionField(
             Spacer(modifier = Modifier.weight(1f))
             
             if (devCheckboxVisible) {
-                CompactSwitch(
-                    checked = enableDevVersions,
-                    onCheckedChange = { onDevVersionsToggle(it) }
-                )
+                val shakeOffset = remember { Animatable(0f) }
+                
+                LaunchedEffect(state.triggerDevSwitcherShake) {
+                    if (state.triggerDevSwitcherShake > 0) {
+                        repeat(4) {
+                            shakeOffset.animateTo(8f, animationSpec = tween(50, easing = LinearEasing))
+                            shakeOffset.animateTo(-8f, animationSpec = tween(50, easing = LinearEasing))
+                        }
+                        shakeOffset.animateTo(0f, animationSpec = tween(50, easing = LinearEasing))
+                    }
+                }
+                
+                Box(modifier = Modifier.offset(x = shakeOffset.value.dp)) {
+                    Tooltip(tooltip = { 
+                        Text(if (enableDevVersions) "Dev versions" else "Release versions") 
+                    }) {
+                        CompactSwitch(
+                            checked = enableDevVersions,
+                            onCheckedChange = { onDevVersionsToggle(it) }
+                        )
+                    }
+                }
+                
                 Spacer(modifier = Modifier.width(16.dp))
             }
         }

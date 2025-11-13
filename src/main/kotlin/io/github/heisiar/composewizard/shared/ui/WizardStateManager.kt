@@ -26,6 +26,9 @@ class WizardState {
     var enableDevVersions by mutableStateOf(false)
     var devCheckboxVisible by mutableStateOf(false)
     var isLocationSynced by mutableStateOf(true)
+    var triggerDevSwitcherShake by mutableStateOf(0)
+    var showDevSwitcherTooltip by mutableStateOf(false)
+    var showInternalModeTooltip by mutableStateOf(false)
     
     var projectNameError by mutableStateOf<String?>(null)
     var projectPathError by mutableStateOf<String?>(null)

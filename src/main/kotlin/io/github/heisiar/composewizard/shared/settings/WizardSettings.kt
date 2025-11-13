@@ -19,6 +19,7 @@ class WizardSettings : PersistentStateComponent<WizardSettings> {
     var devCheckboxVisibleByUser: Boolean = false
     var welcomeTooltipShown: Boolean = false
     var isLibrariesExpanded: Boolean? = null
+    var lastPluginVersion: String = ""
     
     /**
      * Optional GitHub Personal Access Token (fine-grained) for higher API rate limits.
