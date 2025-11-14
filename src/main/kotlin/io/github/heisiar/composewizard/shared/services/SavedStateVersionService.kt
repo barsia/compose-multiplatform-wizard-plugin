@@ -8,7 +8,7 @@ import java.net.URL
 class SavedStateVersionService : LibraryVersionService {
     
     companion object {
-        private const val MAVEN_METADATA_URL = "https://repo1.maven.org/maven2/org/jetbrains/androidx/savedstate/savedstate-core/maven-metadata.xml"
+        private const val MAVEN_METADATA_URL = "https://repo1.maven.org/maven2/org/jetbrains/androidx/savedstate/savedstate/maven-metadata.xml"
     }
     
     suspend fun fetchSavedStateVersions(): List<String> {
