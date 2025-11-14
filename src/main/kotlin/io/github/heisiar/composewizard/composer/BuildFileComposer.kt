@@ -364,7 +364,7 @@ androidx-material3-adaptive-layout = { module = "org.jetbrains.compose.material3
 androidx-material3-adaptive-navigation = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation", version.ref = "androidx-material3-adaptive" }"""
                 "androidx-navigation" -> """androidx-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }"""
                 "androidx-navigation3" -> """androidx-navigation3 = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation3" }"""
-                "androidx-navigation-event" -> """androidx-navigation-event = { module = "org.jetbrains.androidx.navigationevent:navigationevent", version.ref = "androidx-navigation-event" }"""
+                "androidx-navigation-event" -> """androidx-navigation-event = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "androidx-navigation-event" }"""
                 "androidx-savedstate" -> """androidx-savedstate = { module = "org.jetbrains.androidx.savedstate:savedstate", version.ref = "androidx-savedstate" }"""
                 "androidx-window" -> """androidx-window = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }"""
                 else -> ""

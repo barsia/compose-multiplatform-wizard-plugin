@@ -8,7 +8,7 @@ import java.net.URL
 class NavigationEventVersionService : LibraryVersionService {
     
     companion object {
-        private const val MAVEN_METADATA_URL = "https://repo1.maven.org/maven2/org/jetbrains/androidx/navigationevent/navigationevent-core/maven-metadata.xml"
+        private const val MAVEN_METADATA_URL = "https://repo1.maven.org/maven2/org/jetbrains/androidx/navigationevent/navigationevent-compose/maven-metadata.xml"
     }
     
     suspend fun fetchNavigationEventVersions(): List<String> {
