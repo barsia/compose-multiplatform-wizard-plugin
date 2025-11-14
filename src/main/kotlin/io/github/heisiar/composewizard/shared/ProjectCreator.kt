@@ -24,37 +24,97 @@ object ProjectCreator {
         projectName: String,
         builder: ComposeMultiplatformModuleBuilder
     ): Boolean {
+        return createProjectStructure(projectPath, projectName, builder, useCache = true)
+    }
+    
+    /**
+     * Creates the project structure at the specified path.
+     * 
+     * This is an internal method that allows controlling whether to use ComposeVersionCache.
+     * When useCache=false, it's suitable for integration tests that don't have IntelliJ Application context.
+     * 
+     * @param projectPath Full path where the project should be created
+     * @param projectName Name of the project
+     * @param builder Module builder containing all project configuration
+     * @param useCache Whether to use ComposeVersionCache (requires IntelliJ Application context)
+     * @return true if project was created successfully, false otherwise
+     */
+    internal fun createProjectStructure(
+        projectPath: String,
+        projectName: String,
+        builder: ComposeMultiplatformModuleBuilder,
+        useCache: Boolean
+    ): Boolean {
         return try {
             
-            // Get library versions from ComposeVersionCache with fallback to LIBRARY_BUNDLES
-            val cache = ComposeVersionCache.getInstance()
+            // Get library versions from LIBRARY_BUNDLES (for fallback)
             val libraryVersions = ComposeVersions.getLibraryBundle(builder.composeVersion)
                 ?: ComposeVersions.getLibraryBundle(ComposeVersions.DEFAULT_VERSION)!!
             
-            // Try to get versions from cache first, fallback to LIBRARY_BUNDLES
-            val lifecycleVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.LIFECYCLE)
-                ?: libraryVersions.lifecycleVersion
-            val material3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3)
-                ?: libraryVersions.material3Version
-            val material3AdaptiveVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3_ADAPTIVE)
-                ?: libraryVersions.material3AdaptiveVersion
-            val navigationVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION)
-                ?: libraryVersions.navigationVersion
-            val navigation3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION3)
-                ?: libraryVersions.navigation3Version
-            val navigationEventVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION_EVENT)
-                ?: libraryVersions.navigationEventVersion
-            val savedStateVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.SAVED_STATE)
-                ?: libraryVersions.savedStateVersion
-            val windowVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.WINDOW)
-                ?: libraryVersions.windowVersion
+            // Use versions from builder if set, otherwise determine based on useCache flag
+            val lifecycleVersion: String
+            val material3Version: String?
+            val material3AdaptiveVersion: String?
+            val navigationVersion: String?
+            val navigation3Version: String?
+            val navigationEventVersion: String?
+            val savedStateVersion: String?
+            val windowVersion: String?
+            
+            if (builder.lifecycleVersion != null) {
+                // Use versions from builder (already set by UI or tests)
+                lifecycleVersion = builder.lifecycleVersion!!
+                material3Version = builder.material3Version
+                material3AdaptiveVersion = builder.material3AdaptiveVersion
+                navigationVersion = builder.navigationVersion
+                navigation3Version = builder.navigation3Version
+                navigationEventVersion = builder.navigationEventVersion
+                savedStateVersion = builder.savedStateVersion
+                windowVersion = builder.windowVersion
+            } else if (useCache) {
+                // Try to get versions from cache first, fallback to LIBRARY_BUNDLES
+                val cache = ComposeVersionCache.getInstance()
+                lifecycleVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.LIFECYCLE)
+                    ?: libraryVersions.lifecycleVersion
+                material3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3)
+                    ?: libraryVersions.material3Version
+                material3AdaptiveVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.MATERIAL3_ADAPTIVE)
+                    ?: libraryVersions.material3AdaptiveVersion
+                navigationVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION)
+                    ?: libraryVersions.navigationVersion
+                navigation3Version = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION3)
+                    ?: libraryVersions.navigation3Version
+                navigationEventVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.NAVIGATION_EVENT)
+                    ?: libraryVersions.navigationEventVersion
+                savedStateVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.SAVED_STATE)
+                    ?: libraryVersions.savedStateVersion
+                windowVersion = cache.getLibraryVersion(builder.composeVersion, LibraryType.WINDOW)
+                    ?: libraryVersions.windowVersion
+            } else {
+                // Use only versions from LIBRARY_BUNDLES (for tests without Application context)
+                lifecycleVersion = libraryVersions.lifecycleVersion
+                material3Version = libraryVersions.material3Version
+                material3AdaptiveVersion = libraryVersions.material3AdaptiveVersion
+                navigationVersion = libraryVersions.navigationVersion
+                navigation3Version = libraryVersions.navigation3Version
+                navigationEventVersion = libraryVersions.navigationEventVersion
+                savedStateVersion = libraryVersions.savedStateVersion
+                windowVersion = libraryVersions.windowVersion
+            }
             
             
-            val processor = TemplateProcessor(
+            val config = io.github.heisiar.composewizard.generator.ProjectConfig(
                 projectName = projectName,
                 projectId = builder.projectId,
                 composeVersion = builder.composeVersion,
-                kotlinVersion = libraryVersions.kotlinVersion,
+                kotlinVersion = builder.kotlinVersion.takeIf { it.isNotEmpty() } ?: libraryVersions.kotlinVersion,
+                targetDesktop = builder.targetDesktop,
+                targetAndroid = builder.targetAndroid,
+                targetIOS = builder.targetIOS,
+                targetWeb = builder.targetWeb,
+                includeTests = builder.includeTests,
+                initGit = builder.initGit,
+                enableDevVersions = builder.enableDevVersions,
                 lifecycleVersion = lifecycleVersion,
                 material3Version = material3Version,
                 material3AdaptiveVersion = material3AdaptiveVersion,
@@ -64,12 +124,6 @@ object ProjectCreator {
                 savedStateVersion = savedStateVersion,
                 windowVersion = windowVersion,
                 hotReloadVersion = builder.hotReloadVersion,
-                includeTests = builder.includeTests,
-                targetDesktop = builder.targetDesktop,
-                targetAndroid = builder.targetAndroid,
-                targetIOS = builder.targetIOS,
-                targetWeb = builder.targetWeb,
-                enableDevVersions = builder.enableDevVersions,
                 includeMaterial3 = builder.includeMaterial3,
                 includeMaterial3Adaptive = builder.includeMaterial3Adaptive,
                 includeNavigation = builder.includeNavigation,
@@ -80,16 +134,56 @@ object ProjectCreator {
                 includeHotReload = builder.includeHotReload
             )
             
-            processor.copyTemplateToProject(projectPath)
+            val composer = io.github.heisiar.composewizard.composer.ProjectComposer(config)
             
-            // Create .gitignore file
-            createGitignoreFile(projectPath)
+            if (builder.targetAndroid) {
+                composer.addModule(io.github.heisiar.composewizard.composer.modules.AndroidModule())
+            }
+            if (builder.targetIOS) {
+                composer.addModule(io.github.heisiar.composewizard.composer.modules.iOSModule())
+            }
+            if (builder.targetDesktop) {
+                composer.addModule(io.github.heisiar.composewizard.composer.modules.DesktopModule())
+            }
+            if (builder.targetWeb) {
+                composer.addModule(io.github.heisiar.composewizard.composer.modules.WebModule())
+            }
+            
+            if (builder.includeTests) {
+                composer.addFeature(io.github.heisiar.composewizard.composer.features.TestsFeature())
+            }
+            if (builder.initGit) {
+                composer.addFeature(io.github.heisiar.composewizard.composer.features.GitFeature())
+            }
+            if (builder.includeHotReload) {
+                composer.addFeature(io.github.heisiar.composewizard.composer.features.HotReloadFeature())
+            }
+            
+            composer.compose(projectPath)
             
             true
         } catch (e: Exception) {
             e.printStackTrace()
             false
         }
+    }
+    
+    /**
+     * Creates local.properties file for Android projects.
+     * 
+     * @param projectPath Path to the project directory
+     */
+    fun createLocalPropertiesFile(projectPath: String) {
+        val localPropertiesContent = """## This file must *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Location of the SDK. This is only used by Gradle.
+# For customization when using a Version Control System, please read the
+# header note.
+
+sdk.dir=
+"""
+        File(projectPath, "local.properties").writeText(localPropertiesContent)
     }
     
     /**
@@ -119,7 +213,7 @@ object ProjectCreator {
                 !*.xcworkspace/contents.xcworkspacedata
                 **/xcshareddata/WorkspaceSettings.xcsettings
                 node_modules/
-            """.trimIndent()
+            """.trimIndent() + "\n"
             
             val gitignoreFile = File(projectPath, ".gitignore")
             gitignoreFile.writeText(gitignoreContent)

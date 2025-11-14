@@ -106,11 +106,20 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
 
     override fun isAvailable(): Boolean = true
     
-    fun createProjectStructure(rootPath: String, projectName: String) {
+    /**
+     * Creates project structure at the specified path.
+     * 
+     * @param rootPath Full path where the project should be created
+     * @param projectName Name of the project
+     * @param useCache Whether to use ComposeVersionCache (requires IntelliJ Application context).
+     *                 Set to false for tests without Application context.
+     */
+    fun createProjectStructure(rootPath: String, projectName: String, useCache: Boolean = true) {
         io.github.heisiar.composewizard.shared.ProjectCreator.createProjectStructure(
             projectPath = rootPath,
-                projectName = projectName,
-            builder = this
+            projectName = projectName,
+            builder = this,
+            useCache = useCache
         )
     }
     

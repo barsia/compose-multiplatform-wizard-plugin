@@ -67,6 +67,12 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
             // Update builder with UI values
             composeStep.updateDataModel()
             
+            // CRITICAL: Set contentEntryPath BEFORE calling setupProjectFromBuilder
+            // This ensures the builder uses the correct project path from the wizard
+            val projectPath = project.basePath ?: throw IllegalStateException("Project path is null")
+            builder.contentEntryPath = projectPath
+            System.err.println("!!!!! Set builder.contentEntryPath to: $projectPath !!!!!")
+            
             // Use setupProjectFromBuilder like EmptyProject does
             System.err.println("!!!!! Calling setupProjectFromBuilder !!!!!")
             setupProjectFromBuilder(project, builder)

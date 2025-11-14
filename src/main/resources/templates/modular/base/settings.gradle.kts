@@ -12,7 +12,6 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
-        {{DEV_MAVEN_REPO}}
     }
 }
 
@@ -26,13 +25,6 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-        {{DEV_MAVEN_REPO}}
     }
 }
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-include(":composeApp")
-
+{{FOOJAY_PLUGIN}}include(":composeApp")

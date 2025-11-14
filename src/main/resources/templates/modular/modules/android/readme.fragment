@@ -10,4 +10,3 @@ in your IDE's toolbar or build it directly from the terminal:
   ```shell
   .\gradlew.bat :composeApp:assembleDebug
   ```
-

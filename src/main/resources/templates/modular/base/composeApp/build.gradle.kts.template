@@ -1,5 +1,4 @@
 {{IMPORTS}}
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
 {{PLUGINS}}
@@ -10,7 +9,7 @@ plugins {
 
 kotlin {
 {{TARGETS}}
-    
+
     sourceSets {
 {{SOURCE_SETS}}
     }

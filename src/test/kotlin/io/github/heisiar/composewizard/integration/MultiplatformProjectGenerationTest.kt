@@ -217,7 +217,7 @@ class MultiplatformProjectGenerationTest {
                 useCache = false
             )
             
-            val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-desktop-ios-tests")
+            val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-ios-desktop-tests")
             
             FileTreeComparator.compareDirectories(
                 fixtureDir,

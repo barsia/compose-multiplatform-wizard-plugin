@@ -139,9 +139,15 @@ object ComposeVersions {
         ),
         "1.9.3" to ComposeLibraryVersions(
             composeVersion = "1.9.3",
-            kotlinVersion = "2.1.0",
+            kotlinVersion = "2.2.21",
             lifecycleVersion = "2.9.6",
             savedStateVersion = "1.3.6"
+        ),
+        "1.9.2" to ComposeLibraryVersions(
+            composeVersion = "1.9.2",
+            kotlinVersion = "2.2.20",
+            lifecycleVersion = "2.9.5",
+            material3AdaptiveVersion = "1.2.0"
         )
     )
     

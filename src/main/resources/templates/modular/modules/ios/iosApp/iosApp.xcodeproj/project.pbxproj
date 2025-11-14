@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		7418896281989537FB04AA81 /* KotlinProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KotlinProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000001 /* $PROJECT_NAME$.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = $PROJECT_NAME$.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		0C2628FF538DE5BCD9421FDD /* Exceptions for "iosApp" folder in "iosApp" target */ = {
+		000000000000000000000002 /* Exceptions for "iosApp" folder in "iosApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 715CB779D296E0C42E5CADC9 /* iosApp */;
+			target = 000000000000000000000008 /* iosApp */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		572C48337A91912A43821AD1 /* iosApp */ = {
+		000000000000000000000003 /* iosApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				0C2628FF538DE5BCD9421FDD /* Exceptions for "iosApp" folder in "iosApp" target */,
+				000000000000000000000002 /* Exceptions for "iosApp" folder in "iosApp" target */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
 		};
-		BBDAACDF8A89E1D32E94465F /* Configuration */ = {
+		000000000000000000000004 /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Configuration;
 			sourceTree = "<group>";
@@ -37,7 +37,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		E923941904218D83F1838BD3 /* Frameworks */ = {
+		000000000000000000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -47,19 +47,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		B128FF652F6621AD5FE49889 = {
+		000000000000000000000006 = {
 			isa = PBXGroup;
 			children = (
-				BBDAACDF8A89E1D32E94465F /* Configuration */,
-				572C48337A91912A43821AD1 /* iosApp */,
-				C9837A5B214885925A824C96 /* Products */,
+				000000000000000000000004 /* Configuration */,
+				000000000000000000000003 /* iosApp */,
+				000000000000000000000007 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		C9837A5B214885925A824C96 /* Products */ = {
+		000000000000000000000007 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7418896281989537FB04AA81 /* KotlinProject.app */,
+				000000000000000000000001 /* $PROJECT_NAME$.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -67,65 +67,65 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		715CB779D296E0C42E5CADC9 /* iosApp */ = {
+		000000000000000000000008 /* iosApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0A9C47AE2434F77311070B9F /* Build configuration list for PBXNativeTarget "iosApp" */;
+			buildConfigurationList = 44510CE12E689656DDCB223D /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
-				FBCB500297D96D7EB5760496 /* Compile Kotlin Framework */,
-				701A1B979D5D5C54A554FB42 /* Sources */,
-				E923941904218D83F1838BD3 /* Frameworks */,
-				6F3EDFB07A1C5DED4B06B854 /* Resources */,
+				000000000000000000000012 /* Compile Kotlin Framework */,
+				0F7294C899C416969CD30672 /* Sources */,
+				000000000000000000000005 /* Frameworks */,
+				000000000000000000000011 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				572C48337A91912A43821AD1 /* iosApp */,
+				000000000000000000000003 /* iosApp */,
 			);
 			name = iosApp;
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = 7418896281989537FB04AA81 /* KotlinProject.app */;
+			productReference = 000000000000000000000001 /* $PROJECT_NAME$.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		55004456A9222C383C7CA53F /* Project object */ = {
+		000000000000000000000009 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
-					715CB779D296E0C42E5CADC9 = {
+					000000000000000000000008 = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
-			buildConfigurationList = B480BB590B6AC0E31F3663B7 /* Build configuration list for PBXProject "iosApp" */;
+			buildConfigurationList = 77847C6D9988C8126404A545 /* Build configuration list for PBXProject "iosApp" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = B128FF652F6621AD5FE49889;
+			mainGroup = 000000000000000000000006;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = C9837A5B214885925A824C96 /* Products */;
+			productRefGroup = 000000000000000000000007 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				715CB779D296E0C42E5CADC9 /* iosApp */,
+				000000000000000000000008 /* iosApp */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		6F3EDFB07A1C5DED4B06B854 /* Resources */ = {
+		000000000000000000000011 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,7 +135,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		FBCB500297D96D7EB5760496 /* Compile Kotlin Framework */ = {
+		000000000000000000000012 /* Compile Kotlin Framework */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -157,7 +157,7 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		701A1B979D5D5C54A554FB42 /* Sources */ = {
+		0F7294C899C416969CD30672 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -167,9 +167,9 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		CCBD0A8513A48B3F1CF83FB4 /* Debug */ = {
+		B1C2D8FDC4D66E8B64089899 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = BBDAACDF8A89E1D32E94465F /* Configuration */;
+			baseConfigurationReferenceAnchor = 000000000000000000000004 /* Configuration */;
 			baseConfigurationReferenceRelativePath = Config.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -232,9 +232,9 @@
 			};
 			name = Debug;
 		};
-		1AF00129B815D7068F2F3B31 /* Release */ = {
+		4E902D52A801798F465ED5B5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = BBDAACDF8A89E1D32E94465F /* Configuration */;
+			baseConfigurationReferenceAnchor = 000000000000000000000004 /* Configuration */;
 			baseConfigurationReferenceRelativePath = Config.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -290,7 +290,7 @@
 			};
 			name = Release;
 		};
-		21350CB7DBCC3CB3225F9692 /* Debug */ = {
+		B9EEF674A35446D26620C57A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
@@ -318,7 +318,7 @@
 			};
 			name = Debug;
 		};
-		1E2F2D0B134BC513CCE26DEC /* Release */ = {
+		50DE9A96B427C6C5A604201F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
@@ -349,25 +349,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B480BB590B6AC0E31F3663B7 /* Build configuration list for PBXProject "iosApp" */ = {
+		77847C6D9988C8126404A545 /* Build configuration list for PBXProject "iosApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				CCBD0A8513A48B3F1CF83FB4 /* Debug */,
-				1AF00129B815D7068F2F3B31 /* Release */,
+				B1C2D8FDC4D66E8B64089899 /* Debug */,
+				4E902D52A801798F465ED5B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0A9C47AE2434F77311070B9F /* Build configuration list for PBXNativeTarget "iosApp" */ = {
+		44510CE12E689656DDCB223D /* Build configuration list for PBXNativeTarget "iosApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				21350CB7DBCC3CB3225F9692 /* Debug */,
-				1E2F2D0B134BC513CCE26DEC /* Release */,
+				B9EEF674A35446D26620C57A /* Debug */,
+				50DE9A96B427C6C5A604201F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 55004456A9222C383C7CA53F /* Project object */;
+	rootObject = 000000000000000000000009 /* Project object */;
 }
