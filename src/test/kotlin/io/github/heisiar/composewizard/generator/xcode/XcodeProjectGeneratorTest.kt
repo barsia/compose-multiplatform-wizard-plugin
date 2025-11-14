@@ -1,6 +1,5 @@
 package io.github.heisiar.composewizard.generator.xcode
 
-import io.github.heisiar.composewizard.generator.ProjectConfig
 import io.github.heisiar.composewizard.testutils.ProjectFixtures
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -27,7 +26,7 @@ class XcodeProjectGeneratorTest {
             /* End PBXProject section */
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertFalse(result.contains("ABC123DEF456789ABCDEF012"), "Original UUID should be replaced")
         assertFalse(result.contains("DEF456789ABCDEF012345678"), "Original UUID should be replaced")
@@ -44,7 +43,7 @@ class XcodeProjectGeneratorTest {
             D0C6196ECE92D680CDA86A0C /* ${'$'}PROJECT_NAME$.app */ = {isa = PBXFileReference;};
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertTrue(result.contains("${testConfig.projectName}.app"), "Should replace PROJECT_NAME with actual name")
         assertFalse(result.contains("\$PROJECT_NAME\$"), "Placeholder should be removed")
@@ -67,7 +66,7 @@ class XcodeProjectGeneratorTest {
             }
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertTrue(result.contains("// !\$*UTF8*\$!"), "Should preserve file header")
         assertTrue(result.contains("archiveVersion = 1;"), "Should preserve structure")
@@ -84,7 +83,7 @@ class XcodeProjectGeneratorTest {
             UUID1 again: ABC123DEF456789ABCDEF012
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         val lines = result.lines()
         val uuid1Line1 = lines[0].substringAfter("UUID1: ")
@@ -104,7 +103,7 @@ class XcodeProjectGeneratorTest {
             Just regular content
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertEquals(template, result, "Should return template unchanged if no UUIDs or placeholders")
     }
@@ -118,7 +117,7 @@ class XcodeProjectGeneratorTest {
             Bundle: com.example.${'$'}PROJECT_NAME${'$'}
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         val expectedName = testConfig.projectName
         assertTrue(result.contains("Name: $expectedName"))
@@ -139,7 +138,7 @@ class XcodeProjectGeneratorTest {
             /* End PBXFileReference section */
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertTrue(result.contains("/* Begin PBXFileReference section */"))
         assertTrue(result.contains("/* End PBXFileReference section */"))
@@ -152,7 +151,7 @@ class XcodeProjectGeneratorTest {
         val generator = XcodeProjectGenerator(SecureRandomUUIDGenerator())
         val template = "UUID: ABC123DEF456789ABCDEF012"
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         val uuidPattern = Regex("[0-9A-F]{24}")
         val foundUuids = uuidPattern.findAll(result).map { it.value }.toList()
@@ -178,7 +177,7 @@ class XcodeProjectGeneratorTest {
             };
         """.trimIndent()
 
-        val result = generator.generate(testConfig, template)
+        val result = generator.generate(ProjectFixtures.toProjectConfig(testConfig), template)
 
         assertFalse(result.contains("D0C6196ECE92D680CDA86A0C"))
         assertFalse(result.contains("1CB7666178EA02572D3F748D"))

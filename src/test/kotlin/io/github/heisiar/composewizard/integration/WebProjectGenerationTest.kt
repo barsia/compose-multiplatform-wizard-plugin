@@ -1,22 +1,25 @@
 package io.github.heisiar.composewizard.integration
 
-import io.github.heisiar.composewizard.generator.ProjectGenerator
+import io.github.heisiar.composewizard.shared.ProjectCreator
 import io.github.heisiar.composewizard.testutils.FileTreeComparator
 import io.github.heisiar.composewizard.testutils.ProjectFixtures
 import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
 import org.junit.jupiter.api.Test
-import kotlin.test.assertTrue
 import java.io.File
+import kotlin.test.assertTrue
 
 class WebProjectGenerationTest {
 
     @Test
     fun `generate Web-only project with correct structure`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertFileExists(tempDir, "build.gradle.kts")
             FileTreeComparator.assertFileExists(tempDir, "settings.gradle.kts")
@@ -52,57 +55,77 @@ class WebProjectGenerationTest {
     @Test
     fun `generated project has correct project name in settings gradle`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val settingsGradleContent = File(tempDir, "settings.gradle.kts").readText()
-            assertTrue(settingsGradleContent.contains("rootProject.name = \"${config.projectName}\""))
+            assertTrue(settingsGradleContent.contains("rootProject.name = \"${builder.projectName}\""))
         }
     }
 
     @Test
     fun `generated project has correct package name`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val appKtContent = File(tempDir, "composeApp/src/webMain/kotlin/org/example/web/App.kt").readText()
-            assertTrue(appKtContent.contains("package ${config.projectId}"))
+            assertTrue(appKtContent.contains("package ${builder.projectId}"))
         }
     }
 
     @Test
     fun `generated project has correct Compose version`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val libsVersionsContent = File(tempDir, "gradle/libs.versions.toml").readText()
-            assertTrue(libsVersionsContent.contains("composeMultiplatform = \"${config.composeVersion}\""))
+            assertTrue(libsVersionsContent.contains("composeMultiplatform = \"${builder.composeVersion}\""))
         }
     }
 
     @Test
     fun `generated project has correct Kotlin version`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val libsVersionsContent = File(tempDir, "gradle/libs.versions.toml").readText()
-            assertTrue(libsVersionsContent.contains("kotlin = \"${config.kotlinVersion}\""))
+            assertTrue(libsVersionsContent.contains("kotlin = \"${builder.kotlinVersion}\""))
         }
     }
 
     @Test
     fun `generated Web project does not include tests`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val commonTestDir = File(tempDir, "composeApp/src/commonTest")
             assertTrue(!commonTestDir.exists(), "Should not have commonTest")
@@ -112,9 +135,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project does not initialize git`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val gitDir = File(tempDir, ".git")
             assertTrue(!gitDir.exists(), "Should not create .git directory")
@@ -124,9 +151,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project includes js and wasmJs targets`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val composeAppBuildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(composeAppBuildGradle.contains("js {"))
@@ -140,9 +171,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project includes ExperimentalWasmDsl import`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val composeAppBuildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(composeAppBuildGradle.contains("import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl"))
@@ -152,10 +187,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project does not contain system files`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val allFiles = tempDir.walkTopDown().filter { it.isFile }.map { it.name }.toList()
             
@@ -175,9 +213,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project includes google repositories in settings gradle`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val settingsGradleContent = File(tempDir, "settings.gradle.kts").readText()
             assertTrue(settingsGradleContent.contains("google {"))
@@ -187,10 +229,13 @@ class WebProjectGenerationTest {
     @Test
     fun `compare generated Web project with fixture`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.WEB_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.WEB_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("web-only")
 
@@ -202,10 +247,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project includes tests when enabled`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.webConfig(includeTests = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.webConfig(includeTests = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertTestsIncluded(tempDir)
         }
@@ -214,10 +262,13 @@ class WebProjectGenerationTest {
     @Test
     fun `generated Web project initializes git when enabled`() {
         TemporaryProjectHelper.withTempProject("web-test-") { tempDir ->
-            val config = ProjectFixtures.webConfig(initGit = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.webConfig(initGit = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertGitInitialized(tempDir)
         }

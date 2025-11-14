@@ -25,7 +25,7 @@ class IntelliJWizardIntegrationTest {
             builder.includeTests = false
             
             // Simulate what GeneratorNewProjectWizard does
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             // Verify critical files exist
             assertTrue(File(tempDir, "build.gradle.kts").exists(), 
@@ -56,7 +56,7 @@ class IntelliJWizardIntegrationTest {
             builder.includeTests = false
             
             // Create project structure
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             // Verify platform-specific directories
             assertTrue(File(tempDir, "composeApp/src/commonMain").exists(), 
@@ -86,7 +86,7 @@ class IntelliJWizardIntegrationTest {
             
             // Should not throw, but should not create files either
             try {
-                builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+                builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
                 
                 // If it doesn't throw, check that no critical files were created with invalid config
                 // (This is a safety check - in real scenario validation should prevent this)
@@ -112,7 +112,7 @@ class IntelliJWizardIntegrationTest {
             builder.targetIOS = false
             builder.targetWeb = false
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val settingsFile = File(tempDir, "settings.gradle.kts")
             assertTrue(settingsFile.exists(), "settings.gradle.kts must exist")
@@ -136,7 +136,7 @@ class IntelliJWizardIntegrationTest {
             builder.targetIOS = false
             builder.targetWeb = false
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val versionsToml = File(tempDir, "gradle/libs.versions.toml")
             assertTrue(versionsToml.exists(), "libs.versions.toml must exist")
@@ -202,7 +202,7 @@ class IntelliJWizardIntegrationTest {
             builder.targetWeb = false
             builder.initGit = false // Even without git init, .gitignore should be created
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val gitignoreFile = File(tempDir, ".gitignore")
             assertTrue(gitignoreFile.exists(), 
@@ -229,7 +229,7 @@ class IntelliJWizardIntegrationTest {
             builder.targetWeb = false
             builder.includeTests = true // Include tests
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts")
             assertTrue(buildGradle.exists(), "build.gradle.kts must exist")
@@ -256,7 +256,7 @@ class IntelliJWizardIntegrationTest {
             builder.contentEntryPath = tempDir.absolutePath
             
             // This simulates what setupProjectFromBuilder does
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             // Verify the project was created
             assertTrue(File(tempDir, "build.gradle.kts").exists(),
@@ -299,7 +299,7 @@ class IntelliJWizardIntegrationTest {
             // This should either fail validation OR create minimal structure
             // Let's verify the behavior
             try {
-                builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+                builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
                 
                 // If it succeeds, at minimum the gradle wrapper should exist
                 val gradleWrapper = File(tempDir, "gradlew")

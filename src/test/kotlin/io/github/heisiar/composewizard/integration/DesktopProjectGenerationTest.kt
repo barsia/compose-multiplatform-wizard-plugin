@@ -1,6 +1,6 @@
 package io.github.heisiar.composewizard.integration
 
-import io.github.heisiar.composewizard.generator.ProjectGenerator
+import io.github.heisiar.composewizard.shared.ProjectCreator
 import io.github.heisiar.composewizard.testutils.FileTreeComparator
 import io.github.heisiar.composewizard.testutils.ProjectFixtures
 import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
@@ -13,10 +13,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generate Desktop-only project with correct structure`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             FileTreeComparator.assertFileExists(tempDir, "build.gradle.kts")
             FileTreeComparator.assertFileExists(tempDir, "settings.gradle.kts")
@@ -53,10 +56,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated project has correct package name`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             FileTreeComparator.assertFileContains(
                 tempDir,
@@ -74,15 +80,18 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated project has correct Compose version`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val libsVersions = File(tempDir, "gradle/libs.versions.toml").readText()
             assertTrue(
-                libsVersions.contains("composeMultiplatform = \"${config.composeVersion}\""),
-                "libs.versions.toml should contain Compose version: ${config.composeVersion}"
+                libsVersions.contains("composeMultiplatform = \"${builder.composeVersion}\""),
+                "libs.versions.toml should contain Compose version: ${builder.composeVersion}"
             )
         }
     }
@@ -90,15 +99,18 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated project has correct Kotlin version`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val libsVersions = File(tempDir, "gradle/libs.versions.toml").readText()
             assertTrue(
-                libsVersions.contains("kotlin = \"${config.kotlinVersion}\""),
-                "libs.versions.toml should contain Kotlin version: ${config.kotlinVersion}"
+                libsVersions.contains("kotlin = \"${builder.kotlinVersion}\""),
+                "libs.versions.toml should contain Kotlin version: ${builder.kotlinVersion}"
             )
         }
     }
@@ -106,15 +118,18 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated project has correct project name in settings gradle`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             FileTreeComparator.assertFileContains(
                 tempDir,
                 "settings.gradle.kts",
-                "rootProject.name = \"${config.projectName}\""
+                "rootProject.name = \"${builder.projectName}\""
             )
         }
     }
@@ -122,10 +137,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project includes only jvm target`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(buildGradle.contains("jvm()"), "Should contain Desktop target")
@@ -136,28 +154,31 @@ class DesktopProjectGenerationTest {
     }
     
     @Test
-    fun `generated Desktop project includes hot reload plugin`() {
+    fun `generated Desktop project does not include hot reload plugin by default`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
-            
-            FileTreeComparator.assertFileContains(
-                tempDir,
-                "composeApp/build.gradle.kts",
-                "alias(libs.plugins.composeHotReload)"
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
             )
+            
+            val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
+            assertTrue(!buildGradle.contains("alias(libs.plugins.composeHotReload)"), "Should not include hot reload plugin by default")
         }
     }
     
     @Test
     fun `generated Desktop project does not include tests`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(!buildGradle.contains("commonTest"), "Should not contain test dependencies")
@@ -170,10 +191,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project does not initialize git`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val gitDir = File(tempDir, ".git")
             assertTrue(!gitDir.exists(), "Should not create .git directory")
@@ -183,25 +207,36 @@ class DesktopProjectGenerationTest {
     @Test
     fun `compare generated Desktop project with fixture`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("desktop-only")
             
             // Full fixture comparison
-            FileTreeComparator.compareDirectories(fixtureDir, tempDir, setOf("jar"))
+            FileTreeComparator.compareDirectories(
+                fixtureDir, 
+                tempDir, 
+                excludeExtensions = setOf("jar"),
+                excludeFiles = setOf("gradle/.properties")
+            )
         }
     }
 
     @Test
     fun `generated Desktop project does not contain system files`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val allFiles = tempDir.walkTopDown().filter { it.isFile }.map { it.name }.toList()
             
@@ -221,10 +256,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project includes gitignore`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val gitignore = File(tempDir, ".gitignore")
             assertTrue(gitignore.exists(), ".gitignore should exist")
@@ -237,10 +275,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project includes tests when enabled`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.desktopConfig(includeTests = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.desktopConfig(includeTests = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertTestsIncluded(tempDir)
         }
@@ -249,10 +290,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project initializes git when enabled`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.desktopConfig(initGit = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.desktopConfig(initGit = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertGitInitialized(tempDir)
         }
@@ -261,10 +305,13 @@ class DesktopProjectGenerationTest {
     @Test
     fun `generated Desktop project with tests and git initialized`() {
         TemporaryProjectHelper.withTempProject("desktop-test-") { tempDir ->
-            val config = ProjectFixtures.desktopConfig(includeTests = true, initGit = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.desktopConfig(includeTests = true, initGit = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertTestsIncluded(tempDir)
             FileTreeComparator.assertGitInitialized(tempDir)

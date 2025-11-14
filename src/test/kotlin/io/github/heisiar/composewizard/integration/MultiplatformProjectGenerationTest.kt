@@ -1,6 +1,6 @@
 package io.github.heisiar.composewizard.integration
 
-import io.github.heisiar.composewizard.generator.ProjectGenerator
+import io.github.heisiar.composewizard.shared.ProjectCreator
 import io.github.heisiar.composewizard.testutils.FileTreeComparator
 import io.github.heisiar.composewizard.testutils.ProjectFixtures
 import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
@@ -14,10 +14,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated Android+Desktop project with fixture`() {
         TemporaryProjectHelper.withTempProject("android-desktop-compare-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_DESKTOP_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_DESKTOP_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-desktop")
             
@@ -33,10 +36,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated Android+iOS project with fixture`() {
         TemporaryProjectHelper.withTempProject("android-ios-compare-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_IOS_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_IOS_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-ios")
             
@@ -52,10 +58,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `generate Desktop+Web project`() {
         TemporaryProjectHelper.withTempProject("multiplatform-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_WEB_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_WEB_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertFileExists(tempDir, "composeApp/src/jvmMain")
             FileTreeComparator.assertFileExists(tempDir, "composeApp/src/webMain")
@@ -73,10 +82,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `generate Desktop+Web project has correct targets in build gradle`() {
         TemporaryProjectHelper.withTempProject("multiplatform-test-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_WEB_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_WEB_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(buildGradle.contains("jvm()"), "Should contain Desktop target")
@@ -90,10 +102,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `generate all-platforms project with complete structure`() {
         TemporaryProjectHelper.withTempProject("multiplatform-test-") { tempDir ->
-            val config = ProjectFixtures.ALL_PLATFORMS_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ALL_PLATFORMS_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertFileExists(tempDir, "composeApp/src/androidMain")
             FileTreeComparator.assertFileExists(tempDir, "composeApp/src/jvmMain")
@@ -110,10 +125,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `generate all-platforms project has all targets in build gradle`() {
         TemporaryProjectHelper.withTempProject("multiplatform-test-") { tempDir ->
-            val config = ProjectFixtures.ALL_PLATFORMS_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ALL_PLATFORMS_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(buildGradle.contains("androidTarget"), "Should contain androidTarget")
@@ -127,10 +145,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `generate all-platforms project has all plugins in root build gradle`() {
         TemporaryProjectHelper.withTempProject("multiplatform-test-") { tempDir ->
-            val config = ProjectFixtures.ALL_PLATFORMS_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ALL_PLATFORMS_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val rootBuildGradle = File(tempDir, "build.gradle.kts").readText()
             assertTrue(rootBuildGradle.contains("composeMultiplatform"), "Should contain compose plugin")
@@ -144,10 +165,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated Desktop+Web project with fixture`() {
         TemporaryProjectHelper.withTempProject("desktop-web-compare-") { tempDir ->
-            val config = ProjectFixtures.DESKTOP_WEB_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.DESKTOP_WEB_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("desktop-web")
             
@@ -163,10 +187,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated All-platforms project with fixture`() {
         TemporaryProjectHelper.withTempProject("all-platforms-compare-") { tempDir ->
-            val config = ProjectFixtures.ALL_PLATFORMS_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ALL_PLATFORMS_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("all-platforms")
             
@@ -182,10 +209,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated Android+Desktop+iOS project with tests with fixture`() {
         TemporaryProjectHelper.withTempProject("android-desktop-ios-tests-") { tempDir ->
-            val config = ProjectFixtures.androidDesktopIosConfig(includeTests = true)
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.androidDesktopIosConfig(includeTests = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-desktop-ios-tests")
             
@@ -201,10 +231,13 @@ class MultiplatformProjectGenerationTest {
     @Test
     fun `compare generated Android+Web+iOS project with git with fixture`() {
         TemporaryProjectHelper.withTempProject("android-web-ios-git-") { tempDir ->
-            val config = ProjectFixtures.androidWebIosConfig(initGit = true)
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.androidWebIosConfig(initGit = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             FileTreeComparator.assertGitInitialized(tempDir)
             

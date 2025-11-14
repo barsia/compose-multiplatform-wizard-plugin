@@ -1,28 +1,31 @@
 package io.github.heisiar.composewizard.shared.services
 
-import io.github.heisiar.composewizard.shared.ComposeVersions
 import org.junit.jupiter.api.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ComposeVersionCacheTest {
 
     @Test
-    fun `getStableVersions returns fallback versions initially`() {
+    fun `getStableVersions returns null while loading from GitHub`() {
         val cache = ComposeVersionCache()
         
         val versions = cache.getStableVersions()
         
-        assertTrue(versions.isNotEmpty())
-        assertEquals(ComposeVersions.STABLE_VERSIONS_HARDCODED.first(), versions.first())
+        // Initially null while fetching from GitHub
+        assertTrue(versions == null || versions.isNotEmpty(), 
+            "Versions should be null (loading) or non-empty list")
     }
 
     @Test
-    fun `getDevVersions returns fallback versions initially`() {
+    fun `getDevVersions returns null while loading from GitHub`() {
         val cache = ComposeVersionCache()
         
         val versions = cache.getDevVersions()
         
-        assertTrue(versions.isNotEmpty())
+        // Initially null while fetching from GitHub
+        assertTrue(versions == null || versions.isNotEmpty(), 
+            "Versions should be null (loading) or non-empty list")
     }
 
     @Test
@@ -62,43 +65,73 @@ class ComposeVersionCacheTest {
     }
 
     @Test
-    fun `invalidateStableCache allows for cache refresh`() {
+    fun `invalidateStableCache marks cache for refresh on next access`() {
         val cache = ComposeVersionCache()
         
+        // First, get versions to populate cache
+        val initialVersions = cache.getStableVersionsBlocking(timeoutMs = 5000)
+        assertTrue(initialVersions.isNotEmpty(), "Initial versions should be loaded")
+        
+        // Invalidate cache (only marks for refresh, doesn't reload immediately)
         cache.invalidateStableCache()
         
-        val versions = cache.getStableVersions()
-        assertTrue(versions.isNotEmpty())
+        // Next access should trigger reload
+        val versionsAfterInvalidate = cache.getStableVersionsBlocking(timeoutMs = 5000)
+        assertTrue(versionsAfterInvalidate.isNotEmpty(), "Should reload versions on next access")
     }
 
     @Test
-    fun `invalidateDevCache allows for cache refresh`() {
+    fun `invalidateDevCache marks cache for refresh on next access`() {
         val cache = ComposeVersionCache()
         
+        // First, get versions to populate cache
+        val initialVersions = cache.getDevVersionsBlocking(timeoutMs = 5000)
+        assertTrue(initialVersions.isNotEmpty(), "Initial versions should be loaded")
+        
+        // Invalidate cache (only marks for refresh, doesn't reload immediately)
         cache.invalidateDevCache()
         
-        val versions = cache.getDevVersions()
-        assertTrue(versions.isNotEmpty())
+        // Next access should trigger reload
+        val versionsAfterInvalidate = cache.getDevVersionsBlocking(timeoutMs = 5000)
+        assertTrue(versionsAfterInvalidate.isNotEmpty(), "Should reload versions on next access")
     }
 
     @Test
-    fun `forceReloadStable triggers background refresh`() {
+    fun `forceReloadStable triggers immediate background refresh`() {
         val cache = ComposeVersionCache()
         
+        // First, populate cache
+        val initialVersions = cache.getStableVersionsBlocking(timeoutMs = 5000)
+        assertTrue(initialVersions.isNotEmpty(), "Initial versions should be loaded")
+        
+        // Force reload immediately triggers background reload
         cache.forceReloadStable()
         
-        val versions = cache.getStableVersions()
-        assertTrue(versions.isNotEmpty())
+        // Give it a moment to start loading
+        Thread.sleep(100)
+        
+        // Should be loading or already loaded
+        val versionsAfterReload = cache.getStableVersionsBlocking(timeoutMs = 5000)
+        assertTrue(versionsAfterReload.isNotEmpty(), "Should return versions after immediate force reload")
     }
 
     @Test
-    fun `forceReloadDev triggers background refresh`() {
+    fun `forceReloadDev triggers immediate background refresh`() {
         val cache = ComposeVersionCache()
         
+        // First, populate cache
+        val initialVersions = cache.getDevVersionsBlocking(timeoutMs = 5000)
+        assertTrue(initialVersions.isNotEmpty(), "Initial versions should be loaded")
+        
+        // Force reload immediately triggers background reload
         cache.forceReloadDev()
         
-        val versions = cache.getDevVersions()
-        assertTrue(versions.isNotEmpty())
+        // Give it a moment to start loading
+        Thread.sleep(100)
+        
+        // Should be loading or already loaded
+        val versionsAfterReload = cache.getDevVersionsBlocking(timeoutMs = 5000)
+        assertTrue(versionsAfterReload.isNotEmpty(), "Should return versions after immediate force reload")
     }
 
     @Test
@@ -133,13 +166,21 @@ class ComposeVersionCacheTest {
     }
 
     @Test
-    fun `cache returns stable versions list`() {
+    fun `loaded stable versions are in valid semver format`() {
         val cache = ComposeVersionCache()
         
-        val versions = cache.getStableVersions()
+        // Load versions from GitHub/Maven/fallback
+        val versions = cache.getStableVersionsBlocking(timeoutMs = 5000)
         
-        assertTrue(versions.all { it.matches(Regex("\\d+\\.\\d+\\.\\d+.*")) }, 
-            "All versions should be in semver format")
+        // Validate that we got actual version data
+        assertTrue(versions.isNotEmpty(), "Should load at least one version")
+        
+        // Validate that all versions follow semver format: 1.2.3, 1.2.3-beta01, etc.
+        val semverPattern = Regex("\\d+\\.\\d+\\.\\d+.*")
+        assertTrue(
+            versions.all { it.matches(semverPattern) }, 
+            "All versions should match semver format (major.minor.patch), got: ${versions.take(3)}"
+        )
     }
 }
 

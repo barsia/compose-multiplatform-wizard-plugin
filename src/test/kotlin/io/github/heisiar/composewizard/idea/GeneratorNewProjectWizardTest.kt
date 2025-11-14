@@ -1,9 +1,12 @@
 package io.github.heisiar.composewizard.idea
 
-import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
+import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import java.io.File
 
 class GeneratorNewProjectWizardTest {
@@ -43,7 +46,7 @@ class GeneratorNewProjectWizardTest {
             builder.targetAndroid = true
             
             // Simulate what setupProjectFromBuilder does internally
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             // Verify project structure was created
             assertTrue(File(tempDir, "build.gradle.kts").exists(), "build.gradle.kts must exist")
@@ -68,7 +71,7 @@ class GeneratorNewProjectWizardTest {
             builder.targetIOS = true
             builder.targetWeb = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             // Verify all platform-specific code exists
             assertTrue(File(tempDir, "composeApp/src/androidMain").exists(), "androidMain must exist")
@@ -93,7 +96,7 @@ class GeneratorNewProjectWizardTest {
             builder.projectId = "com.example.gradle"
             builder.targetDesktop = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             assertTrue(File(tempDir, "gradlew").exists(), "gradlew must exist")
             assertTrue(File(tempDir, "gradlew.bat").exists(), "gradlew.bat must exist")
@@ -117,7 +120,7 @@ class GeneratorNewProjectWizardTest {
             builder.composeVersion = "1.7.1"
             builder.targetDesktop = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val tomlFile = File(tempDir, "gradle/libs.versions.toml")
             assertTrue(tomlFile.exists(), "libs.versions.toml must exist")
@@ -140,7 +143,7 @@ class GeneratorNewProjectWizardTest {
             builder.projectId = "com.example.gitignore"
             builder.targetDesktop = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val gitignoreFile = File(tempDir, ".gitignore")
             assertTrue(gitignoreFile.exists(), ".gitignore must exist")
@@ -163,7 +166,7 @@ class GeneratorNewProjectWizardTest {
             builder.targetDesktop = true
             builder.targetAndroid = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             val readmeFile = File(tempDir, "README.md")
             assertTrue(readmeFile.exists(), "README.md must exist")
@@ -233,7 +236,7 @@ class GeneratorNewProjectWizardTest {
             builder.projectId = "com.example.mytestproject"
             builder.targetDesktop = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             assertTrue(File(tempDir, "build.gradle.kts").exists(), "Should handle project names with spaces")
             assertTrue(File(tempDir, "settings.gradle.kts").exists(), "Should create all necessary files")
@@ -248,7 +251,7 @@ class GeneratorNewProjectWizardTest {
             builder.projectId = "com.example.my_app.test"
             builder.targetDesktop = true
             
-            builder.createProjectStructure(tempDir.absolutePath, builder.projectName)
+            builder.createProjectStructure(tempDir.absolutePath, builder.projectName, useCache = false)
             
             assertTrue(File(tempDir, "build.gradle.kts").exists(), "Should handle underscores in package name")
             

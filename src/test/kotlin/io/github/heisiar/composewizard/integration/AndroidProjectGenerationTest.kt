@@ -1,6 +1,6 @@
 package io.github.heisiar.composewizard.integration
 
-import io.github.heisiar.composewizard.generator.ProjectGenerator
+import io.github.heisiar.composewizard.shared.ProjectCreator
 import io.github.heisiar.composewizard.testutils.FileTreeComparator
 import io.github.heisiar.composewizard.testutils.ProjectFixtures
 import io.github.heisiar.composewizard.testutils.TemporaryProjectHelper
@@ -14,10 +14,14 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generate Android-only project with correct structure`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
 
-            generator.generateProject(tempDir.absolutePath)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             // Verify project structure
             assertTrue(File(tempDir, "build.gradle.kts").exists())
@@ -36,15 +40,18 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated project has correct project name in settings gradle`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             FileTreeComparator.assertFileContains(
                 tempDir,
                 "settings.gradle.kts",
-                "rootProject.name = \"${config.projectName}\""
+                "rootProject.name = \"${builder.projectName}\""
             )
         }
     }
@@ -52,10 +59,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated project has correct package name`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val mainActivity = File(tempDir, "composeApp/src/androidMain/kotlin/org/example/android/MainActivity.kt")
             assertTrue(mainActivity.exists(), "MainActivity.kt should exist")
@@ -67,38 +77,47 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated project has correct Compose version`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val versionsToml = File(tempDir, "gradle/libs.versions.toml")
             val content = versionsToml.readText()
-            assertTrue(content.contains("composeMultiplatform = \"${config.composeVersion}\""))
+            assertTrue(content.contains("composeMultiplatform = \"${builder.composeVersion}\""))
         }
     }
 
     @Test
     fun `generated project has correct Kotlin version`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val versionsToml = File(tempDir, "gradle/libs.versions.toml")
             val content = versionsToml.readText()
-            assertTrue(content.contains("kotlin = \"${config.kotlinVersion}\""))
+            assertTrue(content.contains("kotlin = \"${builder.kotlinVersion}\""))
         }
     }
 
     @Test
     fun `generated Android project does not include tests`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val buildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertFalse(buildGradle.contains("commonTest.dependencies"))
@@ -108,10 +127,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project does not initialize git`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val gitDir = File(tempDir, ".git")
             assertFalse(gitDir.exists(), ".git directory should not exist")
@@ -121,10 +143,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project includes only androidTarget`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val composeAppBuildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
             assertTrue(composeAppBuildGradle.contains("androidTarget"))
@@ -139,10 +164,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project includes AndroidManifest`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val manifest = File(tempDir, "composeApp/src/androidMain/AndroidManifest.xml")
             assertTrue(manifest.exists(), "AndroidManifest.xml should exist")
@@ -158,10 +186,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project includes google repositories`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val settingsGradleContent = File(tempDir, "settings.gradle.kts").readText()
             assertTrue(settingsGradleContent.contains("google {"))
@@ -171,10 +202,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `compare generated Android project with fixture`() {
         TemporaryProjectHelper.withTempProject("android-compare-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-            
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
             
             val fixtureDir = TemporaryProjectHelper.getFixtureDir("android-only")
 
@@ -186,10 +220,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project does not contain system files`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val allFiles = tempDir.walkTopDown().filter { it.isFile }.map { it.name }.toList()
             
@@ -209,10 +246,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project includes gitignore`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.ANDROID_ONLY_CONFIG
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.ANDROID_ONLY_CONFIG
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             val gitignore = File(tempDir, ".gitignore")
             assertTrue(gitignore.exists(), ".gitignore should exist")
@@ -225,10 +265,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project includes tests when enabled`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.androidConfig(includeTests = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.androidConfig(includeTests = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertTestsIncluded(tempDir)
         }
@@ -237,10 +280,13 @@ class AndroidProjectGenerationTest {
     @Test
     fun `generated Android project initializes git when enabled`() {
         TemporaryProjectHelper.withTempProject("android-test-") { tempDir ->
-            val config = ProjectFixtures.androidConfig(initGit = true)
-            val generator = ProjectGenerator(config)
-
-            generator.generateProject(tempDir.absolutePath)
+            val builder = ProjectFixtures.androidConfig(initGit = true)
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
 
             FileTreeComparator.assertGitInitialized(tempDir)
         }
