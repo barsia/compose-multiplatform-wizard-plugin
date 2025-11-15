@@ -130,7 +130,11 @@ fun WizardMainContent(
                 }
             )
 
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS))
+            // Reduced spacing for IntelliJ IDEA to fit everything without scrolling
+            Spacer(modifier = Modifier.height(
+                if (PlatformDetector.isIntellijIdea) 2.dp
+                else SPACING_BETWEEN_SECTIONS
+            ))
 
             LibrariesSection(
                 state = state,
@@ -142,7 +146,11 @@ fun WizardMainContent(
                 shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
             )
             
-            Spacer(modifier = Modifier.height(SPACING_BETWEEN_SECTIONS * 1.5f))
+            // Reduced spacing for IntelliJ IDEA (Git checkbox is at the top now)
+            Spacer(modifier = Modifier.height(
+                if (PlatformDetector.isIntellijIdea) 8.dp
+                else SPACING_BETWEEN_SECTIONS * 1.5f
+            ))
 
             OptionsSection(
                 git = state.git,

@@ -112,10 +112,14 @@ private fun PlatformItem(
     icon: @Composable () -> Unit,
     label: String
 ) {
+    // Reduced spacing for IntelliJ IDEA to fit everything without scrolling
+    val spacing = if (io.github.heisiar.composewizard.shared.PlatformDetector.isIntellijIdea) 2.dp else 4.dp
+    val padding = if (io.github.heisiar.composewizard.shared.PlatformDetector.isIntellijIdea) 2.dp else 4.dp
+    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.padding(4.dp)
+        verticalArrangement = Arrangement.spacedBy(spacing),
+        modifier = Modifier.padding(padding)
     ) {
         Checkbox(
             checked = checked,
