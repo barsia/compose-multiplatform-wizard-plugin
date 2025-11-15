@@ -218,6 +218,10 @@ class ComposeWizardStep(
     fun getProjectId(): String = projectIdValue
     fun getComposeVersion(): String = composeVersionValue
     
+    fun setProjectName(name: String) {
+        projectNameValue = name
+    }
+    
     // Setter for syncing compose version from platform fields (IntelliJ IDEA only)
     fun setComposeVersion(version: String) {
         composeVersionValue = version

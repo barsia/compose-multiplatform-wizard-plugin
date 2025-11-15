@@ -76,7 +76,15 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
 
         doAddContentEntry(modifiableRootModel)
 
+        // NOTE: Git initialization is disabled in setupRootModel
+        // In IntelliJ IDEA, Git is initialized by GitNewProjectWizardStep after project is opened
+        // In Android Studio, Git is initialized by ASWizardIntegration.initializeGit()
+        val savedInitGit = initGit
+        initGit = false
+        
         createProjectStructure(path, projectName)
+        
+        initGit = savedInitGit
 
         val root = LocalFileSystem.getInstance().refreshAndFindFileByPath(rootPath)
         root?.refresh(false, true)

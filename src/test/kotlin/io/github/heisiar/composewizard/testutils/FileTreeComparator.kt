@@ -1,7 +1,6 @@
 package io.github.heisiar.composewizard.testutils
 
 import java.io.File
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -142,6 +141,19 @@ object FileTreeComparator {
         
         val gitObjects = File(gitDir, "objects")
         assertTrue(gitObjects.exists(), ".git/objects directory should exist")
+        
+        // Check that files are staged (added but not committed)
+        val process = Runtime.getRuntime().exec(
+            arrayOf("git", "status", "--short"),
+            null,
+            projectDir
+        )
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
+        assertTrue(
+            output.lines().any { it.startsWith("A ") },
+            "Git repository should have staged files (marked with 'A')"
+        )
     }
     
     fun assertTestsIncluded(projectDir: File) {

@@ -1,22 +1,13 @@
 package io.github.heisiar.composewizard.idea
 
-import com.intellij.ide.IdeBundle
 import com.intellij.ide.trustedProjects.TrustedProjects
-import com.intellij.openapi.GitRepositoryInitializer
-import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import com.intellij.openapi.externalSystem.importing.ImportSpecBuilder
 import com.intellij.openapi.externalSystem.service.project.manage.ExternalProjectsManagerImpl
 import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupManager
-import com.intellij.openapi.vfs.refreshAndFindVirtualDirectory
-import com.intellij.platform.backend.observation.launchTracked
-import com.intellij.platform.ide.progress.withBackgroundProgress
-import io.github.heisiar.composewizard.shared.ProjectCreator
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.wizard.AbstractWizardIntegration
-import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.settings.GradleSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
@@ -27,7 +18,7 @@ import java.nio.file.Path
  * 
  * Handles IDEA-specific project setup:
  * - Linking Gradle project automatically
- * - Using GitRepositoryInitializer API for Git initialization
+ * - Using GitRepositoryInitializer API for proper Git initialization
  * - Project is already opened by the platform, no need to explicitly open it
  */
 class IdeaWizardIntegration(
@@ -46,19 +37,9 @@ class IdeaWizardIntegration(
     }
     
     override fun initializeGit(projectPath: String) {
-        val gitRepositoryInitializer = GitRepositoryInitializer.getInstance()
-        
-        if (gitRepositoryInitializer != null) {
-            runAfterOpened(project) { proj ->
-                proj.service<CoroutineScopeService>().coroutineScope.launchTracked {
-                    setupProjectSafe(proj, "Error initializing Git repository") {
-                        initRepository(proj, projectPath, gitRepositoryInitializer)
-                    }
-                }
-            }
-        } else {
-            ProjectCreator.initializeGitRepository(projectPath)
-        }
+        // Git initialization is now handled in ComposeMultiplatformGeneratorNewProjectWizard
+        // for the new IntelliJ IDEA wizard API. This method is kept for compatibility
+        // but is not used in the current implementation.
     }
     
     @Suppress("UnstableApiUsage")
@@ -77,48 +58,6 @@ class IdeaWizardIntegration(
             ExternalSystemUtil.refreshProjects(
                 ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
             )
-        }
-    }
-    
-    private suspend fun initRepository(
-        project: Project,
-        projectPath: String,
-        gitRepositoryInitializer: GitRepositoryInitializer
-    ) {
-        withBackgroundProgress(project, IdeBundle.message("progress.title.creating.git.repository")) {
-            Path.of(projectPath).refreshAndFindVirtualDirectory()?.let { rootDirectory ->
-                gitRepositoryInitializer.initRepository(project, rootDirectory, true)
-            }
-        }
-    }
-    
-    @Service(Service.Level.PROJECT)
-    private class CoroutineScopeService(cs: CoroutineScope) {
-        val coroutineScope: CoroutineScope = cs
-    }
-    
-    /**
-     * Runs an action after the project is opened.
-     */
-    @Suppress("UnstableApiUsage")
-    private fun runAfterOpened(project: Project, action: (Project) -> Unit) {
-        StartupManager.getInstance(project).runAfterOpened {
-            action(project)
-        }
-    }
-    
-    /**
-     * Safely runs a suspend project setup action with error handling.
-     */
-    private suspend fun setupProjectSafe(
-        project: Project,
-        errorMessage: String,
-        action: suspend () -> Unit
-    ) {
-        try {
-            action()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 }

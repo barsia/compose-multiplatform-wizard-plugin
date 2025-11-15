@@ -58,19 +58,21 @@ fun WizardUIRoot(
     }
     
     
-    val state = rememberWizardState().apply {
-        projectName = projectNameValue
-        projectPath = projectPathValue
-        projectId = projectIdValue
-        composeVersion = initialComposeVersion
-        desktop = targetDesktop
-        android = targetAndroid
-        ios = targetIOS
-        web = targetWeb
-        git = initGit
-        tests = includeTests
-        this.devCheckboxVisible = devCheckboxVisible
-        this.enableDevVersions = enableDevVersions
+    val state = rememberWizardState()
+    
+    LaunchedEffect(Unit) {
+        state.projectName = projectNameValue
+        state.projectPath = projectPathValue
+        state.projectId = projectIdValue
+        state.composeVersion = initialComposeVersion
+        state.desktop = targetDesktop
+        state.android = targetAndroid
+        state.ios = targetIOS
+        state.web = targetWeb
+        state.git = initGit
+        state.tests = includeTests
+        state.devCheckboxVisible = devCheckboxVisible
+        state.enableDevVersions = enableDevVersions
     }
     
     val projectNameInteractionSource = remember { MutableInteractionSource() }

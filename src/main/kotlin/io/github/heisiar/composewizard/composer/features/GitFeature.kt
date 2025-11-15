@@ -19,14 +19,24 @@ class GitFeature : ProjectFeature {
         return try {
             val projectDir = File(targetPath)
             
-            val process = Runtime.getRuntime().exec(
+            // Step 1: Initialize Git repository
+            val initProcess = Runtime.getRuntime().exec(
                 arrayOf("git", "init"),
                 null,
                 projectDir
             )
-            val exitCode = process.waitFor()
+            if (initProcess.waitFor() != 0) {
+                return false
+            }
             
-            exitCode == 0
+            // Step 2: Add all files to staging
+            // Files will be staged (green in IDE), user can commit when ready
+            val addProcess = Runtime.getRuntime().exec(
+                arrayOf("git", "add", "."),
+                null,
+                projectDir
+            )
+            addProcess.waitFor() == 0
         } catch (e: Exception) {
             false
         }

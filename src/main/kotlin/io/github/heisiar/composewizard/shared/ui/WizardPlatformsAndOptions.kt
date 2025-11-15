@@ -160,19 +160,31 @@ fun OptionsSection(
         modifier = modifier.fillMaxWidth().padding(start = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        CheckboxOption(
-            checked = git,
-            onToggle = onGitToggle,
-            label = "Create Git repository",
-            modifier = Modifier.weight(1f)
-        )
-
-        CheckboxOption(
-            checked = tests,
-            onToggle = onTestsToggle,
-            label = "Add sample tests",
-            modifier = Modifier.weight(1f)
-        )
+        if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+            // In Android Studio, show both Git and Tests checkboxes side by side
+            CheckboxOption(
+                checked = git,
+                onToggle = onGitToggle,
+                label = "Create Git repository",
+                modifier = Modifier.weight(1f)
+            )
+            
+            CheckboxOption(
+                checked = tests,
+                onToggle = onTestsToggle,
+                label = "Add sample tests",
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            // In IntelliJ IDEA, Git checkbox is provided by GitNewProjectWizardStep (above)
+            // Show only Tests checkbox, taking full width
+            CheckboxOption(
+                checked = tests,
+                onToggle = onTestsToggle,
+                label = "Add sample tests",
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 

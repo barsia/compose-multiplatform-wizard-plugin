@@ -3,6 +3,8 @@ package io.github.heisiar.composewizard.idea
 import com.intellij.ide.util.projectWizard.WizardContext
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep
 import com.intellij.ide.wizard.GeneratorNewProjectWizard
+import com.intellij.ide.wizard.GitNewProjectWizardData.Companion.gitData
+import com.intellij.ide.wizard.GitNewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.ide.wizard.RootNewProjectWizardStep
@@ -26,8 +28,10 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
         
         // Use RootNewProjectWizardStep like EmptyProject does
         // Must include newProjectWizardBaseStepWithoutGap for project name/location
+        // Include GitNewProjectWizardStep for proper Git initialization
         return RootNewProjectWizardStep(context)
             .nextStep(::newProjectWizardBaseStepWithoutGap)
+            .nextStep(::GitNewProjectWizardStep)
             .nextStep(::ComposeMultiplatformWizardStep)
     }
     
@@ -63,9 +67,23 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
             System.err.println("!!!!! ComposeMultiplatformWizardStep: setupProject() START !!!!!")
             System.err.println("!!!!!   project.name: ${project.name}")
             System.err.println("!!!!!   project.basePath: ${project.basePath}")
+            System.err.println("!!!!!   context.projectName: ${context.projectName}")
             
-            // Update builder with UI values
+            // CRITICAL: Override projectName from context (base wizard step)
+            // In IntelliJ IDEA, the base wizard step sets context.projectName
+            // and we must use it BEFORE calling updateDataModel()
+            val projectName = context.projectName ?: project.name
+            composeStep.setProjectName(projectName)
+            System.err.println("!!!!! Set project name from context: $projectName !!!!!")
+            
+            // Update builder with UI values (now with correct project name)
             composeStep.updateDataModel()
+            
+            // CRITICAL: Override initGit from GitNewProjectWizardStep
+            // In IntelliJ IDEA, Git checkbox is in GitNewProjectWizardStep, not in our UI
+            val gitEnabled = gitData?.git ?: false
+            builder.initGit = gitEnabled
+            System.err.println("!!!!! Git enabled from GitNewProjectWizardStep: $gitEnabled !!!!!")
             
             // CRITICAL: Set contentEntryPath BEFORE calling setupProjectFromBuilder
             // This ensures the builder uses the correct project path from the wizard
