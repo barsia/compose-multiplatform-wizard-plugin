@@ -57,8 +57,36 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
                     if (composeStep.component.isShowing) {
                         javax.swing.SwingUtilities.invokeLater {
                             composeStep.triggerRevalidation()
+                            
+                            // Add hand cursor to Git repository checkbox in IntelliJ IDEA
+                            addHandCursorToGitCheckbox()
                         }
                     }
+                }
+            }
+        }
+        
+        private fun addHandCursorToGitCheckbox() {
+            // Find Git checkbox in parent hierarchy and add hand cursor
+            javax.swing.SwingUtilities.invokeLater {
+                var parent = composeStep.component.parent
+                while (parent != null) {
+                    findAndModifyGitCheckbox(parent)
+                    parent = parent.parent
+                }
+            }
+        }
+        
+        private fun findAndModifyGitCheckbox(container: java.awt.Container) {
+            for (component in container.components) {
+                if (component is javax.swing.JCheckBox) {
+                    val text = component.text
+                    if (text != null && text.contains("Git", ignoreCase = true)) {
+                        component.cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                    }
+                }
+                if (component is java.awt.Container) {
+                    findAndModifyGitCheckbox(component)
                 }
             }
         }
