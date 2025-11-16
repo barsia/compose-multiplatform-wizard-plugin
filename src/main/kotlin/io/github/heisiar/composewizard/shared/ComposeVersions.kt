@@ -175,7 +175,15 @@ object ComposeVersions {
     
     /**
      * Last stable Compose Multiplatform version in LIBRARY_BUNDLES.
-     * Used as baseline for Maven filtering - only versions >= this one are fetched.
+     * 
+     * This is the STARTING POINT for fetching versions from Maven Central in Release mode.
+     * All versions >= this value are fetched and displayed (including alpha/beta/rc after it).
+     * 
+     * Example:
+     * - LIBRARY_BUNDLES = [1.10.0-beta01, 1.10.0-alpha01, 1.9.3, 1.9.2]
+     * - LAST_STABLE_VERSION = 1.9.3 (first without alpha/beta/rc)
+     * - Maven will fetch: 1.9.3, 1.10.0-alpha01, 1.10.0-beta01, and any newer versions
+     * 
      * Filters out dev versions (alpha/beta/rc) to get the true stable baseline.
      */
     val LAST_STABLE_VERSION: String by lazy {
