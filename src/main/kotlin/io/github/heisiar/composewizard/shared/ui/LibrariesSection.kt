@@ -500,14 +500,15 @@ private fun LibrariesContent(
                 LibraryVersionDropdown(
                     libraryType = LibraryType.HOT_RELOAD,
                     label = "Hot Reload",
-                    currentVersion = librariesState.libraryVersions[LibraryType.HOT_RELOAD] ?: state.hotReloadVersion ?: "",
+                    currentVersion = librariesState.libraryVersions[LibraryType.HOT_RELOAD] ?: "",
                     cache = cache,
                     state = state,
                     librariesState = librariesState,
                     versionService = hotReloadVersionService,
                     checked = state.includeHotReload,
                     enabled = shouldShowOptionalHotReload,
-                    onCheckedChange = { state.includeHotReload = !state.includeHotReload }
+                    onCheckedChange = { state.includeHotReload = !state.includeHotReload },
+                    onVersionChange = { state.hotReloadVersion = it }
                 )
             }
         }

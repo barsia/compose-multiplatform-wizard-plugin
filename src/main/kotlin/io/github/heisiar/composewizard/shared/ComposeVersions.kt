@@ -107,7 +107,7 @@ object ComposeVersions {
         ),
         "1.10.0-alpha03" to ComposeLibraryVersions(
             composeVersion = "1.10.0-alpha03",
-            kotlinVersion = "2.1.0",
+            kotlinVersion = "2.2.21",
             lifecycleVersion = "2.10.0-alpha03",
             material3Version = "1.10.0-alpha03",
             material3AdaptiveVersion = "1.2.0-beta01",
@@ -118,7 +118,7 @@ object ComposeVersions {
         ),
         "1.10.0-alpha02" to ComposeLibraryVersions(
             composeVersion = "1.10.0-alpha02",
-            kotlinVersion = "2.1.0",
+            kotlinVersion = "2.2.21",
             lifecycleVersion = "2.10.0-alpha02",
             material3Version = "1.10.0-alpha02",
             material3AdaptiveVersion = "1.2.0-alpha07",
@@ -129,11 +129,12 @@ object ComposeVersions {
         ),
         "1.10.0-alpha01" to ComposeLibraryVersions(
             composeVersion = "1.10.0-alpha01",
-            kotlinVersion = "2.1.0",
+            kotlinVersion = "2.2.21",
             lifecycleVersion = "2.10.0-alpha01",
             material3Version = "1.10.0-alpha01",
             material3AdaptiveVersion = "1.2.0-alpha06",
             navigation3Version = "1.0.0-alpha01",
+            navigationVersion = "1.10.0-alpha01",
             savedStateVersion = "1.4.0-alpha01",
             windowVersion = "1.5.0-alpha01"
         ),
@@ -142,12 +143,6 @@ object ComposeVersions {
             kotlinVersion = "2.2.21",
             lifecycleVersion = "2.9.6",
             savedStateVersion = "1.3.6"
-        ),
-        "1.9.2" to ComposeLibraryVersions(
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
-            lifecycleVersion = "2.9.5",
-            material3AdaptiveVersion = "1.2.0"
         )
     )
     

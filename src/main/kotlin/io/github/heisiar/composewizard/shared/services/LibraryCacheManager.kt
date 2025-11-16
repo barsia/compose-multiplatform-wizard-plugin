@@ -9,31 +9,11 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
     }
     
     fun getVersionsMap(type: LibraryType): LinkedHashMap<String, String> {
-        return when (type) {
-            LibraryType.LIFECYCLE -> state.lifecycleVersions
-            LibraryType.MATERIAL3 -> state.material3Versions
-            LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersions
-            LibraryType.NAVIGATION -> state.navigationVersions
-            LibraryType.NAVIGATION3 -> state.navigation3Versions
-            LibraryType.NAVIGATION_EVENT -> state.navigationEventVersions
-            LibraryType.SAVED_STATE -> state.savedStateVersions
-            LibraryType.WINDOW -> state.windowVersions
-            LibraryType.HOT_RELOAD -> state.hotReloadVersions
-        }
+        return state.getLibraryVersions(type)
     }
     
     fun getIsFromBundleMap(type: LibraryType): LinkedHashMap<String, Boolean> {
-        return when (type) {
-            LibraryType.LIFECYCLE -> state.lifecycleIsFromBundle
-            LibraryType.MATERIAL3 -> state.material3IsFromBundle
-            LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveIsFromBundle
-            LibraryType.NAVIGATION -> state.navigationIsFromBundle
-            LibraryType.NAVIGATION3 -> state.navigation3IsFromBundle
-            LibraryType.NAVIGATION_EVENT -> state.navigationEventIsFromBundle
-            LibraryType.SAVED_STATE -> state.savedStateIsFromBundle
-            LibraryType.WINDOW -> state.windowIsFromBundle
-            LibraryType.HOT_RELOAD -> state.hotReloadIsFromBundle
-        }
+        return state.getLibraryIsFromBundle(type)
     }
     
     fun cacheLibraryVersion(composeVersion: String, type: LibraryType, version: String, isFromFallback: Boolean) {
@@ -53,37 +33,14 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
     }
     
     fun cacheLifecycleVersion(composeVersion: String, lifecycleVersion: String, isFromFallback: Boolean = false) {
-        synchronized(state.lifecycleVersions) {
-            state.lifecycleVersions[composeVersion] = lifecycleVersion
-            state.lifecycleIsFromBundle[composeVersion] = isFromFallback
-            
-            while (state.lifecycleVersions.size > MAX_LIBRARY_CACHE_SIZE) {
-                val oldestKey = state.lifecycleVersions.keys.first()
-                state.lifecycleVersions.remove(oldestKey)
-                state.lifecycleIsFromBundle.remove(oldestKey)
-            }
-        }
+        cacheLibraryVersion(composeVersion, LibraryType.LIFECYCLE, lifecycleVersion, isFromFallback)
     }
     
     fun invalidateLibraryCache() {
-        state.lifecycleVersions.clear()
-        state.lifecycleIsFromBundle.clear()
-        state.material3Versions.clear()
-        state.material3IsFromBundle.clear()
-        state.material3AdaptiveVersions.clear()
-        state.material3AdaptiveIsFromBundle.clear()
-        state.navigationVersions.clear()
-        state.navigationIsFromBundle.clear()
-        state.navigation3Versions.clear()
-        state.navigation3IsFromBundle.clear()
-        state.navigationEventVersions.clear()
-        state.navigationEventIsFromBundle.clear()
-        state.savedStateVersions.clear()
-        state.savedStateIsFromBundle.clear()
-        state.windowVersions.clear()
-        state.windowIsFromBundle.clear()
-        state.hotReloadVersions.clear()
-        state.hotReloadIsFromBundle.clear()
+        for (type in LibraryRegistry.getAllTypes()) {
+            getVersionsMap(type).clear()
+            getIsFromBundleMap(type).clear()
+        }
     }
     
     fun getLibraryVersion(composeVersion: String, type: LibraryType): String? {
@@ -91,12 +48,17 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         return versionsMap[composeVersion]
     }
     
+
+    fun getRawCachedVersion(composeVersion: String, type: LibraryType): String? {
+        return getVersionsMap(type)[composeVersion]
+    }
+
     fun isLibraryFromBundle(composeVersion: String, type: LibraryType): Boolean {
         return getIsFromBundleMap(type)[composeVersion] == true
     }
     
     fun isLifecycleFallback(composeVersion: String): Boolean {
-        return state.lifecycleIsFromBundle[composeVersion] == true
+        return isLibraryFromBundle(composeVersion, LibraryType.LIFECYCLE)
     }
     
     fun cacheHotReloadGithubVersion(composeVersion: String, githubVersion: String) {

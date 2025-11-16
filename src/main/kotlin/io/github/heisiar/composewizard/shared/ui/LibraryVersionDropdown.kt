@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,7 +28,6 @@ import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 import io.github.heisiar.composewizard.shared.services.LibraryVersionService
-import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
@@ -51,6 +52,11 @@ fun LibraryVersionDropdown(
         return
     }
     
+    if (currentVersion == "N/A") {
+        LibraryVersionDropdownError(label = label)
+        return
+    }
+    
     val originalVersion = remember(state.composeVersion, currentVersion) {
         if (currentVersion.isNotEmpty()) currentVersion else ""
     }
@@ -67,17 +73,7 @@ fun LibraryVersionDropdown(
         }
     }
     
-    val selectedVersion = when (libraryType) {
-        LibraryType.LIFECYCLE -> state.lifecycleVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.MATERIAL3 -> state.material3Version?.takeIf { it.isNotEmpty() }
-        LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.NAVIGATION -> state.navigationVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.NAVIGATION3 -> state.navigation3Version?.takeIf { it.isNotEmpty() }
-        LibraryType.WINDOW -> state.windowVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.SAVED_STATE -> state.savedStateVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion?.takeIf { it.isNotEmpty() }
-        LibraryType.HOT_RELOAD -> state.hotReloadVersion?.takeIf { it.isNotEmpty() }
-    } ?: currentVersion
+    val selectedVersion = librariesState.libraryVersions[libraryType] ?: currentVersion
     
     val allAvailableVersions = remember(cacheVersion, libraryType) {
         when (libraryType) {
@@ -97,28 +93,15 @@ fun LibraryVersionDropdown(
         ComposeVersions.getLibraryBundle(state.composeVersion)?.getVersion(libraryType)
     }
     
-    val isOldComposeForHotReload = remember(state.composeVersion, libraryType) {
-        libraryType == LibraryType.HOT_RELOAD && 
-        isComposeVersionLessThan(state.composeVersion, "1.10.0-beta01")
-    }
-    
-    val versionsToFilter = remember(allAvailableVersions, isOldComposeForHotReload, originalVersion) {
-        if (isOldComposeForHotReload) {
-            val rc02Parsed = ComposeVersionComparator.parse(ComposeVersions.COMPOSE_HOT_RELOAD_VERSION)
-            allAvailableVersions.filter { version ->
-                val versionParsed = ComposeVersionComparator.parse(version)
-                versionParsed.compareTo(rc02Parsed) <= 0
-            }
-        } else {
-            allAvailableVersions
-        }
-    }
+    val versionsToFilter = allAvailableVersions
     
     val filteredVersions = remember(versionsToFilter, originalVersion, bundledVersion, versionService) {
-        if (versionsToFilter.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null) {
+        if (versionsToFilter.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null && originalVersion != "N/A") {
             versionService.filterVersionsForDropdown(versionsToFilter, originalVersion, bundledVersion, 5)
-        } else {
+        } else if (originalVersion != "N/A") {
             listOf(originalVersion)
+        } else {
+            emptyList()
         }
     }
     
@@ -179,7 +162,11 @@ fun LibraryVersionDropdown(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                if (showHotReloadLock || (isFromFallback && libraryType != LibraryType.HOT_RELOAD)) {
+                val showPinIcon = isFromFallback && 
+                                  libraryType != LibraryType.HOT_RELOAD && 
+                                  selectedVersion != bundledVersion
+                
+                if (showHotReloadLock || showPinIcon) {
                     Spacer(modifier = Modifier.width(3.dp))
                     Box(
                         modifier = Modifier.size(10.dp),
@@ -197,24 +184,15 @@ fun LibraryVersionDropdown(
             Box(
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             ) {
-                org.jetbrains.jewel.ui.component.ListComboBox(
-                    items = filteredVersions,
-                    selectedIndex = selectedIndex,
-                    onSelectedItemChange = { index ->
+                key(state.composeVersion, selectedVersion) {
+                    org.jetbrains.jewel.ui.component.ListComboBox(
+                        items = filteredVersions,
+                        selectedIndex = selectedIndex,
+                        onSelectedItemChange = { index ->
                         if (index in filteredVersions.indices) {
                             val newVersion = filteredVersions[index]
                             
-                            when (libraryType) {
-                                LibraryType.LIFECYCLE -> state.lifecycleVersion = newVersion
-                                LibraryType.MATERIAL3 -> state.material3Version = newVersion
-                                LibraryType.MATERIAL3_ADAPTIVE -> state.material3AdaptiveVersion = newVersion
-                                LibraryType.NAVIGATION -> state.navigationVersion = newVersion
-                                LibraryType.NAVIGATION3 -> state.navigation3Version = newVersion
-                                LibraryType.WINDOW -> state.windowVersion = newVersion
-                                LibraryType.SAVED_STATE -> state.savedStateVersion = newVersion
-                                LibraryType.NAVIGATION_EVENT -> state.navigationEventVersion = newVersion
-                                LibraryType.HOT_RELOAD -> state.hotReloadVersion = newVersion
-                            }
+                            librariesState.libraryVersions[libraryType] = newVersion
                             
                             if (newVersion == originalVersion) {
                                 librariesState.isFromFallback[libraryType] = originalIsFromFallback
@@ -231,6 +209,7 @@ fun LibraryVersionDropdown(
                     maxPopupHeight = 280.dp,
                     style = textFieldStyleComboBox()
                 )
+                }
             }
         }
         
@@ -275,5 +254,57 @@ private fun LibraryVersionDropdownSkeleton() {
         ) {
             SkeletonText(width = 14.dp, height = 18.dp)
         }
+    }
+}
+
+@Composable
+private fun LibraryVersionDropdownError(label: String) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        org.jetbrains.jewel.ui.component.Checkbox(
+            checked = false,
+            onCheckedChange = { },
+            enabled = false
+        )
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(16.dp)
+            ) {
+                Text(
+                    text = label,
+                    style = JewelTheme.defaultTextStyle.copy(fontSize = JewelTheme.defaultTextStyle.fontSize * 0.85),
+                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.65f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
+            Box(
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = "Failed to load version",
+                    style = JewelTheme.defaultTextStyle.copy(fontSize = JewelTheme.defaultTextStyle.fontSize * 0.9),
+                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(4.dp))
+        
+        Box(
+            modifier = Modifier.width(16.dp).height(24.dp)
+        )
     }
 }

@@ -48,13 +48,11 @@ fun WizardMainContent(
     }
     
     val shouldShowNavigation = remember(state.composeVersion) {
-        val numericVersion = state.composeVersion.split("-").first().split("+").first()
-        isComposeVersionLessThan(numericVersion, "1.10.0")
+        isComposeVersionLessThan(state.composeVersion, "1.10.0-alpha02")
     }
     
     val shouldShowNavigation3AndNavigationEvent = remember(state.composeVersion) {
-        val numericVersion = state.composeVersion.split("-").first().split("+").first()
-        !isComposeVersionLessThan(numericVersion, "1.10.0") && state.composeVersion.isNotEmpty()
+        !isComposeVersionLessThan(state.composeVersion, "1.10.0-alpha02") && state.composeVersion.isNotEmpty()
     }
     
     val shouldShowBundledHotReload = remember(state.desktop, state.composeVersion) {
@@ -103,7 +101,8 @@ fun WizardMainContent(
                     projectIdState = projectIdState,
                     projectIdFocused = projectIdFocused,
                     projectIdInteractionSource = projectIdInteractionSource,
-                    projectIdFocusRequester = projectIdFocusRequester
+                    projectIdFocusRequester = projectIdFocusRequester,
+                    mainPanel = mainPanel
                 )
             }
 

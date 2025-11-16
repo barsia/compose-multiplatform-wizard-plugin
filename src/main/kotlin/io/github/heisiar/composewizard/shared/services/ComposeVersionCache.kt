@@ -30,19 +30,12 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val versionService = ComposeVersionService()
     private val libraryVersionService = ComposeLibraryVersionService()
-    private val lifecycleVersionService = LifecycleVersionService()
-    private val material3VersionService = Material3VersionService()
-    private val material3AdaptiveVersionService = Material3AdaptiveVersionService()
-    private val navigationVersionService = NavigationVersionService()
-    private val navigation3VersionService = Navigation3VersionService()
-    private val windowVersionService = WindowVersionService()
-    private val savedStateVersionService = SavedStateVersionService()
-    private val navigationEventVersionService = NavigationEventVersionService()
-    private val hotReloadVersionService = HotReloadVersionService()
+    private val unifiedLibraryVersionService = LibraryVersionService()
     
     private var persistentState = ComposeVersionCacheState()
     
     private lateinit var coreCache: ComposeVersionCacheCore
+    private lateinit var availableVersionsLoader: LibraryAvailableVersionsLoader
     private lateinit var availableVersionsManager: LibraryAvailableVersionsManager
     private lateinit var cacheManager: LibraryCacheManager
     private lateinit var versionResolver: LibraryVersionResolver
@@ -69,16 +62,33 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     private fun initializeComponents() {
         coreCache = ComposeVersionCacheCore(persistentState, scope, versionService)
-        availableVersionsManager = LibraryAvailableVersionsManager(
-            persistentState, scope, lifecycleVersionService, material3VersionService,
-            material3AdaptiveVersionService, navigationVersionService, navigation3VersionService,
-            windowVersionService, savedStateVersionService, navigationEventVersionService,
-            hotReloadVersionService
+        
+        availableVersionsLoader = LibraryAvailableVersionsLoader(
+            persistentState,
+            scope,
+            unifiedLibraryVersionService
         ) {
             coreCache.notifyCacheInvalidated()
         }
+        
+        availableVersionsManager = LibraryAvailableVersionsManager(
+            persistentState,
+            availableVersionsLoader
+        )
+        
         cacheManager = LibraryCacheManager(persistentState)
-        versionResolver = LibraryVersionResolver(scope, cacheManager, libraryVersionService)
+        versionResolver = LibraryVersionResolver(
+            scope, 
+            cacheManager, 
+            libraryVersionService,
+            getAvailableVersions = { 
+                // Return all available versions (stable + dev) for fallback logic
+                (getStableVersions() ?: emptyList()) + (getDevVersions() ?: emptyList())
+            },
+            getLibraryAvailableVersions = { type ->
+                availableVersionsManager.getLibraryVersions(type)
+            }
+        )
     }
     
     private fun checkPluginUpdate() {
@@ -105,44 +115,11 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         persistentState.stableLastLoadTime = 0L
         persistentState.devLastLoadTime = 0L
         
-        persistentState.lifecycleVersions = linkedMapOf()
-        persistentState.lifecycleIsFromBundle = linkedMapOf()
-        persistentState.material3Versions = linkedMapOf()
-        persistentState.material3IsFromBundle = linkedMapOf()
-        persistentState.material3AdaptiveVersions = linkedMapOf()
-        persistentState.material3AdaptiveIsFromBundle = linkedMapOf()
-        persistentState.navigationVersions = linkedMapOf()
-        persistentState.navigationIsFromBundle = linkedMapOf()
-        persistentState.navigation3Versions = linkedMapOf()
-        persistentState.navigation3IsFromBundle = linkedMapOf()
-        persistentState.windowVersions = linkedMapOf()
-        persistentState.windowIsFromBundle = linkedMapOf()
-        persistentState.savedStateVersions = linkedMapOf()
-        persistentState.savedStateIsFromBundle = linkedMapOf()
-        persistentState.navigationEventVersions = linkedMapOf()
-        persistentState.navigationEventIsFromBundle = linkedMapOf()
-        persistentState.hotReloadVersions = linkedMapOf()
-        persistentState.hotReloadIsFromBundle = linkedMapOf()
+        persistentState.libraryVersions.clear()
+        persistentState.libraryIsFromBundle.clear()
+        persistentState.libraryAvailableVersions.clear()
+        persistentState.libraryAvailableLastLoadTime.clear()
         persistentState.hotReloadGithubVersions = linkedMapOf()
-        
-        persistentState.lifecycleAvailableVersions = emptyList()
-        persistentState.lifecycleAvailableLastLoadTime = 0L
-        persistentState.material3AvailableVersions = emptyList()
-        persistentState.material3AvailableLastLoadTime = 0L
-        persistentState.material3AdaptiveAvailableVersions = emptyList()
-        persistentState.material3AdaptiveAvailableLastLoadTime = 0L
-        persistentState.navigationAvailableVersions = emptyList()
-        persistentState.navigationAvailableLastLoadTime = 0L
-        persistentState.navigation3AvailableVersions = emptyList()
-        persistentState.navigation3AvailableLastLoadTime = 0L
-        persistentState.windowAvailableVersions = emptyList()
-        persistentState.windowAvailableLastLoadTime = 0L
-        persistentState.savedStateAvailableVersions = emptyList()
-        persistentState.savedStateAvailableLastLoadTime = 0L
-        persistentState.navigationEventAvailableVersions = emptyList()
-        persistentState.navigationEventAvailableLastLoadTime = 0L
-        persistentState.hotReloadAvailableVersions = emptyList()
-        persistentState.hotReloadAvailableLastLoadTime = 0L
         
         logger.info("All cache cleared after plugin update")
     }
@@ -165,7 +142,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         initialized = true
         
         coreCache.initializeCache {
-            availableVersionsManager.initializeAvailableVersions()
+            // Lazy loading: dropdown lists will be loaded on first access
         }
     }
     
@@ -216,75 +193,75 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     fun getLifecycleAvailableVersions(): List<String> {
-        return availableVersionsManager.getLifecycleAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.LIFECYCLE)
     }
     
     fun getMaterial3AvailableVersions(): List<String> {
-        return availableVersionsManager.getMaterial3AvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.MATERIAL3)
     }
     
     fun getMaterial3AdaptiveAvailableVersions(): List<String> {
-        return availableVersionsManager.getMaterial3AdaptiveAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.MATERIAL3_ADAPTIVE)
     }
     
     fun getNavigationAvailableVersions(): List<String> {
-        return availableVersionsManager.getNavigationAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.NAVIGATION)
     }
     
     fun getNavigation3AvailableVersions(): List<String> {
-        return availableVersionsManager.getNavigation3AvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.NAVIGATION3)
     }
     
     fun getWindowAvailableVersions(): List<String> {
-        return availableVersionsManager.getWindowAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.WINDOW)
     }
     
     fun getSavedStateAvailableVersions(): List<String> {
-        return availableVersionsManager.getSavedStateAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.SAVED_STATE)
     }
     
     fun getNavigationEventAvailableVersions(): List<String> {
-        return availableVersionsManager.getNavigationEventAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.NAVIGATION_EVENT)
     }
     
     fun getHotReloadAvailableVersions(): List<String> {
-        return availableVersionsManager.getHotReloadAvailableVersions()
+        return availableVersionsManager.getLibraryVersions(LibraryType.HOT_RELOAD)
     }
     
     fun invalidateLifecycleAvailableCache() {
-        availableVersionsManager.invalidateLifecycleAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.LIFECYCLE)
     }
     
     fun invalidateMaterial3AvailableCache() {
-        availableVersionsManager.invalidateMaterial3AvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.MATERIAL3)
     }
     
     fun invalidateMaterial3AdaptiveAvailableCache() {
-        availableVersionsManager.invalidateMaterial3AdaptiveAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.MATERIAL3_ADAPTIVE)
     }
     
     fun invalidateNavigationAvailableCache() {
-        availableVersionsManager.invalidateNavigationAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.NAVIGATION)
     }
     
     fun invalidateNavigation3AvailableCache() {
-        availableVersionsManager.invalidateNavigation3AvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.NAVIGATION3)
     }
     
     fun invalidateWindowAvailableCache() {
-        availableVersionsManager.invalidateWindowAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.WINDOW)
     }
     
     fun invalidateSavedStateAvailableCache() {
-        availableVersionsManager.invalidateSavedStateAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.SAVED_STATE)
     }
     
     fun invalidateNavigationEventAvailableCache() {
-        availableVersionsManager.invalidateNavigationEventAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.NAVIGATION_EVENT)
     }
     
     fun invalidateHotReloadAvailableCache() {
-        availableVersionsManager.invalidateHotReloadAvailableCache()
+        availableVersionsManager.invalidateCache(LibraryType.HOT_RELOAD)
     }
     
     fun invalidateStableCache() {
@@ -340,6 +317,14 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     fun isResolvingLibrary(composeVersion: String, type: LibraryType): Boolean {
         return versionResolver.isResolvingLibrary(composeVersion, type)
+    }
+    
+    fun clearNotFoundMarker(composeVersion: String, type: LibraryType) {
+        versionResolver.clearNotFoundMarker(composeVersion, type)
+    }
+    
+    fun getRawCachedVersion(composeVersion: String, type: LibraryType): String? {
+        return cacheManager.getRawCachedVersion(composeVersion, type)
     }
     
     fun isLibraryFromBundle(composeVersion: String, type: LibraryType): Boolean {

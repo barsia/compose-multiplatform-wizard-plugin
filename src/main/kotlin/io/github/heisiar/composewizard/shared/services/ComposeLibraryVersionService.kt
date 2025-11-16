@@ -38,10 +38,6 @@ class ComposeLibraryVersionService {
         )
     }
     
-    fun generateFallbackVersions(baseVersion: String): List<String> {
-        return ComposeFallbackVersionGenerator.generateFallbackVersions(baseVersion)
-    }
-    
     fun fetchHotReloadVersion(composeVersion: String): String? {
         return ComposeHotReloadFetcher.fetchHotReloadVersion(composeVersion)
     }

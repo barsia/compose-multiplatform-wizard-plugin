@@ -82,8 +82,8 @@ class ComposeVersionService {
         try {
             val metadataUrl = "${mavenUrl}maven-metadata.xml"
             val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = 2000
-            connection.readTimeout = 2000
+            connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+            connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
             connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
             
             if (connection.responseCode == 200) {
@@ -108,7 +108,7 @@ class ComposeVersionService {
                         val first20 = versions.take(20)
                         first20
                     } else {
-                        // Stable: Filter versions >= last stable version in LIBRARY_BUNDLES
+                        // Stable: Filter versions >= LAST_STABLE_VERSION
                         val minVersion = ComposeVersions.LAST_STABLE_VERSION
                         val minVersionParsed = ComposeVersionComparator.parse(minVersion)
                         
@@ -117,7 +117,12 @@ class ComposeVersionService {
                             parsed >= minVersionParsed
                         }
                         
-                        filtered
+                        // If no versions or < 5, take last 5 from all
+                        if (filtered.isEmpty() || filtered.size < 5) {
+                            versions.takeLast(5)
+                        } else {
+                            filtered
+                        }
                     }
                     return result
                 }

@@ -167,6 +167,7 @@ fun ProjectNameField(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PackageNameField(
+    mainPanel: androidx.compose.ui.awt.ComposePanel,
     projectIdState: androidx.compose.foundation.text.input.TextFieldState,
     projectIdError: String?,
     projectIdFocused: Boolean,

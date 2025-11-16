@@ -77,7 +77,8 @@ fun IntellijIdeaProjectFields(
     projectIdState: androidx.compose.foundation.text.input.TextFieldState,
     projectIdFocused: Boolean,
     projectIdInteractionSource: MutableInteractionSource,
-    projectIdFocusRequester: androidx.compose.ui.focus.FocusRequester
+    projectIdFocusRequester: androidx.compose.ui.focus.FocusRequester,
+    mainPanel: androidx.compose.ui.awt.ComposePanel
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -90,6 +91,7 @@ fun IntellijIdeaProjectFields(
             projectIdFocused = projectIdFocused,
             projectIdInteractionSource = projectIdInteractionSource,
             projectIdFocusRequester = projectIdFocusRequester,
+            mainPanel = mainPanel,
             onIdChanged = { },
             modifier = Modifier.weight(0.5f)
         )

@@ -9,7 +9,6 @@ object ComposeLibraryVersionFetcher {
     private val logger = Logger.getInstance(ComposeLibraryVersionFetcher::class.java)
     
     private const val CORE_TAG_WEB_URL = "https://github.com/JetBrains/compose-multiplatform-core/releases/tag"
-    private const val TIMEOUT_MS = 5000
     
     private val LIFECYCLE_PATTERN = Regex("""lifecycle-\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
     private val MATERIAL3_PATTERN = Regex("""material3\*:((\d+\.\d+\.\d+)(?:[-+][a-zA-Z0-9.]+)*)""")
@@ -38,8 +37,8 @@ object ComposeLibraryVersionFetcher {
             val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
             
             val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
+            connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+            connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
             
             val responseCode = connection.responseCode
@@ -70,8 +69,8 @@ object ComposeLibraryVersionFetcher {
             val url = "$CORE_TAG_WEB_URL/v$encodedVersion"
             
             val connection = java.net.URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
+            connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+            connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (IntelliJ Compose Wizard)")
             
             val responseCode = connection.responseCode
@@ -85,6 +84,19 @@ object ComposeLibraryVersionFetcher {
             }
             
             val html = connection.inputStream.bufferedReader().use { it.readText() }
+            
+            // Log relevant parts of HTML for debugging
+            val relevantLines = html.lines().filter { line ->
+                line.contains("lifecycle", ignoreCase = true) ||
+                line.contains("material3", ignoreCase = true) ||
+                line.contains("adaptive", ignoreCase = true) ||
+                line.contains("navigation", ignoreCase = true) ||
+                line.contains("savedstate", ignoreCase = true) ||
+                line.contains("window", ignoreCase = true)
+            }.take(20)
+            if (relevantLines.isNotEmpty()) {
+                logger.info("Sample HTML lines for $composeVersion:\n${relevantLines.joinToString("\n")}")
+            }
             
             val versions = mutableMapOf<LibraryType, String>()
             
@@ -119,6 +131,8 @@ object ComposeLibraryVersionFetcher {
             WINDOW_PATTERN.find(html)?.groups?.get(1)?.value?.let {
                 versions[LibraryType.WINDOW] = it
             }
+            
+            logger.info("Parsed versions for $composeVersion: ${versions.map { "${it.key.displayName}=${it.value}" }.joinToString()}")
             
             LibraryVersionsResult(versions = versions, isRateLimited = false, pageExists = true)
         } catch (e: Exception) {

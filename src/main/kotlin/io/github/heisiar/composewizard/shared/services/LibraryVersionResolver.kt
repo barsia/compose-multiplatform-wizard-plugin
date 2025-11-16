@@ -3,21 +3,29 @@ package io.github.heisiar.composewizard.shared.services
 import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
+import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 class LibraryVersionResolver(
     private val scope: CoroutineScope,
     private val cacheManager: LibraryCacheManager,
-    private val libraryVersionService: ComposeLibraryVersionService
+    private val libraryVersionService: ComposeLibraryVersionService,
+    private val getAvailableVersions: () -> List<String>,
+    private val getLibraryAvailableVersions: (LibraryType) -> List<String>
 ) {
     
     private val logger = Logger.getInstance(LibraryVersionResolver::class.java)
     
     private val lifecycleResolvingVersions = mutableSetOf<String>()
+    private val webUIResultsCache = mutableMapOf<String, ComposeLibraryVersionService.LibraryVersionsResult?>()
+    private val webUIFetchMutexes = mutableMapOf<String, Mutex>()
     
     private val _lifecycleVersionUpdates = MutableSharedFlow<Pair<String, String>>(replay = 0)
     val lifecycleVersionUpdates = _lifecycleVersionUpdates.asSharedFlow()
@@ -49,7 +57,7 @@ class LibraryVersionResolver(
     fun getLibraryVersion(composeVersion: String, type: LibraryType): String? {
         val cached = cacheManager.getLibraryVersion(composeVersion, type)
         
-        if (cached != null) {
+        if (cached != null && cached != "NOT_FOUND") {
             return cached
         }
         
@@ -58,6 +66,16 @@ class LibraryVersionResolver(
         }
         
         return null
+    }
+    
+    fun clearNotFoundMarker(composeVersion: String, type: LibraryType) {
+        val versionsMap = cacheManager.getVersionsMap(type)
+        if (versionsMap[composeVersion] == "NOT_FOUND") {
+            versionsMap.remove(composeVersion)
+        }
+        synchronized(webUIResultsCache) {
+            webUIResultsCache.remove(composeVersion)
+        }
     }
     
     fun getLifecycleVersion(composeVersion: String): String? {
@@ -88,129 +106,237 @@ class LibraryVersionResolver(
         
         scope.launch {
             try {
-                if (type == LibraryType.NAVIGATION) {
-                    val baseVersion = composeVersion.split("+").first().split("-").first()
-                    val parts = baseVersion.split(".")
-                    val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                    val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                    
-                    if (major > 1 || (major == 1 && minor >= 10)) {
-                        cacheLibrary(composeVersion, type, "", isFromFallback = false)
-                        return@launch
-                    }
+                val result = withTimeoutOrNull(NetworkConfig.TOTAL_RESOLVE_TIMEOUT_MS) {
+                    resolveLibraryVersionInternal(composeVersion, type)
                 }
                 
-                if (type == LibraryType.HOT_RELOAD) {
-                    if (VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
-                        cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
-                        return@launch
-                    } else {
-                        val githubVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
-                        
-                        if (githubVersion != null) {
-                            cacheManager.cacheHotReloadGithubVersion(composeVersion, githubVersion)
-                            cacheLibrary(composeVersion, type, githubVersion, isFromFallback = false)
-                            return@launch
-                        }
-                        
-                        val mavenVersions = try {
-                            val hotReloadService = HotReloadVersionService()
-                            hotReloadService.fetchHotReloadVersions()
-                        } catch (e: Exception) {
-                            emptyList()
-                        }
-                        
-                        val firstMavenVersion = mavenVersions.firstOrNull()
-                        if (firstMavenVersion != null) {
-                            cacheLibrary(composeVersion, type, firstMavenVersion, isFromFallback = false)
-                            return@launch
-                        }
-                        
-                        cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
-                        return@launch
-                    }
-                }
-                
-                var isNetworkError = false
-                val result = try {
-                    libraryVersionService.fetchLibraryVersionsFromWebUI(composeVersion)
-                } catch (e: Exception) {
-                    isNetworkError = true
-                    null
-                }
-                
-                if (isNetworkError || result == null) {
+                if (result == null) {
                     val bundle = ComposeVersions.getLibraryBundle(composeVersion)
                     val bundleVersion = bundle?.getVersion(type)
                     if (bundleVersion != null) {
                         cacheLibrary(composeVersion, type, bundleVersion, isFromFallback = false)
-                        return@launch
-                    }
-                    cacheLibrary(composeVersion, type, "", isFromFallback = false)
-                    return@launch
-                }
-                
-                val version = result.versions[type]
-                if (version != null) {
-                    cacheLibrary(composeVersion, type, version, isFromFallback = false)
-                    return@launch
-                }
-                
-                if (result.pageExists) {
-                    val bundle = ComposeVersions.getLibraryBundle(composeVersion)
-                    val bundleVersion = bundle?.getVersion(type)
-                    if (bundleVersion != null) {
-                        cacheLibrary(composeVersion, type, bundleVersion, isFromFallback = true)
-                        return@launch
+                    } else {
+                        cacheLibrary(composeVersion, type, "NOT_FOUND", isFromFallback = false)
                     }
                 }
-                
-                val fallbackVersions = libraryVersionService.generateFallbackVersions(composeVersion)
-                var isRateLimited = false
-                
-                for (fallbackVersion in fallbackVersions) {
-                    val fallbackBundle = ComposeVersions.getLibraryBundle(fallbackVersion)
-                    val fallbackVersionLib = fallbackBundle?.getVersion(type)
-                    if (fallbackVersionLib != null) {
-                        cacheLibrary(composeVersion, type, fallbackVersionLib, isFromFallback = true)
-                        return@launch
-                    }
-                    
-                    if (!isRateLimited) {
-                        delay(150)
-                        val fallbackResult = try {
-                            libraryVersionService.fetchLibraryVersionsFromWebUI(fallbackVersion)
-                        } catch (e: Exception) {
-                            null
-                        }
-                        
-                        if (fallbackResult == null) {
-                            continue
-                        }
-                        
-                        if (fallbackResult.isRateLimited) {
-                            isRateLimited = true
-                        } else {
-                            val fallbackLibVersion = fallbackResult.versions[type]
-                            if (fallbackLibVersion != null) {
-                                cacheLibrary(composeVersion, type, fallbackLibVersion, isFromFallback = true)
-                                return@launch
-                            }
-                        }
-                    }
-                }
-                
-                cacheLibrary(composeVersion, type, "", isFromFallback = false)
                 
             } catch (e: Exception) {
                 logger.warn("Failed to resolve ${type.displayName} version for Compose $composeVersion: ${e.message}")
+                cacheLibrary(composeVersion, type, "NOT_FOUND", isFromFallback = false)
+            }
+            
+            synchronized(lifecycleResolvingVersions) {
+                lifecycleResolvingVersions.remove(key)
+            }
+        }
+    }
+    
+    private suspend fun resolveLibraryVersionInternal(composeVersion: String, type: LibraryType) {
+        if (type == LibraryType.NAVIGATION) {
+            if (!VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-alpha02")) {
                 cacheLibrary(composeVersion, type, "", isFromFallback = false)
-            } finally {
-                synchronized(lifecycleResolvingVersions) {
-                    lifecycleResolvingVersions.remove(key)
+                return
+            }
+        }
+                
+        if (type == LibraryType.HOT_RELOAD) {
+            if (VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-beta01")) {
+                cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
+                return
+            } else {
+                val githubVersion = libraryVersionService.fetchHotReloadVersion(composeVersion)
+                
+                if (githubVersion != null) {
+                    cacheManager.cacheHotReloadGithubVersion(composeVersion, githubVersion)
+                    cacheLibrary(composeVersion, type, githubVersion, isFromFallback = false)
+                    return
+                }
+                
+                val mavenVersions = try {
+                    val hotReloadService = HotReloadVersionService()
+                    val metadata = LibraryRegistry.getMetadata(LibraryType.HOT_RELOAD)
+                    hotReloadService.fetchVersions(metadata.mavenMetadataUrl)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                
+                val firstMavenVersion = mavenVersions.firstOrNull()
+                if (firstMavenVersion != null) {
+                    cacheLibrary(composeVersion, type, firstMavenVersion, isFromFallback = false)
+                    return
+                }
+                
+                cacheLibrary(composeVersion, type, ComposeVersions.COMPOSE_HOT_RELOAD_VERSION, isFromFallback = false)
+                return
+            }
+        }
+        
+        val mutex = synchronized(webUIFetchMutexes) {
+            webUIFetchMutexes.getOrPut(composeVersion) { Mutex() }
+        }
+        
+        val result = mutex.withLock {
+            val cached = synchronized(webUIResultsCache) {
+                webUIResultsCache[composeVersion]
+            }
+            
+            if (cached != null) {
+                logger.info("Using cached web UI result for $composeVersion")
+                if (cached.pageExists) cached else null
+            } else {
+                logger.info("Fetching web UI for $composeVersion")
+                var isNetworkError = false
+                val fetchedResult = try {
+                    libraryVersionService.fetchLibraryVersionsFromWebUI(composeVersion)
+                } catch (e: Exception) {
+                    logger.warn("Failed to fetch web UI for $composeVersion: ${e.message}")
+                    isNetworkError = true
+                    null
+                }
+                
+                synchronized(webUIResultsCache) {
+                    webUIResultsCache[composeVersion] = fetchedResult
+                }
+                
+                if (isNetworkError || fetchedResult == null || !fetchedResult.pageExists) {
+                    logger.info("Web UI result for $composeVersion: pageExists=${fetchedResult?.pageExists}, error=$isNetworkError")
+                    null
+                } else {
+                    logger.info("Successfully fetched web UI for $composeVersion with ${fetchedResult.versions.size} libraries")
+                    fetchedResult
                 }
             }
         }
+        
+        if (result == null) {
+            val bundle = ComposeVersions.getLibraryBundle(composeVersion)
+            val bundleVersion = bundle?.getVersion(type)
+            if (bundleVersion != null) {
+                cacheLibrary(composeVersion, type, bundleVersion, isFromFallback = false)
+                return
+            }
+            cacheLibrary(composeVersion, type, "NOT_FOUND", isFromFallback = false)
+            return
+        }
+        
+        val version = result.versions[type]
+        if (version != null) {
+            cacheLibrary(composeVersion, type, version, isFromFallback = false)
+            return
+        }
+        
+        logger.info("Library ${type.displayName} not found for $composeVersion, checking fallback versions")
+        
+        val libraryAvailableVersions = getLibraryAvailableVersions(type)
+        if (libraryAvailableVersions.isNotEmpty()) {
+            val stableLibraryVersions = libraryAvailableVersions
+                .filter { !it.contains("+dev", ignoreCase = true) }
+                .filter { !it.contains("-alpha") && !it.contains("-beta") && !it.contains("-rc") && !it.contains("-dev") }
+                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+            
+            val latestStableVersion = stableLibraryVersions.firstOrNull()
+            if (latestStableVersion != null) {
+                logger.info("Found latest stable ${type.displayName} version in Maven: $latestStableVersion")
+                cacheLibrary(composeVersion, type, latestStableVersion, isFromFallback = true)
+                return
+            }
+            
+            val latestVersion = libraryAvailableVersions
+                .filter { !it.contains("+dev", ignoreCase = true) }
+                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+                .firstOrNull()
+            
+            if (latestVersion != null) {
+                logger.info("Found latest ${type.displayName} version in Maven: $latestVersion")
+                cacheLibrary(composeVersion, type, latestVersion, isFromFallback = true)
+                return
+            }
+        }
+        
+        val availableVersions = getAvailableVersions()
+        logger.info("Available Compose versions from Maven: ${availableVersions.take(10).joinToString()}")
+        
+        // For NavigationEvent and Navigation3, which appeared later, try newer versions first
+        val shouldTryNewerVersions = (type == LibraryType.NAVIGATION_EVENT || type == LibraryType.NAVIGATION3) &&
+                                      !VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-alpha02")
+        
+        val fallbackVersions = if (shouldTryNewerVersions) {
+            availableVersions
+                .filter { version ->
+                    !version.contains("+dev") && 
+                    !VersionComparison.isComposeVersionLessThan(version, composeVersion) &&
+                    version != composeVersion
+                }
+                .take(ComposeFallbackVersionGenerator.MAX_FALLBACK_VERSIONS)
+        } else {
+            ComposeFallbackVersionGenerator.generateFallbackVersions(composeVersion, availableVersions)
+        }
+        
+        logger.info("Trying ${fallbackVersions.size} fallback versions for ${type.displayName}: ${fallbackVersions.joinToString()}")
+        
+        for (fallbackVersion in fallbackVersions) {
+            logger.info("Checking fallback version $fallbackVersion for ${type.displayName}")
+            
+            val fallbackBundle = ComposeVersions.getLibraryBundle(fallbackVersion)
+            val fallbackBundleVersion = fallbackBundle?.getVersion(type)
+            if (fallbackBundleVersion != null) {
+                logger.info("Found ${type.displayName} in bundle for fallback version $fallbackVersion: $fallbackBundleVersion")
+                cacheLibrary(composeVersion, type, fallbackBundleVersion, isFromFallback = true)
+                return
+            }
+            logger.info("Not found in bundle for $fallbackVersion, checking GitHub...")
+            
+            delay(100)
+            
+            val fallbackMutex = synchronized(webUIFetchMutexes) {
+                webUIFetchMutexes.getOrPut(fallbackVersion) { Mutex() }
+            }
+            
+            val fallbackResult = fallbackMutex.withLock {
+                val cached = synchronized(webUIResultsCache) {
+                    webUIResultsCache[fallbackVersion]
+                }
+                
+                if (cached != null) {
+                    logger.info("Using cached GitHub result for $fallbackVersion")
+                    if (cached.pageExists) cached else null
+                } else {
+                    logger.info("Fetching GitHub for $fallbackVersion...")
+                    try {
+                        val fetched = libraryVersionService.fetchLibraryVersionsFromWebUI(fallbackVersion)
+                        logger.info("GitHub fetch result for $fallbackVersion: pageExists=${fetched.pageExists}, libraries=${fetched.versions.size}")
+                        synchronized(webUIResultsCache) {
+                            webUIResultsCache[fallbackVersion] = fetched
+                        }
+                        if (fetched.pageExists) fetched else null
+                    } catch (e: Exception) {
+                        logger.warn("GitHub fetch failed for $fallbackVersion: ${e.message}")
+                        null
+                    }
+                }
+            }
+            
+            val fallbackLibVersion = fallbackResult?.versions?.get(type)
+            if (fallbackLibVersion != null) {
+                logger.info("Found ${type.displayName} in web UI for fallback version $fallbackVersion: $fallbackLibVersion")
+                cacheLibrary(composeVersion, type, fallbackLibVersion, isFromFallback = true)
+                return
+            } else {
+                logger.info("${type.displayName} not found in GitHub for $fallbackVersion")
+            }
+        }
+        
+        logger.warn("No version found for ${type.displayName} after checking all fallback versions and GitHub, trying bundle as last resort")
+        
+        val bundle = ComposeVersions.getLibraryBundle(composeVersion)
+        val bundleVersion = bundle?.getVersion(type)
+        if (bundleVersion != null) {
+            logger.info("Using bundle version as last resort: $bundleVersion")
+            cacheLibrary(composeVersion, type, bundleVersion, isFromFallback = true)
+            return
+        }
+        
+        cacheLibrary(composeVersion, type, "NOT_FOUND", isFromFallback = false)
     }
     
     private suspend fun cacheLibrary(composeVersion: String, type: LibraryType, version: String, isFromFallback: Boolean) {
