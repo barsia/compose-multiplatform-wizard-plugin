@@ -110,8 +110,9 @@ fun ComposeVersionField(
         var displayedVersion by remember(enableDevVersions) { mutableStateOf("") }
 
         LaunchedEffect(enableDevVersions) {
+            onVersionSelected("")
+            
             if (enableDevVersions) {
-                onVersionSelected("")
                 cache.forceReloadDev()
             } else {
                 cache.forceReloadStable()

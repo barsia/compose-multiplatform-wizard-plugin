@@ -213,8 +213,9 @@ private fun LibrariesSectionContent(
     
     var devVersions by remember { mutableStateOf<List<String>?>(null) }
     
-    LaunchedEffect(state.enableDevVersions) {
+    LaunchedEffect(state.enableDevVersions, state.composeVersion) {
         if (state.enableDevVersions) {
+            devVersions = null
             while (true) {
                 devVersions = cache.getDevVersions()
                 if (devVersions != null) break
@@ -247,9 +248,15 @@ private fun LibrariesSectionContent(
         }
     }
     
+    androidx.compose.runtime.SideEffect {
+        if (state.composeVersion.isEmpty() && librariesState.libraryVersions.isNotEmpty()) {
+            librariesState.clearAllVersions()
+        }
+    }
+    
     val librariesLoaded = librariesState.libraryVersions.isNotEmpty() && !librariesState.isLoadingVersions
     val showError = state.composeVersion.isEmpty() && state.enableDevVersions && devVersions?.isEmpty() == true
-    val showSkeletons = state.composeVersion.isEmpty() || !librariesLoaded
+    val showSkeletons = (state.composeVersion.isEmpty() && !showError) || (!state.composeVersion.isEmpty() && !librariesLoaded)
     
     when {
         showError -> {

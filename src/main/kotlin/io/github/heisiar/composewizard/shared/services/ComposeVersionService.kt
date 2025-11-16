@@ -88,8 +88,9 @@ class ComposeVersionService {
             try {
                 val metadataUrl = "${mavenUrl}maven-metadata.xml"
                 val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
-                connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
-                connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+                val timeout = if (attempt == 0) 3000 else 1500
+                connection.connectTimeout = timeout
+                connection.readTimeout = timeout
                 connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
             
                 if (connection.responseCode == 200) {

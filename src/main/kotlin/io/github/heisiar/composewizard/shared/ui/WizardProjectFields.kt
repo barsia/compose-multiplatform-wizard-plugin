@@ -110,6 +110,7 @@ fun ComposeVersionFieldWrapper(state: WizardState, modifier: Modifier = Modifier
         selectedVersion = state.composeVersion,
         onVersionSelected = { state.composeVersion = it },
         onRefreshVersions = {
+            state.composeVersion = ""
             val cache = io.github.heisiar.composewizard.shared.services.ComposeVersionCache.getInstance()
             if (state.enableDevVersions) {
                 cache.forceReloadDev()
