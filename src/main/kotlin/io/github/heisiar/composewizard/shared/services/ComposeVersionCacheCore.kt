@@ -83,21 +83,17 @@ class ComposeVersionCacheCore(
             return null
         }
         
-        if (state.devVersions.isNotEmpty() && !isDevCacheExpired()) {
-            return state.devVersions
-        }
-        
-        if (!isLoadingDev) {
-            logger.info("Dev cache missing or expired, triggering background load")
-            loadDevVersionsInBackground()
-        }
-        
         if (isLoadingDev) {
             return null
         }
         
-        val versions = state.devVersions
-        return versions
+        if (!isDevCacheExpired()) {
+            return state.devVersions
+        }
+        
+        logger.info("Dev cache missing or expired, triggering background load")
+        loadDevVersionsInBackground()
+        return null
     }
     
     private fun isStableCacheExpired(): Boolean {
@@ -106,7 +102,7 @@ class ComposeVersionCacheCore(
     }
     
     private fun isDevCacheExpired(): Boolean {
-        if (state.devLastLoadTime == 0L || state.devVersions.isEmpty()) return true
+        if (state.devLastLoadTime == 0L) return true
         return (System.currentTimeMillis() - state.devLastLoadTime) > CACHE_TTL_MS
     }
     
@@ -253,8 +249,8 @@ class ComposeVersionCacheCore(
                 logger.warn("Failed to load stable Compose versions, using hardcoded fallback: ${e.message}")
                 if (state.stableVersions.isEmpty()) {
                     state.stableVersions = ComposeVersions.STABLE_VERSIONS_HARDCODED
+                    state.stableLastLoadTime = System.currentTimeMillis()
                 }
-                state.stableLastLoadTime = System.currentTimeMillis()
             } finally {
                 isLoadingStable = false
             }
@@ -293,7 +289,7 @@ class ComposeVersionCacheCore(
                 throw e
             } catch (e: Exception) {
                 logger.warn("Failed to load dev Compose versions: ${e.message}")
-                state.devLastLoadTime = System.currentTimeMillis()
+                state.devVersions = emptyList()
             } finally {
                 isLoadingDev = false
             }

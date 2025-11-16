@@ -105,18 +105,20 @@ fun ComposeVersionField(
             }
         }
 
-        val initialVersions = if (enableDevVersions) cache.getDevVersions() else cache.getStableVersions()
-        val initialLoadingState = if (enableDevVersions) cache.isLoadingDevVersions() else cache.isLoadingStableVersions()
-
-        var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf(initialVersions) }
-        var isLoading by remember(enableDevVersions) { mutableStateOf(initialVersions == null) }
-        
-        var displayedVersion by remember(enableDevVersions) { 
-            val firstVersion = initialVersions?.firstOrNull() ?: ""
-            mutableStateOf(firstVersion)
-        }
+        var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf<List<String>?>(null) }
+        var isLoading by remember(enableDevVersions) { mutableStateOf(true) }
+        var displayedVersion by remember(enableDevVersions) { mutableStateOf("") }
 
         LaunchedEffect(enableDevVersions) {
+            if (enableDevVersions) {
+                onVersionSelected("")
+                cache.forceReloadDev()
+            } else {
+                cache.forceReloadStable()
+            }
+            
+            kotlinx.coroutines.delay(50)
+            
             if (displayedVersion.isNotEmpty()) {
                 onVersionSelected(displayedVersion)
             }
@@ -159,12 +161,7 @@ fun ComposeVersionField(
             }
         }
         
-        LaunchedEffect(enableDevVersions) {
-            
-            if (initialVersions != null && !initialLoadingState) {
-                return@LaunchedEffect
-            }
-            
+        LaunchedEffect(enableDevVersions, refreshTrigger) {
             while (true) {
                 val isCurrentlyLoading = if (enableDevVersions) {
                     cache.isLoadingDevVersions()
@@ -177,7 +174,6 @@ fun ComposeVersionField(
                 } else {
                     cache.getStableVersions()
                 }
-                
                 
                 if (!isCurrentlyLoading && newVersions != null) {
                     availableVersions = newVersions
@@ -199,18 +195,22 @@ fun ComposeVersionField(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
             ) {
-                val items = remember(enableDevVersions, availableVersions) {
-                    if (isLoading && availableVersions == null) {
-                        listOf("")
-                    } else {
-                        val versions = availableVersions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
-                        versions
+                val items = remember(enableDevVersions, availableVersions, isLoading) {
+                    val versions = availableVersions
+                    when {
+                        isLoading && versions == null -> listOf("")
+                        versions != null && versions.isEmpty() && !isLoading -> listOf("Dev versions unavailable")
+                        else -> versions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
                     }
                 }
                 
-                val currentIndex = remember(displayedVersion, items, isLoading) {
-                    val index = if (isLoading && availableVersions == null) 0 else items.indexOf(displayedVersion).takeIf { it >= 0 } ?: 0
-                    index
+                val currentIndex = remember(displayedVersion, items, isLoading, availableVersions) {
+                    val versions = availableVersions
+                    when {
+                        isLoading && versions == null -> 0
+                        versions != null && versions.isEmpty() && !isLoading -> 0
+                        else -> items.indexOf(displayedVersion).takeIf { it >= 0 } ?: 0
+                    }
                 }
                 
             Box(
@@ -231,7 +231,7 @@ fun ComposeVersionField(
                                             }
                                         }
                                     },
-                                    enabled = !isLoading && availableVersions != null,
+                                    enabled = !isLoading && availableVersions?.isNotEmpty() == true,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),

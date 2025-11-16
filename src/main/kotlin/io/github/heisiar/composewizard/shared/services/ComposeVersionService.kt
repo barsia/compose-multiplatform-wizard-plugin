@@ -51,8 +51,11 @@ class ComposeVersionService {
             }
         } catch (e: Exception) {
             logger.warn("Failed to fetch Compose versions: ${e.message}")
-            // For dev versions without internet: fallback to hardcoded versions
-            ComposeVersions.STABLE_VERSIONS_HARDCODED
+            if (includeDevVersions) {
+                emptyList()
+            } else {
+                ComposeVersions.STABLE_VERSIONS_HARDCODED
+            }
         }
     }
     
@@ -79,59 +82,66 @@ class ComposeVersionService {
     }
     
     private fun fetchVersionsFromMaven(mavenUrl: String, isDevMode: Boolean): List<String> {
-        try {
-            val metadataUrl = "${mavenUrl}maven-metadata.xml"
-            val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
-            connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
+        var lastException: Exception? = null
+        
+        repeat(5) { attempt ->
+            try {
+                val metadataUrl = "${mavenUrl}maven-metadata.xml"
+                val connection = java.net.URI(metadataUrl).toURL().openConnection() as HttpURLConnection
+                connection.connectTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+                connection.readTimeout = NetworkConfig.NETWORK_TIMEOUT_MS
+                connection.setRequestProperty("User-Agent", "IntelliJ-Compose-Wizard")
             
-            if (connection.responseCode == 200) {
-                connection.inputStream.use { input ->
-                    val dbFactory = DocumentBuilderFactory.newInstance()
-                    val dBuilder = dbFactory.newDocumentBuilder()
-                    val doc = dBuilder.parse(input)
-                    doc.documentElement.normalize()
-                    
-                    val versionNodes = doc.getElementsByTagName("version")
-                    val versions = mutableListOf<String>()
-                    
-                    for (i in 0 until versionNodes.length) {
-                        val version = versionNodes.item(i).textContent
-                        if (version.isNotBlank()) {
-                            versions.add(version)
-                        }
-                    }
-                    
-                    val result = if (isDevMode) {
-                        // Dev: Take FIRST 20 from XML as-is (no sorting, no filtering!)
-                        val first20 = versions.take(20)
-                        first20
-                    } else {
-                        // Stable: Filter versions >= LAST_STABLE_VERSION
-                        val minVersion = ComposeVersions.LAST_STABLE_VERSION
-                        val minVersionParsed = ComposeVersionComparator.parse(minVersion)
+                if (connection.responseCode == 200) {
+                    connection.inputStream.use { input ->
+                        val dbFactory = DocumentBuilderFactory.newInstance()
+                        val dBuilder = dbFactory.newDocumentBuilder()
+                        val doc = dBuilder.parse(input)
+                        doc.documentElement.normalize()
                         
-                        val filtered = versions.filter { version ->
-                            val parsed = ComposeVersionComparator.parse(version)
-                            parsed >= minVersionParsed
+                        val versionNodes = doc.getElementsByTagName("version")
+                        val versions = mutableListOf<String>()
+                        
+                        for (i in 0 until versionNodes.length) {
+                            val version = versionNodes.item(i).textContent
+                            if (version.isNotBlank()) {
+                                versions.add(version)
+                            }
                         }
                         
-                        // If no versions or < 5, take last 5 from all
-                        if (filtered.isEmpty() || filtered.size < 5) {
-                            versions.takeLast(5)
+                        val result = if (isDevMode) {
+                            val first20 = versions.take(20)
+                            first20
                         } else {
-                            filtered
+                            val minVersion = ComposeVersions.LAST_STABLE_VERSION
+                            val minVersionParsed = ComposeVersionComparator.parse(minVersion)
+                            
+                            val filtered = versions.filter { version ->
+                                val parsed = ComposeVersionComparator.parse(version)
+                                parsed >= minVersionParsed
+                            }
+                            
+                            if (filtered.isEmpty() || filtered.size < 5) {
+                                versions.takeLast(5)
+                            } else {
+                                filtered
+                            }
                         }
+                        return result
                     }
-                    return result
+                }
+            } catch (e: Exception) {
+                lastException = e
+                logger.warn("Attempt ${attempt + 1}/5 failed to fetch versions from $mavenUrl: ${e.message}")
+                
+                if (attempt < 4) {
+                    Thread.sleep(1000)
                 }
             }
-        } catch (e: Exception) {
-            logger.warn("Failed to fetch versions from $mavenUrl: ${e.message}")
         }
         
-        return ComposeVersions.STABLE_VERSIONS_HARDCODED
+        logger.warn("All 5 attempts failed to fetch versions from $mavenUrl. Last error: ${lastException?.message}")
+        return if (isDevMode) emptyList() else ComposeVersions.STABLE_VERSIONS_HARDCODED
     }
 }
 

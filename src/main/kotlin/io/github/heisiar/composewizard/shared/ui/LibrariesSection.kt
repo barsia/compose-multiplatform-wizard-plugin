@@ -211,10 +211,26 @@ private fun LibrariesSectionContent(
     val navigationEventVersionService = remember { NavigationEventVersionService() }
     val hotReloadVersionService = remember { HotReloadVersionService() }
     
+    var devVersions by remember { mutableStateOf<List<String>?>(null) }
+    
+    LaunchedEffect(state.enableDevVersions) {
+        if (state.enableDevVersions) {
+            while (true) {
+                devVersions = cache.getDevVersions()
+                if (devVersions != null) break
+                kotlinx.coroutines.delay(100)
+            }
+        } else {
+            devVersions = null
+        }
+    }
+    
     LaunchedEffect(state.composeVersion, state.enableDevVersions, shouldShowBundledHotReload, shouldShowNavigation, shouldShowNavigation3AndNavigationEvent) {
-        if (state.composeVersion.isEmpty()) return@LaunchedEffect
+        if (state.composeVersion.isEmpty()) {
+            librariesState.clearAllVersions()
+            return@LaunchedEffect
+        }
         
-        val devVersions = if (state.enableDevVersions) cache.getDevVersions() else null
         val isDevLoading = state.enableDevVersions && devVersions == null
         
         if (!isDevLoading) {
@@ -231,10 +247,28 @@ private fun LibrariesSectionContent(
         }
     }
     
-    if (state.composeVersion.isEmpty()) {
-        LibrariesLoadingPlaceholder()
-    } else {
-        LibrariesContent(
+    val librariesLoaded = librariesState.libraryVersions.isNotEmpty() && !librariesState.isLoadingVersions
+    val showError = state.composeVersion.isEmpty() && state.enableDevVersions && devVersions?.isEmpty() == true
+    val showSkeletons = state.composeVersion.isEmpty() || !librariesLoaded
+    
+    when {
+        showError -> {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Compose version is not available",
+                    style = JewelTheme.defaultTextStyle,
+                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
+                )
+            }
+        }
+        showSkeletons -> {
+            LibrariesLoadingPlaceholder()
+        }
+        else -> {
+            LibrariesContent(
             state = state,
             librariesState = librariesState,
             cache = cache,
@@ -252,6 +286,7 @@ private fun LibrariesSectionContent(
             shouldShowNavigation = shouldShowNavigation,
             shouldShowNavigation3AndNavigationEvent = shouldShowNavigation3AndNavigationEvent
         )
+        }
     }
 }
 
@@ -266,7 +301,7 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(LEFT_COLUMN_LIBRARIES_COUNT) {
-                LibrarySkeletonItem()
+                LibraryVersionDropdownSkeleton()
             }
         }
         
@@ -275,58 +310,8 @@ private fun LibrariesLoadingPlaceholder() {
             verticalArrangement = Arrangement.spacedBy(LIBRARY_ITEM_SPACING)
         ) {
             repeat(RIGHT_COLUMN_BASE_LIBRARIES_COUNT) {
-                LibrarySkeletonItem()
+                LibraryVersionDropdownSkeleton()
             }
-        }
-    }
-}
-
-@Composable
-private fun LibrarySkeletonItem() {
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        org.jetbrains.jewel.ui.component.Checkbox(
-            checked = false,
-            onCheckedChange = { },
-            enabled = false
-        )
-        
-        Spacer(modifier = Modifier.width(4.dp))
-        
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().height(16.dp)
-            ) {
-                SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 13.dp)
-            }
-            
-            Box(
-                modifier = Modifier.fillMaxWidth().height(24.dp)
-            ) {
-                org.jetbrains.jewel.ui.component.ListComboBox(
-                    items = listOf("..."),
-                    selectedIndex = 0,
-                    onSelectedItemChange = { },
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = textFieldStyleComboBox()
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.width(4.dp))
-        
-        Box(
-            modifier = Modifier.width(16.dp).height(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            SkeletonBox(width = 14.dp, height = 14.dp)
         }
     }
 }

@@ -225,7 +225,7 @@ fun LibraryVersionDropdown(
 }
 
 @Composable
-private fun LibraryVersionDropdownSkeleton() {
+internal fun LibraryVersionDropdownSkeleton() {
     Row(
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.fillMaxWidth()

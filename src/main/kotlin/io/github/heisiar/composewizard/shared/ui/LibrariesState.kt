@@ -20,15 +20,25 @@ class LibrariesState(
     val isFromFallback = mutableStateMapOf<LibraryType, Boolean>()
     var versionForLibraries by mutableStateOf("")
     var hotReloadGithubVersion by mutableStateOf<String?>(null)
+    var isLoadingVersions by mutableStateOf(false)
     
     companion object {
         private const val MAX_CACHE_WAIT_ATTEMPTS = 16
         private const val CACHE_POLL_DELAY_MS = 500L
     }
     
+    fun clearAllVersions() {
+        libraryVersions.clear()
+        isFromFallback.clear()
+        versionForLibraries = ""
+        hotReloadGithubVersion = null
+        isLoadingVersions = false
+    }
+    
     suspend fun loadLibraryVersions(versionToLoad: String) {
         if (versionToLoad.isEmpty()) return
         
+        isLoadingVersions = true
         libraryVersions.clear()
         isFromFallback.clear()
         
@@ -101,6 +111,8 @@ class LibrariesState(
                 }
             }
         }
+        
+        isLoadingVersions = false
     }
 }
 
