@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,7 +134,10 @@ private fun PlatformItem(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
                 ) { onToggle() }
-                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                .graphicsLayer {
+                    alpha = if (checked) 1f else 0.3f
+                },
             contentAlignment = Alignment.Center
         ) {
             icon()
