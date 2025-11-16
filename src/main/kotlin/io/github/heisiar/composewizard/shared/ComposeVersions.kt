@@ -84,12 +84,14 @@ object ComposeVersions {
      * This is the ONLY place where versions need to be defined.
      * All other lists (STABLE_VERSIONS_HARDCODED, etc.) are automatically derived.
      * 
-     * Used as fallback when GitHub API is unavailable or version resolution fails.
+     * Used as the ONLY source when no internet connection is available (offline fallback).
+     * When internet is available, versions are fetched from Maven Central instead.
+     * 
      * Based on official JetBrains releases:
      * https://github.com/JetBrains/compose-multiplatform/releases
      * 
      * NOTE: All library versions in this map were originally fetched from GitHub tag pages
-     * and are hardcoded here to avoid unnecessary requests to GitHub.
+     * and are hardcoded here to guarantee offline functionality.
      * 
      * To add new versions: add entry here, everything else updates automatically.
      */
@@ -151,13 +153,14 @@ object ComposeVersions {
      * 
      * ⚠️ AUTOMATICALLY GENERATED from LIBRARY_BUNDLES ⚠️
      * 
-     * These versions are embedded in the plugin code and serve as:
-     * 1. Instant availability (no internet required)
-     * 2. Baseline for version filtering (Maven versions newer than first version in this list)
-     * 3. Fallback when Maven is unavailable
+     * This list is used as the ONLY source when no internet connection is available.
+     * When internet is available, versions are fetched from Maven Central instead.
      * 
-     * The plugin will check Maven once per 24 hours for newer versions than DEFAULT_VERSION.
-     * Total cached versions limited to 20 (hardcoded + new from Maven).
+     * Usage:
+     * - Offline fallback: displayed when Maven Central is unreachable (all versions from LIBRARY_BUNDLES)
+     * - Version baseline: LAST_STABLE_VERSION is derived from this list for Maven filtering
+     * 
+     * The plugin checks Maven once per 24 hours. No version limit or merging with hardcoded.
      * 
      * This list is automatically derived from LIBRARY_BUNDLES keys.
      */

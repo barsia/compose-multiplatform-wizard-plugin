@@ -37,7 +37,7 @@ class ComposeVersionCacheCore(
     
     companion object {
         private const val CACHE_TTL_MS = 24 * 60 * 60 * 1000L
-        private const val MAX_CACHED_VERSIONS = 20
+        private const val MAX_CACHED_VERSIONS = 10
     }
     
     fun initializeCache(onInitComplete: () -> Unit) {
@@ -231,23 +231,17 @@ class ComposeVersionCacheCore(
                     return@launch
                 }
                 
-                val hardcodedVersions = ComposeVersions.LIBRARY_BUNDLES.keys.toList()
-                val allVersions = (hardcodedVersions + versionsFromMaven).distinct()
-                
-                val sortedVersions = allVersions.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-                
-                val finalVersions = sortedVersions.take(MAX_CACHED_VERSIONS)
-                
-                state.stableVersions = finalVersions
+                state.stableVersions = versionsFromMaven
                 state.stableLastLoadTime = System.currentTimeMillis()
                 
-                logger.info("Cached ${finalVersions.size} stable Compose versions (${hardcodedVersions.size} hardcoded + ${versionsFromMaven.size} from Maven)")
+                logger.info("Cached ${versionsFromMaven.size} stable Compose versions from Maven")
             } catch (e: CancellationException) {
                 logger.info("Stable version loading cancelled due to plugin unload")
                 throw e
             } catch (e: Exception) {
-                logger.warn("Failed to load stable Compose versions, using hardcoded fallback: ${e.message}")
+                logger.warn("Failed to load stable Compose versions from Maven, using hardcoded fallback: ${e.message}")
                 if (state.stableVersions.isEmpty()) {
+                    // Fallback: use LIBRARY_BUNDLES as the only source when Maven is unreachable
                     state.stableVersions = ComposeVersions.STABLE_VERSIONS_HARDCODED
                     state.stableLastLoadTime = System.currentTimeMillis()
                 }
@@ -290,6 +284,7 @@ class ComposeVersionCacheCore(
             } catch (e: Exception) {
                 logger.warn("Failed to load dev Compose versions: ${e.message}")
                 state.devVersions = emptyList()
+                // Dev режим: без fallback, UI покажет "Dev versions unavailable"
             } finally {
                 isLoadingDev = false
             }

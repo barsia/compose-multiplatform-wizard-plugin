@@ -111,21 +111,34 @@ class ComposeVersionService {
                         }
                         
                         val result = if (isDevMode) {
-                            val first20 = versions.take(20)
-                            first20
+                            versions.take(20)
                         } else {
                             val minVersion = ComposeVersions.LAST_STABLE_VERSION
                             val minVersionParsed = ComposeVersionComparator.parse(minVersion)
                             
-                            val filtered = versions.filter { version ->
+                            val sortedVersions = versions.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+                            
+                            val filtered = sortedVersions.filter { version ->
                                 val parsed = ComposeVersionComparator.parse(version)
                                 parsed >= minVersionParsed
                             }
                             
-                            if (filtered.isEmpty() || filtered.size < 5) {
-                                versions.takeLast(5)
+                            if (filtered.isEmpty()) {
+                                emptyList()
                             } else {
-                                filtered
+                                val lastPublished = filtered.first()
+                                val lastStable = filtered.firstOrNull { version ->
+                                    !version.contains("-alpha") && !version.contains("-beta") && !version.contains("-rc")
+                                }
+                                
+                                when {
+                                    lastStable == null -> filtered
+                                    lastPublished == lastStable -> filtered.take(6)
+                                    else -> {
+                                        val lastStableIndex = filtered.indexOf(lastStable)
+                                        filtered.subList(0, lastStableIndex + 1)
+                                    }
+                                }
                             }
                         }
                         return result
@@ -142,7 +155,7 @@ class ComposeVersionService {
         }
         
         logger.warn("All 5 attempts failed to fetch versions from $mavenUrl. Last error: ${lastException?.message}")
-        return if (isDevMode) emptyList() else ComposeVersions.STABLE_VERSIONS_HARDCODED
+        throw java.io.IOException("Failed to fetch versions from Maven after 5 attempts", lastException)
     }
 }
 
