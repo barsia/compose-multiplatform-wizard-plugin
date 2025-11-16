@@ -41,7 +41,7 @@ fun WizardUIRoot(
     
     val devCheckboxVisible = isInternalMode || settings.devCheckboxVisibleByUser
     val enableDevVersions = if (devCheckboxVisible && !settings.enableDevVersionsSetByUser) {
-        true
+        false
     } else {
         settings.enableDevVersions
     }
