@@ -285,7 +285,7 @@ fun PinnedVersionIndicator(
 @Composable
 fun BundledLibraryIndicator() {
     Tooltip(
-        tooltip = { Text("This library is bundled with the Compose release") },
+        tooltip = { Text("This version is bundled with the Compose release") },
         tooltipPlacement = TooltipPlacement.ComponentRect(
             anchor = Alignment.TopCenter,
             alignment = Alignment.TopCenter
