@@ -49,6 +49,8 @@ import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
 import java.awt.Cursor
 
+private const val ROTATION_DURATION_MS = 500
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ComposeVersionField(
@@ -106,11 +108,21 @@ fun ComposeVersionField(
         }
 
         var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf<List<String>?>(null) }
-        var isLoading by remember(enableDevVersions) { mutableStateOf(true) }
+        var isLoading by remember(enableDevVersions) { 
+            println("🔵 [STATE] isLoading initialized to: true (enableDevVersions=$enableDevVersions)")
+            mutableStateOf(true) 
+        }
         var displayedVersion by remember(enableDevVersions) { mutableStateOf("") }
+        var toggleTrigger by remember { 
+            println("🔵 [STATE] toggleTrigger initialized to: 0")
+            mutableStateOf(0) 
+        }
 
         LaunchedEffect(enableDevVersions) {
+            println("🔵 [STATE] LaunchedEffect(enableDevVersions) triggered: enableDevVersions=$enableDevVersions")
             onVersionSelected("")
+            toggleTrigger++
+            println("🔵 [STATE] toggleTrigger incremented to: $toggleTrigger")
             
             if (enableDevVersions) {
                 cache.forceReloadDev()
@@ -126,8 +138,12 @@ fun ComposeVersionField(
         }
 
         LaunchedEffect(refreshTrigger) {
-            if (refreshTrigger == 0) return@LaunchedEffect
+            if (refreshTrigger == 0) {
+                println("🔵 [STATE] LaunchedEffect(refreshTrigger) skipped: refreshTrigger=0")
+                return@LaunchedEffect
+            }
             
+            println("🔵 [STATE] LaunchedEffect(refreshTrigger) setting isLoading = true")
             isLoading = true
             
             kotlinx.coroutines.delay(200)
@@ -153,6 +169,7 @@ fun ComposeVersionField(
                             displayedVersion = firstVersion
                             onVersionSelected(firstVersion)
                         }
+                        println("🔵 [STATE] LaunchedEffect(refreshTrigger) setting isLoading = false (versions loaded)")
                         isLoading = false
                         break
                     }
@@ -163,6 +180,7 @@ fun ComposeVersionField(
         }
         
         LaunchedEffect(enableDevVersions, refreshTrigger) {
+            println("🔵 [STATE] LaunchedEffect(enableDevVersions, refreshTrigger) started polling (enableDevVersions=$enableDevVersions, refreshTrigger=$refreshTrigger)")
             while (true) {
                 val isCurrentlyLoading = if (enableDevVersions) {
                     cache.isLoadingDevVersions()
@@ -183,6 +201,7 @@ fun ComposeVersionField(
                         displayedVersion = firstVersion
                         onVersionSelected(firstVersion)
                     }
+                    println("🔵 [STATE] LaunchedEffect(enableDevVersions, refreshTrigger) setting isLoading = false (polling detected versions)")
                     isLoading = false
                     break
                 }
@@ -248,23 +267,85 @@ fun ComposeVersionField(
                     .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                 contentAlignment = Alignment.Center
             ) {
-                val coroutineScope = rememberCoroutineScope()
                 val rotation = remember { Animatable(0f) }
                 val refreshInteractionSource = remember { MutableInteractionSource() }
                 val isRefreshFocused by refreshInteractionSource.collectIsFocusedAsState()
+                var isManualRefresh by remember { mutableStateOf(false) }
+                val lastToggleTrigger = remember { mutableStateOf(0) }
+                val lastIsLoading = remember { mutableStateOf<Boolean?>(null) }
+                val isLoadingState = remember { mutableStateOf(isLoading) }
+                isLoadingState.value = isLoading
+                var isAnimating by remember { mutableStateOf(false) }
+                val coroutineScope = rememberCoroutineScope()
+                
+                val startAnimation = {
+                    if (!isAnimating) {
+                        println("🔄 [ROTATION] startAnimation() called")
+                        coroutineScope.launch {
+                            try {
+                                isAnimating = true
+                                val startTime = System.currentTimeMillis()
+                                var rotationCount = 0
+                                var hasMinimumRotation = false
+                                
+                                do {
+                                    rotationCount++
+                                    println("🔄 [ROTATION] Rotation #$rotationCount (isLoading=${isLoadingState.value}, elapsed=${System.currentTimeMillis() - startTime}ms)")
+                                    rotation.animateTo(
+                                        targetValue = rotation.value + 360f,
+                                        animationSpec = tween(
+                                            durationMillis = ROTATION_DURATION_MS,
+                                            easing = LinearEasing
+                                        )
+                                    )
+                                    val elapsed = System.currentTimeMillis() - startTime
+                                    hasMinimumRotation = elapsed >= ROTATION_DURATION_MS
+                                    println("🔄 [ROTATION] After rotation #$rotationCount: elapsed=${elapsed}ms, hasMin=$hasMinimumRotation, isLoading=${isLoadingState.value}")
+                                } while (isLoadingState.value || !hasMinimumRotation)
+                                
+                                println("🔄 [ROTATION] Animation completed: $rotationCount rotations")
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                println("🔄 [ROTATION] Animation cancelled: ${e.message}")
+                                throw e
+                            } finally {
+                                isAnimating = false
+                            }
+                        }
+                    } else {
+                        println("🔄 [ROTATION] startAnimation() skipped: animation already in progress")
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    println("🔄 [ROTATION] LaunchedEffect(Unit) - First composition check: isLoading=$isLoading, toggleTrigger=$toggleTrigger")
+                    // Don't start animation if toggleTrigger will handle it
+                    kotlinx.coroutines.delay(10)
+                    if (isLoading && toggleTrigger == 0) {
+                        startAnimation()
+                    }
+                }
 
                 LaunchedEffect(isLoading) {
-                    if (isLoading) {
-                        while (isLoading) {
-                            rotation.animateTo(
-                                targetValue = 360f,
-                                animationSpec = tween(
-                                    durationMillis = 1000,
-                                    easing = LinearEasing
-                                )
-                            )
-                            rotation.snapTo(0f)
-                        }
+                    println("🔄 [ROTATION] LaunchedEffect(isLoading) triggered: isLoading=$isLoading, lastIsLoading=${lastIsLoading.value}")
+                    if (isLoading && lastIsLoading.value == false) {
+                        startAnimation()
+                    }
+                    lastIsLoading.value = isLoading
+                }
+
+                LaunchedEffect(toggleTrigger) {
+                    println("🔄 [ROTATION] LaunchedEffect(toggleTrigger) triggered: toggleTrigger=$toggleTrigger, last=${lastToggleTrigger.value}")
+                    if (toggleTrigger > 0 && toggleTrigger != lastToggleTrigger.value) {
+                        lastToggleTrigger.value = toggleTrigger
+                        startAnimation()
+                    }
+                }
+
+                LaunchedEffect(isManualRefresh) {
+                    println("🔄 [ROTATION] LaunchedEffect(isManualRefresh) triggered: $isManualRefresh")
+                    if (isManualRefresh) {
+                        startAnimation()
+                        isManualRefresh = false
                     }
                 }
                 
@@ -286,22 +367,13 @@ fun ComposeVersionField(
                         contentDescription = "Refresh versions",
                         modifier = Modifier
                             .size(16.dp)
-                            .graphicsLayer { rotationZ = rotation.value }
+                            .graphicsLayer { rotationZ = rotation.value % 360f }
                             .onKeyEvent { keyEvent: KeyEvent ->
                                 if (!isLoading && 
                                     (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
                                     keyEvent.type == KeyEventType.KeyDown
                                 ) {
-                                    coroutineScope.launch {
-                                        rotation.snapTo(0f)
-                                        rotation.animateTo(
-                                            targetValue = 360f,
-                                            animationSpec = tween(
-                                                durationMillis = 500,
-                                                easing = LinearEasing
-                                            )
-                                        )
-                                    }
+                                    isManualRefresh = true
                                     onRefreshVersions()
                                     refreshTrigger++
                                     true
@@ -312,16 +384,7 @@ fun ComposeVersionField(
                             .pointerInput(isLoading) {
                                 if (!isLoading) {
                                     detectTapGestures {
-                                        coroutineScope.launch {
-                                            rotation.snapTo(0f)
-                                            rotation.animateTo(
-                                                targetValue = 360f,
-                                                animationSpec = tween(
-                                                    durationMillis = 500,
-                                                    easing = LinearEasing
-                                                )
-                                            )
-                                        }
+                                        isManualRefresh = true
                                         onRefreshVersions()
                                         refreshTrigger++
                                     }
