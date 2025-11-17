@@ -1,37 +1,55 @@
 package io.github.heisiar.composewizard.androidstudio
 
+import com.intellij.openapi.GitRepositoryInitializer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
-import io.github.heisiar.composewizard.shared.ProjectCreator
+import com.intellij.openapi.vfs.LocalFileSystem
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.wizard.AbstractWizardIntegration
+import java.io.File
 
 /**
  * Android Studio specific wizard integration.
  * 
  * Handles AS-specific project setup:
  * - Opens project using ProjectManager.loadAndOpenProject()
- * - Uses command-line git init for Git initialization
+ * - Uses GitRepositoryInitializer API for proper Git initialization (respects .gitignore)
  * - No additional setup needed before opening (AS handles Gradle sync automatically)
  */
 class ASWizardIntegration : AbstractWizardIntegration() {
+    
+    private var openedProject: com.intellij.openapi.project.Project? = null
+    private var shouldInitGit = false
     
     override fun performIdeSpecificSetup(
         projectPath: String,
         projectName: String,
         builder: ComposeMultiplatformModuleBuilder
     ) {
+        shouldInitGit = builder.initGit
     }
     
     override fun openProject(projectPath: String) {
-        
         ApplicationManager.getApplication().invokeLater {
             try {
                 val projectManager = ProjectManager.getInstance()
                 val newProject = projectManager.loadAndOpenProject(projectPath)
                 
                 if (newProject != null) {
+                    openedProject = newProject
+                    
+                    // Initialize Git after project is opened (if requested)
+                    if (shouldInitGit) {
+                        val root = LocalFileSystem.getInstance().findFileByIoFile(File(projectPath))
+                        if (root != null) {
+                            val gitInitializer = GitRepositoryInitializer.getInstance()
+                            if (gitInitializer != null) {
+                                // Use platform API - properly respects .gitignore
+                                gitInitializer.initRepository(newProject, root, true)
+                            }
+                        }
+                    }
                 } else {
                     Messages.showErrorDialog(
                         "Failed to open the created project",
@@ -51,7 +69,8 @@ class ASWizardIntegration : AbstractWizardIntegration() {
     }
     
     override fun initializeGit(projectPath: String) {
-        ProjectCreator.initializeGitRepository(projectPath)
+        // Git initialization is handled in openProject() for AS
+        // This is necessary because GitRepositoryInitializer requires an open project
     }
     
     override fun handleCreationError(

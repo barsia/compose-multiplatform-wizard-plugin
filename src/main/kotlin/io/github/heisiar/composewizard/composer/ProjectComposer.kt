@@ -49,6 +49,10 @@ class ProjectComposer(
         
         copyBaseStructure(targetPath)
         
+        // Create .gitignore FIRST, before any other files
+        // This ensures Git will properly ignore files like local.properties
+        createGitignoreFile(targetPath)
+        
         if (isMultiplatform) {
             copyCommonMainFiles(targetPath)
         }
@@ -60,8 +64,6 @@ class ProjectComposer(
         features.forEach { feature ->
             feature.apply(targetPath, config, modules)
         }
-        
-        createGitignoreFile(targetPath)
         
         generateBuildFiles(targetPath, isMultiplatform)
         

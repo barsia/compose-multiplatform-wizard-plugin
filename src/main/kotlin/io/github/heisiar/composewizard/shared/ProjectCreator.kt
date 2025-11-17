@@ -235,24 +235,15 @@ sdk.dir=
         return try {
             val projectDir = File(projectPath)
             
-            // Step 1: Initialize Git repository
+            // Initialize Git repository
+            // Note: We don't run 'git add .' automatically to respect .gitignore
+            // Files like local.properties should remain untracked (not green in IDE)
             val initProcess = Runtime.getRuntime().exec(
                 arrayOf("git", "init"),
                 null,
                 projectDir
             )
-            if (initProcess.waitFor() != 0) {
-                return false
-            }
-            
-            // Step 2: Add all files to staging
-            // Files will be staged (green in IDE), user can commit when ready
-            val addProcess = Runtime.getRuntime().exec(
-                arrayOf("git", "add", "."),
-                null,
-                projectDir
-            )
-            addProcess.waitFor() == 0
+            initProcess.waitFor() == 0
         } catch (e: Exception) {
             false
         }

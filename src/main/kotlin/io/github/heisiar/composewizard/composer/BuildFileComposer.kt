@@ -122,7 +122,7 @@ class BuildFileComposer(
     }
     
     fun composeLibsVersions(targetPath: String) {
-        val template = resourceCopier.readResourceFile("templates/modular/base/gradle/libs.versions.toml")
+        val template = resourceCopier.readResourceFile("templates/modular/base/gradle/libs.versions.toml.template")
         
         var content = template
         content = content.replace("{{COMPOSE_VERSION}}", config.composeVersion)
@@ -306,9 +306,10 @@ class BuildFileComposer(
             "\n            implementation(compose.material3)"
         }
         val optionalLibrariesDependencies = generateOptionalLibrariesDependencies()
-        return fragment
+        val result = fragment
             .replace("{{MATERIAL3_DEPENDENCY}}", material3Dependency)
             .replace("{{OPTIONAL_LIBRARIES_DEPENDENCIES}}", optionalLibrariesDependencies)
+        return result
     }
     
     private fun generateOptionalLibrariesDependencies(): String {

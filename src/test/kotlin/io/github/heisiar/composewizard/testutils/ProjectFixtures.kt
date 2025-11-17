@@ -280,6 +280,7 @@ object ProjectFixtures {
         this.includeSavedState = includeSavedState
         this.includeWindow = includeWindow
         this.includeHotReload = false
+        this.enableDevVersions = true
     }
     
     /**
