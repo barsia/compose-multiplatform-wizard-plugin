@@ -14,4 +14,5 @@ object WizardIconKeys {
     val Android: PathIconKey = PathIconKey("icons/android.svg", WizardIconKeys::class.java)
     val Pin: PathIconKey = PathIconKey("icons/pin.svg", WizardIconKeys::class.java)
     val Lock: PathIconKey = PathIconKey("icons/lock.svg", WizardIconKeys::class.java)
+    val ComposeWatermark: PathIconKey = PathIconKey("META-INF/compose.svg", WizardIconKeys::class.java)
 }

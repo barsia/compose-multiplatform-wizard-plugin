@@ -2,24 +2,31 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.painter.hints.HiDpi
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -68,19 +75,22 @@ fun WizardMainContent(
         }
     }
     
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(JewelTheme.globalColors.panelBackground)
     ) {
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .widthIn(min = 220.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .widthIn(min = 220.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
+            ) {
             if (PlatformDetector.isAndroidStudio) {
                 AndroidStudioProjectFields(
                     state = state,
@@ -163,8 +173,23 @@ fun WizardMainContent(
                     ComposeWizardUsageCollector.logTestsToggled(state.tests)
                 }
             )
-        }
+            }
 
-        WizardFooter(state = state)
+            WizardFooter(state = state)
+        }
+        
+        // Watermark with Compose logo (color gradient from SVG)
+        // Positioned so ~60% is visible, rest goes beyond screen edge
+        Icon(
+            key = WizardIconKeys.ComposeWatermark,
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 0.dp, y = 135.dp)
+                .size(250.dp)
+                .alpha(0.05f),
+            colorFilter = null,
+            hint = HiDpi()
+        )
     }
 }
