@@ -273,80 +273,71 @@ fun ComposeVersionField(
                 var isManualRefresh by remember { mutableStateOf(false) }
                 val lastToggleTrigger = remember { mutableStateOf(0) }
                 val lastIsLoading = remember { mutableStateOf<Boolean?>(null) }
-                val isLoadingState = remember { mutableStateOf(isLoading) }
-                isLoadingState.value = isLoading
                 var isAnimating by remember { mutableStateOf(false) }
+                val isLoadingState = remember { mutableStateOf(isLoading) }
                 val coroutineScope = rememberCoroutineScope()
                 
-                val startAnimation = {
-                    if (!isAnimating) {
-                        println("🔄 [ROTATION] startAnimation() called")
-                        coroutineScope.launch {
-                            try {
-                                isAnimating = true
-                                val startTime = System.currentTimeMillis()
-                                var rotationCount = 0
-                                var hasMinimumRotation = false
-                                
-                                do {
-                                    rotationCount++
-                                    println("🔄 [ROTATION] Rotation #$rotationCount (isLoading=${isLoadingState.value}, elapsed=${System.currentTimeMillis() - startTime}ms)")
-                                    rotation.animateTo(
-                                        targetValue = rotation.value + 360f,
-                                        animationSpec = tween(
-                                            durationMillis = ROTATION_DURATION_MS,
-                                            easing = LinearEasing
+                // Update loading state on every recomposition
+                androidx.compose.runtime.SideEffect {
+                    isLoadingState.value = isLoading
+                }
+                
+                // Animation function that runs in rememberCoroutineScope (not cancelled on recomposition)
+                val startAnimation = remember {
+                    {
+                        if (!isAnimating) {
+                            println("🔄 [ROTATION] Starting animation...")
+                            coroutineScope.launch {
+                                try {
+                                    isAnimating = true
+                                    val startTime = System.currentTimeMillis()
+                                    var rotationCount = 0
+                                    var hasMinimumRotation = false
+                                    
+                                    do {
+                                        rotationCount++
+                                        println("🔄 [ROTATION] Rotation #$rotationCount (isLoading=${isLoadingState.value}, elapsed=${System.currentTimeMillis() - startTime}ms)")
+                                        rotation.animateTo(
+                                            targetValue = rotation.value + 360f,
+                                            animationSpec = tween(
+                                                durationMillis = ROTATION_DURATION_MS,
+                                                easing = LinearEasing
+                                            )
                                         )
-                                    )
-                                    val elapsed = System.currentTimeMillis() - startTime
-                                    hasMinimumRotation = elapsed >= ROTATION_DURATION_MS
-                                    println("🔄 [ROTATION] After rotation #$rotationCount: elapsed=${elapsed}ms, hasMin=$hasMinimumRotation, isLoading=${isLoadingState.value}")
-                                } while (isLoadingState.value || !hasMinimumRotation)
-                                
-                                println("🔄 [ROTATION] Animation completed: $rotationCount rotations")
-                            } catch (e: kotlinx.coroutines.CancellationException) {
-                                println("🔄 [ROTATION] Animation cancelled: ${e.message}")
-                                throw e
-                            } finally {
-                                isAnimating = false
+                                        val elapsed = System.currentTimeMillis() - startTime
+                                        hasMinimumRotation = elapsed >= ROTATION_DURATION_MS
+                                        println("🔄 [ROTATION] After rotation #$rotationCount: elapsed=${elapsed}ms, hasMin=$hasMinimumRotation, isLoading=${isLoadingState.value}")
+                                    } while (isLoadingState.value || !hasMinimumRotation)
+                                    
+                                    println("🔄 [ROTATION] Animation completed: $rotationCount rotations")
+                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                    println("🔄 [ROTATION] Animation cancelled: ${e.message}")
+                                    throw e
+                                } finally {
+                                    isAnimating = false
+                                }
                             }
+                        } else {
+                            println("🔄 [ROTATION] Animation skipped: already in progress")
                         }
-                    } else {
-                        println("🔄 [ROTATION] startAnimation() skipped: animation already in progress")
                     }
                 }
 
-                LaunchedEffect(Unit) {
-                    println("🔄 [ROTATION] LaunchedEffect(Unit) - First composition check: isLoading=$isLoading, toggleTrigger=$toggleTrigger")
-                    // Don't start animation if toggleTrigger will handle it
-                    kotlinx.coroutines.delay(10)
-                    if (isLoading && toggleTrigger == 0) {
+                // Trigger animation on state changes
+                LaunchedEffect(isLoading, toggleTrigger, isManualRefresh) {
+                    val isFirstLoad = isLoading && lastIsLoading.value == null
+                    val isLoadingRestarted = isLoading && lastIsLoading.value == false
+                    val isToggleChanged = toggleTrigger > 0 && toggleTrigger != lastToggleTrigger.value
+                    
+                    println("🔄 [ROTATION] Check: isFirstLoad=$isFirstLoad, isLoadingRestarted=$isLoadingRestarted, isToggleChanged=$isToggleChanged, isManualRefresh=$isManualRefresh")
+                    
+                    if (isFirstLoad || isLoadingRestarted || isToggleChanged || isManualRefresh) {
+                        if (isToggleChanged) lastToggleTrigger.value = toggleTrigger
+                        if (isManualRefresh) isManualRefresh = false
                         startAnimation()
                     }
-                }
-
-                LaunchedEffect(isLoading) {
-                    println("🔄 [ROTATION] LaunchedEffect(isLoading) triggered: isLoading=$isLoading, lastIsLoading=${lastIsLoading.value}")
-                    if (isLoading && lastIsLoading.value == false) {
-                        startAnimation()
-                    }
+                    
                     lastIsLoading.value = isLoading
-                }
-
-                LaunchedEffect(toggleTrigger) {
-                    println("🔄 [ROTATION] LaunchedEffect(toggleTrigger) triggered: toggleTrigger=$toggleTrigger, last=${lastToggleTrigger.value}")
-                    if (toggleTrigger > 0 && toggleTrigger != lastToggleTrigger.value) {
-                        lastToggleTrigger.value = toggleTrigger
-                        startAnimation()
-                    }
-                }
-
-                LaunchedEffect(isManualRefresh) {
-                    println("🔄 [ROTATION] LaunchedEffect(isManualRefresh) triggered: $isManualRefresh")
-                    if (isManualRefresh) {
-                        startAnimation()
-                        isManualRefresh = false
-                    }
                 }
                 
                 val focusBorderColor = Color(0xFF3574F0)
