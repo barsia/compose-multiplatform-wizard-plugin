@@ -27,8 +27,8 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "WebProject",
             projectId = "org.example.web",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetWeb = true
         )
 
@@ -36,8 +36,8 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "ProjectIos",
             projectId = "org.example.ios",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetIOS = true
         )
 
@@ -45,8 +45,8 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "ProjectAndroid",
             projectId = "org.example.android",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetAndroid = true
         )
     
@@ -148,12 +148,12 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "ProjectAndroidDesktop",
             projectId = "org.example.android.desktop",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetDesktop = true,
             targetAndroid = true
         ).apply {
-            lifecycleVersion = "2.9.5"
+            lifecycleVersion = "2.9.6"
             includeHotReload = true
             hotReloadVersion = "1.0.0-rc02"
         }
@@ -162,24 +162,24 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "ProjectAndroidIos",
             projectId = "org.example.android.ios",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetAndroid = true,
             targetIOS = true
         ).apply {
-            lifecycleVersion = "2.9.5"
+            lifecycleVersion = "2.9.6"
         }
     
     val DESKTOP_WEB_CONFIG: ComposeMultiplatformModuleBuilder
         get() = createBuilder(
             projectName = "ProjectDesktopWeb",
             projectId = "org.example.desktop.web",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetDesktop = true,
             targetWeb = true
         ).apply {
-            lifecycleVersion = "2.9.5"
+            lifecycleVersion = "2.9.6"
             includeHotReload = true
             hotReloadVersion = "1.0.0-rc02"
         }
@@ -188,14 +188,14 @@ object ProjectFixtures {
         get() = createBuilder(
             projectName = "ProjectAllPlatforms",
             projectId = "org.example.all.platforms",
-            composeVersion = "1.9.2",
-            kotlinVersion = "2.2.20",
+            composeVersion = "1.9.3",
+            kotlinVersion = "2.2.21",
             targetDesktop = true,
             targetAndroid = true,
             targetIOS = true,
             targetWeb = true
         ).apply {
-            lifecycleVersion = "2.9.5"
+            lifecycleVersion = "2.9.6"
             includeHotReload = true
             hotReloadVersion = "1.0.0-rc02"
         }
@@ -205,8 +205,8 @@ object ProjectFixtures {
         initGit: Boolean = false,
         projectName: String = "AndroidDesktopIosTests",
         packageName: String = "org.example.project.android.desktop.ios.tests",
-        composeVersion: String = "1.9.2",
-        kotlinVersion: String = "2.2.20"
+        composeVersion: String = "1.9.3",
+        kotlinVersion: String = "2.2.21"
     ) = createBuilder(
         projectName = projectName,
         projectId = packageName,
@@ -218,7 +218,7 @@ object ProjectFixtures {
         includeTests = includeTests,
         initGit = initGit
     ).apply {
-        lifecycleVersion = "2.9.5"
+        lifecycleVersion = "2.9.6"
         includeHotReload = true
         hotReloadVersion = "1.0.0-rc02"
     }
@@ -228,8 +228,8 @@ object ProjectFixtures {
         initGit: Boolean = false,
         projectName: String = "AndroidWebIosGit",
         packageName: String = "org.example.android.web.ios.git",
-        composeVersion: String = "1.9.2",
-        kotlinVersion: String = "2.2.20"
+        composeVersion: String = "1.9.3",
+        kotlinVersion: String = "2.2.21"
     ) = createBuilder(
         projectName = projectName,
         projectId = packageName,
@@ -241,7 +241,7 @@ object ProjectFixtures {
         includeTests = includeTests,
         initGit = initGit
     ).apply {
-        lifecycleVersion = "2.9.5"
+        lifecycleVersion = "2.9.6"
     }
     
     /**

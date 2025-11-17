@@ -6,10 +6,10 @@ android-targetSdk = "36"
 androidx-activity = "1.11.0"
 androidx-appcompat = "1.7.1"
 androidx-core = "1.17.0"
-androidx-lifecycle = "2.9.5"
+androidx-lifecycle = "2.9.6"
 composeHotReload = "1.0.0-rc02"
-composeMultiplatform = "1.9.2"
-kotlin = "2.2.20"
+composeMultiplatform = "1.9.3"
+kotlin = "2.2.21"
 kotlinx-coroutines = "1.10.2"
 
 [libraries]

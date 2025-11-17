@@ -318,4 +318,72 @@ class DesktopProjectGenerationTest {
         }
     }
 
+    @Test
+    fun `generated Desktop project in Release mode has correct settings gradle repositories`() {
+        TemporaryProjectHelper.withTempProject("desktop-release-test-") { tempDir ->
+            val builder = ProjectFixtures.desktopConfig().apply {
+                enableDevVersions = false
+            }
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
+
+            val settingsGradle = File(tempDir, "settings.gradle.kts").readText()
+            
+            assertTrue(
+                settingsGradle.contains("google {"),
+                "Release mode should have google with mavenContent block"
+            )
+            assertTrue(
+                settingsGradle.contains("includeGroupAndSubgroups(\"androidx\")"),
+                "Release mode should have includeGroupAndSubgroups for androidx"
+            )
+            assertTrue(
+                settingsGradle.contains("includeGroupAndSubgroups(\"com.android\")"),
+                "Release mode should have includeGroupAndSubgroups for com.android"
+            )
+            assertTrue(
+                !settingsGradle.contains("maven.pkg.jetbrains.space"),
+                "Release mode should not contain dev repository"
+            )
+        }
+    }
+
+    @Test
+    fun `generated Desktop project in Dev mode has correct settings gradle repositories`() {
+        TemporaryProjectHelper.withTempProject("desktop-dev-test-") { tempDir ->
+            val builder = ProjectFixtures.desktopConfig().apply {
+                enableDevVersions = true
+            }
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
+
+            val settingsGradle = File(tempDir, "settings.gradle.kts").readText()
+            
+            assertTrue(
+                settingsGradle.contains("google()"),
+                "Dev mode should have google() without mavenContent block"
+            )
+            assertTrue(
+                !settingsGradle.contains("includeGroupAndSubgroups"),
+                "Dev mode should not have includeGroupAndSubgroups"
+            )
+            assertTrue(
+                settingsGradle.contains("maven(\"https://maven.pkg.jetbrains.space/public/p/compose/dev\")"),
+                "Dev mode should contain compose dev repository"
+            )
+            assertTrue(
+                settingsGradle.contains("maven(\"https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev\")"),
+                "Dev mode should contain kotlin dev repository"
+            )
+        }
+    }
+
 }

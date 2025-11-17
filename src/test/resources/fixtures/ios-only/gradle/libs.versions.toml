@@ -1,7 +1,7 @@
 [versions]
-androidx-lifecycle = "2.9.5"
-composeMultiplatform = "1.9.2"
-kotlin = "2.2.20"
+androidx-lifecycle = "2.9.6"
+composeMultiplatform = "1.9.3"
+kotlin = "2.2.21"
 
 [libraries]
 androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }

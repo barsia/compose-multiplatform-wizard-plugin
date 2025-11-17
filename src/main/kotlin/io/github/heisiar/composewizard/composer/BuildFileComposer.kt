@@ -12,6 +12,8 @@ class BuildFileComposer(
 ) {
     
     fun composeRootBuildFile(targetPath: String) {
+        val template = resourceCopier.readResourceFile("templates/modular/base/build.gradle.kts.template")
+        
         val rootPlugins = mutableListOf<String>()
         
         // Add module-specific root plugins first
@@ -29,19 +31,15 @@ class BuildFileComposer(
         rootPlugins.add("alias(libs.plugins.composeCompiler)")
         rootPlugins.add("alias(libs.plugins.kotlinMultiplatform)")
         
-        val content = buildString {
-            appendLine("plugins {")
-            appendLine("    // this is necessary to avoid the plugins to be loaded multiple times")
-            appendLine("    // in each subproject's classloader")
-            rootPlugins.distinct().forEach { plugin ->
-                if (plugin.contains("apply false")) {
-                    appendLine("    $plugin")
-                } else {
-                    appendLine("    $plugin apply false")
-                }
+        val pluginsContent = rootPlugins.distinct().joinToString("\n") { plugin ->
+            if (plugin.contains("apply false")) {
+                "    $plugin"
+            } else {
+                "    $plugin apply false"
             }
-            append("}")
         }
+        
+        val content = template.replace("{{PLUGINS}}", pluginsContent)
         
         File(targetPath, "build.gradle.kts").writeText(content)
     }
@@ -111,7 +109,16 @@ class BuildFileComposer(
     
     fun composeSettingsFile(targetPath: String) {
         val template = resourceCopier.readResourceFile("templates/modular/base/settings.gradle.kts")
-        File(targetPath, "settings.gradle.kts").writeText(template)
+        
+        val repositoriesFragment = if (config.enableDevVersions) {
+            resourceCopier.readResourceFile("templates/modular/base/settings-repositories-dev.fragment")
+        } else {
+            resourceCopier.readResourceFile("templates/modular/base/settings-repositories-release.fragment")
+        }
+        
+        val content = template.replace("{{REPOSITORIES}}", repositoriesFragment)
+        
+        File(targetPath, "settings.gradle.kts").writeText(content)
     }
     
     fun composeLibsVersions(targetPath: String) {
