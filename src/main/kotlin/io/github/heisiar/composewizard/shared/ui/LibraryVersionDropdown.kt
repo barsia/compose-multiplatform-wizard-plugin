@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -151,16 +152,18 @@ fun LibraryVersionDropdown(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
+        val checkboxModifier = if (effectiveEnabled) {
+            Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+        } else {
+            Modifier.focusProperties { canFocus = false }
+        }
+        
         val checkboxContent = @Composable {
             org.jetbrains.jewel.ui.component.Checkbox(
                 checked = if (effectiveEnabled) checked else true,
                 onCheckedChange = if (effectiveEnabled) { { onCheckedChange() } } else { { } },
                 enabled = effectiveEnabled,
-                modifier = if (effectiveEnabled) {
-                    Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
-                } else {
-                    Modifier
-                }
+                modifier = checkboxModifier
             )
         }
         
@@ -197,7 +200,9 @@ fun LibraryVersionDropdown(
                 if (showHotReloadLock || showPinIcon) {
                     Spacer(modifier = Modifier.width(3.dp))
                     Box(
-                        modifier = Modifier.size(10.dp),
+                        modifier = Modifier
+                            .size(10.dp)
+                            .focusProperties { canFocus = false },
                         contentAlignment = Alignment.Center
                     ) {
                         if (showHotReloadLock) {
@@ -223,7 +228,6 @@ fun LibraryVersionDropdown(
                     LaunchedEffect(selectedIndex, filteredVersions) {
                         if (selectedIndex in filteredVersions.indices) {
                             listState.selectedKeys = setOf(selectedIndex)
-                            println("🟣 [LIBRARY-DROPDOWN] ${libraryType.name}: Syncing listState.selectedKeys to selectedIndex=$selectedIndex")
                         } else {
                             listState.selectedKeys = emptySet()
                         }
@@ -231,11 +235,8 @@ fun LibraryVersionDropdown(
                     
                     LaunchedEffect(isPopupVisible) {
                         if (isPopupVisible && !wasPopupVisible) {
-                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Popup opened, resetting hoveredIndex from $hoveredIndex to -1, selectedIndex=$selectedIndex, selectedVersion='$selectedVersion', filteredVersions.size=${filteredVersions.size}")
-                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: filteredVersions[0]='${filteredVersions.getOrNull(0)}', filteredVersions[$selectedIndex]='${filteredVersions.getOrNull(selectedIndex)}'")
                             hoveredIndex = -1
                         } else if (!isPopupVisible && wasPopupVisible) {
-                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Popup closed, hoveredIndex=$hoveredIndex, selectedIndex=$selectedIndex")
                             if (hoveredIndex >= 0 && hoveredIndex != selectedIndex && hoveredIndex in filteredVersions.indices) {
                                 val newVersion = filteredVersions[hoveredIndex]
                                 librariesState.libraryVersions[libraryType] = newVersion
@@ -245,7 +246,6 @@ fun LibraryVersionDropdown(
                                     librariesState.isFromFallback[libraryType] = false
                                 }
                                 onVersionChange(newVersion)
-                                println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Applied version $newVersion")
                             }
                             hoveredIndex = -1
                             shouldRestoreFocus = true
@@ -262,8 +262,6 @@ fun LibraryVersionDropdown(
                             shouldRestoreFocus = false
                         }
                     }
-                    
-                    println("🟢 [LIBRARY-DROPDOWN] ${libraryType.name}: Creating ListComboBox with selectedIndex=$selectedIndex, selectedVersion='$selectedVersion', items.size=${filteredVersions.size}")
                     
                     org.jetbrains.jewel.ui.component.ListComboBox(
                         items = filteredVersions,
@@ -337,7 +335,6 @@ fun LibraryVersionDropdown(
                             val itemIndex = filteredVersions.indexOf(item)
                             val isHighlighted = hoveredIndex >= 0 && itemIndex == hoveredIndex
                             val showAsSelected = if (hoveredIndex >= 0) isHighlighted else isSelected
-                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Rendering item='$item', itemIndex=$itemIndex, isSelected=$isSelected, hoveredIndex=$hoveredIndex, selectedIndex=$selectedIndex, isHighlighted=$isHighlighted, showAsSelected=$showAsSelected")
                             SimpleListItem(
                                 text = item,
                                 selected = showAsSelected,
