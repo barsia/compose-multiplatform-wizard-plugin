@@ -187,7 +187,7 @@ fun WizardMainContent(
                 .align(Alignment.BottomEnd)
                 .offset(x = 0.dp, y = 135.dp)
                 .size(250.dp)
-                .alpha(0.05f),
+                .alpha(0.075f),
             colorFilter = null,
             hint = HiDpi()
         )
