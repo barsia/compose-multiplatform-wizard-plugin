@@ -75,10 +75,3 @@ interface PlatformModule {
      */
     fun getLibraryDeclarations(config: ProjectConfig): Map<String, String>
 }
-
-
-
-
-
-
-
