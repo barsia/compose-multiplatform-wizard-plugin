@@ -130,19 +130,19 @@ class BuildFileComposer(
         content = content.replace("{{LIFECYCLE_VERSION}}", config.lifecycleVersion ?: "2.9.5")
         
         content = replaceOptionalLibraryVersionBlock(content, "MATERIAL3_VERSION_BLOCK", 
-                                                     config.includeMaterial3, config.material3Version, "androidx-material3")
+                                                     config.includeMaterial3, config.material3Version, "compose-material3")
         content = replaceOptionalLibraryVersionBlock(content, "MATERIAL3_ADAPTIVE_VERSION_BLOCK",
-                                                     config.includeMaterial3Adaptive, config.material3AdaptiveVersion, "androidx-material3-adaptive")
+                                                     config.includeMaterial3Adaptive, config.material3AdaptiveVersion, "compose-material3-adaptive")
         content = replaceOptionalLibraryVersionBlock(content, "NAVIGATION_VERSION_BLOCK",
                                                      config.includeNavigation, config.navigationVersion, "androidx-navigation")
         content = replaceOptionalLibraryVersionBlock(content, "NAVIGATION3_VERSION_BLOCK",
-                                                     config.includeNavigation3, config.navigation3Version, "androidx-navigation3")
+                                                     config.includeNavigation3, config.navigation3Version, "compose-navigation3-ui")
         content = replaceOptionalLibraryVersionBlock(content, "NAVIGATION_EVENT_VERSION_BLOCK",
-                                                     config.includeNavigationEvent, config.navigationEventVersion, "androidx-navigation-event")
+                                                     config.includeNavigationEvent, config.navigationEventVersion, "compose-navigationevent")
         content = replaceOptionalLibraryVersionBlock(content, "SAVED_STATE_VERSION_BLOCK",
                                                      config.includeSavedState, config.savedStateVersion, "androidx-savedstate")
         content = replaceOptionalLibraryVersionBlock(content, "WINDOW_VERSION_BLOCK",
-                                                     config.includeWindow, config.windowVersion, "androidx-window")
+                                                     config.includeWindow, config.windowVersion, "androidx-window-core")
         
         content = replaceOptionalLibraryLibrariesBlock(content, "MATERIAL3_LIBRARIES_BLOCK",
                                                        config.includeMaterial3, "androidx-material3")
@@ -300,34 +300,42 @@ class BuildFileComposer(
     
     private fun getCommonMainSourceSet(): String {
         val fragment = resourceCopier.readResourceFile("templates/modular/base/commonMain.sourceset.fragment")
+        val material3Dependency = if (config.includeMaterial3 && config.material3Version != null) {
+            ""
+        } else {
+            "\n            implementation(compose.material3)"
+        }
         val optionalLibrariesDependencies = generateOptionalLibrariesDependencies()
-        return fragment.replace("{{OPTIONAL_LIBRARIES_DEPENDENCIES}}", optionalLibrariesDependencies)
+        return fragment
+            .replace("{{MATERIAL3_DEPENDENCY}}", material3Dependency)
+            .replace("{{OPTIONAL_LIBRARIES_DEPENDENCIES}}", optionalLibrariesDependencies)
     }
     
     private fun generateOptionalLibrariesDependencies(): String {
         val dependencies = buildList {
             if (config.includeMaterial3 && config.material3Version != null) {
-                add("            implementation(libs.androidx.material3)")
+                add("            implementation(libs.compose.material3)")
             }
             if (config.includeMaterial3Adaptive && config.material3AdaptiveVersion != null) {
-                add("            implementation(libs.androidx.material3.adaptive)")
-                add("            implementation(libs.androidx.material3.adaptive.layout)")
-                add("            implementation(libs.androidx.material3.adaptive.navigation)")
+                add("            implementation(libs.compose.material3.adaptive)")
+                add("            implementation(libs.compose.material3.adaptive.layout)")
+                add("            implementation(libs.compose.material3.adaptive.navigation)")
             }
             if (config.includeNavigation && config.navigationVersion != null) {
                 add("            implementation(libs.androidx.navigation)")
             }
             if (config.includeNavigation3 && config.navigation3Version != null) {
-                add("            implementation(libs.androidx.navigation3)")
+                add("            implementation(libs.compose.navigation3.ui)")
+                add("            implementation(libs.compose.material3.adaptive.nav3)")
             }
             if (config.includeNavigationEvent && config.navigationEventVersion != null) {
-                add("            implementation(libs.androidx.navigation.event)")
+                add("            implementation(libs.compose.navigationevent)")
             }
             if (config.includeSavedState && config.savedStateVersion != null) {
                 add("            implementation(libs.androidx.savedstate)")
             }
             if (config.includeWindow && config.windowVersion != null) {
-                add("            implementation(libs.androidx.window)")
+                add("            implementation(libs.androidx.window.core)")
             }
         }
         
@@ -365,15 +373,16 @@ class BuildFileComposer(
     private fun replaceOptionalLibraryLibrariesBlock(content: String, placeholder: String, include: Boolean, libraryPrefix: String): String {
         val replacement = if (include) {
             when (libraryPrefix) {
-                "androidx-material3" -> """androidx-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "androidx-material3" }"""
-                "androidx-material3-adaptive" -> """androidx-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "androidx-material3-adaptive" }
-androidx-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "androidx-material3-adaptive" }
-androidx-material3-adaptive-navigation = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation", version.ref = "androidx-material3-adaptive" }"""
-                "androidx-navigation" -> """androidx-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }"""
-                "androidx-navigation3" -> """androidx-navigation3 = { module = "org.jetbrains.androidx.navigation3:navigation3-compose", version.ref = "androidx-navigation3" }"""
-                "androidx-navigation-event" -> """androidx-navigation-event = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "androidx-navigation-event" }"""
-                "androidx-savedstate" -> """androidx-savedstate = { module = "org.jetbrains.androidx.savedstate:savedstate", version.ref = "androidx-savedstate" }"""
-                "androidx-window" -> """androidx-window = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }"""
+                "androidx-material3" -> """compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "compose-material3" }"""
+                "androidx-material3-adaptive" -> """compose-material3-adaptive = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-layout = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-layout", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-navigation = { group = "org.jetbrains.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "compose-material3" }
+compose-material3-adaptive-nav3 = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "compose-material3-adaptive" }"""
+                "androidx-navigation" -> """androidx-navigation = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "androidx-navigation" }"""
+                "androidx-navigation3" -> """compose-navigation3-ui = { group = "org.jetbrains.androidx.navigation3", name = "navigation3-ui", version.ref = "compose-navigation3-ui" }"""
+                "androidx-navigation-event" -> """compose-navigationevent = { group = "org.jetbrains.androidx.navigationevent", name = "navigationevent-compose", version.ref = "compose-navigationevent" }"""
+                "androidx-savedstate" -> """androidx-savedstate = { group = "org.jetbrains.androidx.savedstate", name = "savedstate", version.ref = "androidx-savedstate" }"""
+                "androidx-window" -> """androidx-window-core = { group = "org.jetbrains.androidx.window", name = "window-core", version.ref = "androidx-window-core" }"""
                 else -> ""
             }
         } else {

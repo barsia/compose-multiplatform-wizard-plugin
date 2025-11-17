@@ -243,6 +243,44 @@ object ProjectFixtures {
     ).apply {
         lifecycleVersion = "2.9.6"
     }
+
+    fun androidDesktopIosAllLibrariesConfig(
+        includeTests: Boolean = true,
+        includeMaterial3: Boolean = true,
+        includeMaterial3Adaptive: Boolean = true,
+        includeNavigation3: Boolean = true,
+        includeNavigationEvent: Boolean = true,
+        includeSavedState: Boolean = true,
+        includeWindow: Boolean = true,
+        projectName: String = "AndroidDesktopIosAllLibraries",
+        packageName: String = "org.example.project"
+    ) = createBuilder(
+        projectName = projectName,
+        projectId = packageName,
+        composeVersion = "1.10.0-beta01",
+        kotlinVersion = "2.2.21",
+        targetAndroid = true,
+        targetDesktop = true,
+        targetIOS = true,
+        includeTests = includeTests,
+        initGit = false
+    ).apply {
+        lifecycleVersion = "2.10.0-alpha04"
+        material3Version = "1.10.0-alpha04"
+        material3AdaptiveVersion = "1.3.0-alpha01"
+        navigation3Version = "1.0.0-alpha04"
+        navigationEventVersion = "1.0.0-beta01"
+        savedStateVersion = "1.4.0-beta01"
+        windowVersion = "1.5.0-rc01"
+
+        this.includeMaterial3 = includeMaterial3
+        this.includeMaterial3Adaptive = includeMaterial3Adaptive
+        this.includeNavigation3 = includeNavigation3
+        this.includeNavigationEvent = includeNavigationEvent
+        this.includeSavedState = includeSavedState
+        this.includeWindow = includeWindow
+        this.includeHotReload = false
+    }
     
     /**
      * Creates a ComposeMultiplatformModuleBuilder with the specified configuration.

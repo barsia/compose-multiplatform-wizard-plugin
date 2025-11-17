@@ -1,4 +1,4 @@
-package org.example.project.android.desktop.ios.tests
+package org.example.project
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
