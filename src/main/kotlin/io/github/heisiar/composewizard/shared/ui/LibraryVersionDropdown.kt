@@ -15,11 +15,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,7 +36,9 @@ import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
 import io.github.heisiar.composewizard.shared.services.LibraryVersionService
+import org.jetbrains.jewel.foundation.lazy.rememberSelectableLazyListState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.SimpleListItem
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
 
@@ -57,8 +67,15 @@ fun LibraryVersionDropdown(
         return
     }
     
-    val originalVersion = remember(state.composeVersion, currentVersion) {
-        if (currentVersion.isNotEmpty()) currentVersion else ""
+    var initialVersionRef by remember(state.composeVersion, libraryType) { mutableStateOf<String?>(null) }
+    if (initialVersionRef == null && currentVersion.isNotEmpty()) {
+        initialVersionRef = currentVersion
+    }
+    
+    val originalVersion = remember(state.composeVersion, libraryType, initialVersionRef) {
+        val bundle = ComposeVersions.getLibraryBundle(state.composeVersion)
+        val bundleVersion = bundle?.getVersion(libraryType)
+        bundleVersion ?: (initialVersionRef ?: currentVersion)
     }
     
     val originalIsFromFallback = remember(state.composeVersion, currentVersion) {
@@ -95,13 +112,19 @@ fun LibraryVersionDropdown(
     
     val versionsToFilter = allAvailableVersions
     
-    val filteredVersions = remember(versionsToFilter, originalVersion, bundledVersion, versionService) {
-        if (versionsToFilter.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null && originalVersion != "N/A") {
+    val filteredVersions = remember(versionsToFilter, originalVersion, bundledVersion, versionService, selectedVersion) {
+        val baseList = if (versionsToFilter.isNotEmpty() && originalVersion.isNotEmpty() && versionService != null && originalVersion != "N/A") {
             versionService.filterVersionsForDropdown(versionsToFilter, originalVersion, bundledVersion, 5)
         } else if (originalVersion != "N/A") {
             listOf(originalVersion)
         } else {
             emptyList()
+        }
+        
+        if (selectedVersion.isNotEmpty() && selectedVersion !in baseList) {
+            (listOf(selectedVersion) + baseList).distinct()
+        } else {
+            baseList
         }
     }
     
@@ -128,19 +151,24 @@ fun LibraryVersionDropdown(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
-        if (effectiveEnabled) {
+        val checkboxContent = @Composable {
             org.jetbrains.jewel.ui.component.Checkbox(
-                checked = checked,
-                onCheckedChange = { onCheckedChange() },
-                modifier = Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+                checked = if (effectiveEnabled) checked else true,
+                onCheckedChange = if (effectiveEnabled) { { onCheckedChange() } } else { { } },
+                enabled = effectiveEnabled,
+                modifier = if (effectiveEnabled) {
+                    Modifier.pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)))
+                } else {
+                    Modifier
+                }
             )
+        }
+        
+        if (effectiveEnabled) {
+            checkboxContent()
         } else {
             Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
-                org.jetbrains.jewel.ui.component.Checkbox(
-                    checked = true,
-                    onCheckedChange = { },
-                    enabled = false
-                )
+                checkboxContent()
             }
         }
         
@@ -184,10 +212,64 @@ fun LibraryVersionDropdown(
             Box(
                 modifier = Modifier.fillMaxWidth().height(24.dp)
             ) {
-                key(state.composeVersion, selectedVersion) {
+                key(state.composeVersion) {
+                    val dropdownFocusRequester = remember { FocusRequester() }
+                    var isPopupVisible by remember { mutableStateOf(false) }
+                    var hoveredIndex by remember { mutableIntStateOf(-1) }
+                    var shouldRestoreFocus by remember { mutableStateOf(false) }
+                    var wasPopupVisible by remember { mutableStateOf(false) }
+                    val listState = rememberSelectableLazyListState()
+                    
+                    LaunchedEffect(selectedIndex, filteredVersions) {
+                        if (selectedIndex in filteredVersions.indices) {
+                            listState.selectedKeys = setOf(selectedIndex)
+                            println("🟣 [LIBRARY-DROPDOWN] ${libraryType.name}: Syncing listState.selectedKeys to selectedIndex=$selectedIndex")
+                        } else {
+                            listState.selectedKeys = emptySet()
+                        }
+                    }
+                    
+                    LaunchedEffect(isPopupVisible) {
+                        if (isPopupVisible && !wasPopupVisible) {
+                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Popup opened, resetting hoveredIndex from $hoveredIndex to -1, selectedIndex=$selectedIndex, selectedVersion='$selectedVersion', filteredVersions.size=${filteredVersions.size}")
+                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: filteredVersions[0]='${filteredVersions.getOrNull(0)}', filteredVersions[$selectedIndex]='${filteredVersions.getOrNull(selectedIndex)}'")
+                            hoveredIndex = -1
+                        } else if (!isPopupVisible && wasPopupVisible) {
+                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Popup closed, hoveredIndex=$hoveredIndex, selectedIndex=$selectedIndex")
+                            if (hoveredIndex >= 0 && hoveredIndex != selectedIndex && hoveredIndex in filteredVersions.indices) {
+                                val newVersion = filteredVersions[hoveredIndex]
+                                librariesState.libraryVersions[libraryType] = newVersion
+                                if (newVersion == originalVersion) {
+                                    librariesState.isFromFallback[libraryType] = originalIsFromFallback
+                                } else {
+                                    librariesState.isFromFallback[libraryType] = false
+                                }
+                                onVersionChange(newVersion)
+                                println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Applied version $newVersion")
+                            }
+                            hoveredIndex = -1
+                            shouldRestoreFocus = true
+                        }
+                        wasPopupVisible = isPopupVisible
+                    }
+                    
+                    LaunchedEffect(shouldRestoreFocus) {
+                        if (shouldRestoreFocus) {
+                            try {
+                                dropdownFocusRequester.requestFocus()
+                            } catch (_: Exception) {
+                            }
+                            shouldRestoreFocus = false
+                        }
+                    }
+                    
+                    println("🟢 [LIBRARY-DROPDOWN] ${libraryType.name}: Creating ListComboBox with selectedIndex=$selectedIndex, selectedVersion='$selectedVersion', items.size=${filteredVersions.size}")
+                    
                     org.jetbrains.jewel.ui.component.ListComboBox(
                         items = filteredVersions,
                         selectedIndex = selectedIndex,
+                        listState = listState,
+                        itemKeys = { index, _ -> index },
                         onSelectedItemChange = { index ->
                         if (index in filteredVersions.indices) {
                             val newVersion = filteredVersions[index]
@@ -203,11 +285,66 @@ fun LibraryVersionDropdown(
                             onVersionChange(newVersion)
                         }
                     },
+                    onPopupVisibleChange = { visible -> 
+                        isPopupVisible = visible 
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(dropdownFocusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && isPopupVisible) {
+                                if (filteredVersions.isNotEmpty()) {
+                                    val currentIndex = if (hoveredIndex >= 0) hoveredIndex else selectedIndex
+                                    when (event.key) {
+                                        Key.DirectionDown -> {
+                                            val newIndex = (currentIndex + 1).coerceAtMost(filteredVersions.lastIndex)
+                                            if (newIndex != currentIndex) {
+                                                hoveredIndex = newIndex
+                                            }
+                                            true
+                                        }
+                                        Key.DirectionUp -> {
+                                            val newIndex = (currentIndex - 1).coerceAtLeast(0)
+                                            if (newIndex != currentIndex) {
+                                                hoveredIndex = newIndex
+                                            }
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }
                         .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR))),
                     maxPopupHeight = 280.dp,
-                    style = textFieldStyleComboBox()
+                    style = textFieldStyleComboBox(),
+                    itemContent = { item, isSelected, isActive ->
+                        if (!isActive) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = item,
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1
+                                )
+                            }
+                        } else {
+                            val itemIndex = filteredVersions.indexOf(item)
+                            val isHighlighted = hoveredIndex >= 0 && itemIndex == hoveredIndex
+                            val showAsSelected = if (hoveredIndex >= 0) isHighlighted else isSelected
+                            println("🔵 [LIBRARY-DROPDOWN] ${libraryType.name}: Rendering item='$item', itemIndex=$itemIndex, isSelected=$isSelected, hoveredIndex=$hoveredIndex, selectedIndex=$selectedIndex, isHighlighted=$isHighlighted, showAsSelected=$showAsSelected")
+                            SimpleListItem(
+                                text = item,
+                                selected = showAsSelected,
+                                active = true
+                            )
+                        }
+                    }
                 )
                 }
             }

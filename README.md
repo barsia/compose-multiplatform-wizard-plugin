@@ -84,6 +84,18 @@ WizardMainContent (orchestration)
 - Clear responsibility separation
 - Easy navigation and maintenance
 
+**Accessibility (A11y):**
+- Keyboard navigation support for all interactive elements
+- Arrow up/down navigation in all dropdowns (Compose version and library versions) with visual selection highlight
+- `SelectableLazyListState` integration for proper visual feedback in dropdowns
+- Focus preservation on Refresh icon after keyboard activation (Space/Enter)
+- Proper focus management across wizard steps
+
+**State Management:**
+- Automatic library version updates when switching between Dev/Stable Compose versions
+- Cache invalidation and reload on version type toggle
+- Synchronized state across Compose version selector and Libraries section
+
 ## Library Version Resolution Logic
 
 ### Overview

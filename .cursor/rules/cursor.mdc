@@ -25,6 +25,7 @@ cd /Users/Siarhei.Baradulia/Marketplace_IDE/compose-multiplatform-wizard-plugin
 
 ## Code Style
 
+- Don't fix something at random, first do some logging if there isn't enough information to clearly identify the problem.
 - NO Russian text in code or comments
 - Keep files compact (max 300 lines, excluding imports)
 - Use `remember { FocusRequester() }` in Compose, not inline creation

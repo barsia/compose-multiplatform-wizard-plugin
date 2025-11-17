@@ -30,6 +30,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -37,12 +39,14 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.jetbrains.jewel.foundation.lazy.rememberSelectableLazyListState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
@@ -108,42 +112,28 @@ fun ComposeVersionField(
         }
 
         var availableVersions by remember(enableDevVersions, refreshTrigger) { mutableStateOf<List<String>?>(null) }
-        var isLoading by remember(enableDevVersions) { 
-            println("🔵 [STATE] isLoading initialized to: true (enableDevVersions=$enableDevVersions)")
-            mutableStateOf(true) 
-        }
+        var isLoading by remember(enableDevVersions) { mutableStateOf(true) }
         var displayedVersion by remember(enableDevVersions) { mutableStateOf("") }
-        var toggleTrigger by remember { 
-            println("🔵 [STATE] toggleTrigger initialized to: 0")
-            mutableStateOf(0) 
-        }
+        var toggleTrigger by remember { mutableStateOf(0) }
 
         LaunchedEffect(enableDevVersions) {
-            println("🔵 [STATE] LaunchedEffect(enableDevVersions) triggered: enableDevVersions=$enableDevVersions")
+            isLoading = true
+            displayedVersion = ""
             onVersionSelected("")
             toggleTrigger++
-            println("🔵 [STATE] toggleTrigger incremented to: $toggleTrigger")
             
             if (enableDevVersions) {
                 cache.forceReloadDev()
             } else {
                 cache.forceReloadStable()
             }
-            
-            kotlinx.coroutines.delay(50)
-            
-            if (displayedVersion.isNotEmpty()) {
-                onVersionSelected(displayedVersion)
-            }
         }
 
         LaunchedEffect(refreshTrigger) {
             if (refreshTrigger == 0) {
-                println("🔵 [STATE] LaunchedEffect(refreshTrigger) skipped: refreshTrigger=0")
                 return@LaunchedEffect
             }
             
-            println("🔵 [STATE] LaunchedEffect(refreshTrigger) setting isLoading = true")
             isLoading = true
             
             kotlinx.coroutines.delay(200)
@@ -165,11 +155,8 @@ fun ComposeVersionField(
                     if (newVersions != null) {
                         availableVersions = newVersions
                         val firstVersion = newVersions.firstOrNull() ?: ""
-                        if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
-                            displayedVersion = firstVersion
-                            onVersionSelected(firstVersion)
-                        }
-                        println("🔵 [STATE] LaunchedEffect(refreshTrigger) setting isLoading = false (versions loaded)")
+                        displayedVersion = firstVersion
+                        onVersionSelected(firstVersion)
                         isLoading = false
                         break
                     }
@@ -180,7 +167,6 @@ fun ComposeVersionField(
         }
         
         LaunchedEffect(enableDevVersions, refreshTrigger) {
-            println("🔵 [STATE] LaunchedEffect(enableDevVersions, refreshTrigger) started polling (enableDevVersions=$enableDevVersions, refreshTrigger=$refreshTrigger)")
             while (true) {
                 val isCurrentlyLoading = if (enableDevVersions) {
                     cache.isLoadingDevVersions()
@@ -197,11 +183,8 @@ fun ComposeVersionField(
                 if (!isCurrentlyLoading && newVersions != null) {
                     availableVersions = newVersions
                     val firstVersion = newVersions.firstOrNull() ?: ""
-                    if (selectedVersion.isEmpty() || !newVersions.contains(selectedVersion)) {
-                        displayedVersion = firstVersion
-                        onVersionSelected(firstVersion)
-                    }
-                    println("🔵 [STATE] LaunchedEffect(enableDevVersions, refreshTrigger) setting isLoading = false (polling detected versions)")
+                    displayedVersion = firstVersion
+                    onVersionSelected(firstVersion)
                     isLoading = false
                     break
                 }
@@ -239,6 +222,16 @@ fun ComposeVersionField(
                     .weight(1f)
                         ) {
                             androidx.compose.runtime.key(enableDevVersions) {
+                                val comboBoxFocusRequester = remember { FocusRequester() }
+                                val listState = rememberSelectableLazyListState(currentIndex)
+                                var isPopupVisible by remember { mutableStateOf(false) }
+                                
+                                LaunchedEffect(currentIndex, items) {
+                                    if (currentIndex >= 0 && currentIndex < items.size) {
+                                        listState.selectedKeys = setOf(currentIndex)
+                                    }
+                                }
+                                
                                 org.jetbrains.jewel.ui.component.ListComboBox(
                                     items = items,
                                     selectedIndex = currentIndex,
@@ -251,9 +244,41 @@ fun ComposeVersionField(
                                             }
                                         }
                                     },
+                                    onPopupVisibleChange = { visible -> isPopupVisible = visible },
                                     enabled = !isLoading && availableVersions?.isNotEmpty() == true,
+                                    listState = listState,
+                                    itemKeys = { index, _ -> index },
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .focusRequester(comboBoxFocusRequester)
+                                        .onPreviewKeyEvent { event ->
+                                            if (event.type == KeyEventType.KeyDown && isPopupVisible) {
+                                                val versions = availableVersions
+                                                if (!versions.isNullOrEmpty()) {
+                                                    when (event.key) {
+                                                        Key.DirectionDown -> {
+                                                            val newIndex = (currentIndex + 1).coerceAtMost(versions.lastIndex)
+                                                            if (newIndex != currentIndex) {
+                                                                listState.selectedKeys = setOf(newIndex)
+                                                                displayedVersion = versions[newIndex]
+                                                                onVersionSelected(versions[newIndex])
+                                                            }
+                                                            true
+                                                        }
+                                                        Key.DirectionUp -> {
+                                                            val newIndex = (currentIndex - 1).coerceAtLeast(0)
+                                                            if (newIndex != currentIndex) {
+                                                                listState.selectedKeys = setOf(newIndex)
+                                                                displayedVersion = versions[newIndex]
+                                                                onVersionSelected(versions[newIndex])
+                                                            }
+                                                            true
+                                                        }
+                                                        else -> false
+                                                    }
+                                                } else false
+                                            } else false
+                                        }
                                         .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
                         maxPopupHeight = 280.dp,
                         style = textFieldStyleComboBox()
@@ -268,9 +293,11 @@ fun ComposeVersionField(
                 contentAlignment = Alignment.Center
             ) {
                 val rotation = remember { Animatable(0f) }
+                val refreshFocusRequester = remember { FocusRequester() }
                 val refreshInteractionSource = remember { MutableInteractionSource() }
                 val isRefreshFocused by refreshInteractionSource.collectIsFocusedAsState()
                 var isManualRefresh by remember { mutableStateOf(false) }
+                var shouldRestoreFocus by remember { mutableStateOf(false) }
                 val lastToggleTrigger = remember { mutableStateOf(0) }
                 val lastIsLoading = remember { mutableStateOf<Boolean?>(null) }
                 var isAnimating by remember { mutableStateOf(false) }
@@ -286,7 +313,6 @@ fun ComposeVersionField(
                 val startAnimation = remember {
                     {
                         if (!isAnimating) {
-                            println("🔄 [ROTATION] Starting animation...")
                             coroutineScope.launch {
                                 try {
                                     isAnimating = true
@@ -296,7 +322,6 @@ fun ComposeVersionField(
                                     
                                     do {
                                         rotationCount++
-                                        println("🔄 [ROTATION] Rotation #$rotationCount (isLoading=${isLoadingState.value}, elapsed=${System.currentTimeMillis() - startTime}ms)")
                                         rotation.animateTo(
                                             targetValue = rotation.value + 360f,
                                             animationSpec = tween(
@@ -306,19 +331,13 @@ fun ComposeVersionField(
                                         )
                                         val elapsed = System.currentTimeMillis() - startTime
                                         hasMinimumRotation = elapsed >= ROTATION_DURATION_MS
-                                        println("🔄 [ROTATION] After rotation #$rotationCount: elapsed=${elapsed}ms, hasMin=$hasMinimumRotation, isLoading=${isLoadingState.value}")
                                     } while (isLoadingState.value || !hasMinimumRotation)
-                                    
-                                    println("🔄 [ROTATION] Animation completed: $rotationCount rotations")
                                 } catch (e: kotlinx.coroutines.CancellationException) {
-                                    println("🔄 [ROTATION] Animation cancelled: ${e.message}")
                                     throw e
                                 } finally {
                                     isAnimating = false
                                 }
                             }
-                        } else {
-                            println("🔄 [ROTATION] Animation skipped: already in progress")
                         }
                     }
                 }
@@ -329,8 +348,6 @@ fun ComposeVersionField(
                     val isLoadingRestarted = isLoading && lastIsLoading.value == false
                     val isToggleChanged = toggleTrigger > 0 && toggleTrigger != lastToggleTrigger.value
                     
-                    println("🔄 [ROTATION] Check: isFirstLoad=$isFirstLoad, isLoadingRestarted=$isLoadingRestarted, isToggleChanged=$isToggleChanged, isManualRefresh=$isManualRefresh")
-                    
                     if (isFirstLoad || isLoadingRestarted || isToggleChanged || isManualRefresh) {
                         if (isToggleChanged) lastToggleTrigger.value = toggleTrigger
                         if (isManualRefresh) isManualRefresh = false
@@ -338,6 +355,15 @@ fun ComposeVersionField(
                     }
                     
                     lastIsLoading.value = isLoading
+                }
+                
+                // Restore focus after loading completes
+                LaunchedEffect(isLoading, shouldRestoreFocus) {
+                    if (!isLoading && shouldRestoreFocus) {
+                        kotlinx.coroutines.delay(100)
+                        refreshFocusRequester.requestFocus()
+                        shouldRestoreFocus = false
+                    }
                 }
                 
                 val focusBorderColor = Color(0xFF3574F0)
@@ -359,6 +385,7 @@ fun ComposeVersionField(
                         modifier = Modifier
                             .size(16.dp)
                             .graphicsLayer { rotationZ = rotation.value % 360f }
+                            .focusRequester(refreshFocusRequester)
                             .onKeyEvent { keyEvent: KeyEvent ->
                                 if (!isLoading && 
                                     (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
@@ -367,6 +394,7 @@ fun ComposeVersionField(
                                     isManualRefresh = true
                                     onRefreshVersions()
                                     refreshTrigger++
+                                    shouldRestoreFocus = true
                                     true
                                 } else {
                                     false
