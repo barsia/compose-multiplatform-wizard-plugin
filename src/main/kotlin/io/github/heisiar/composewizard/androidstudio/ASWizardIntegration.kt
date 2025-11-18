@@ -2,13 +2,23 @@ package io.github.heisiar.composewizard.androidstudio
 
 import com.intellij.openapi.GitRepositoryInitializer
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.externalSystem.importing.ImportSpecBuilder
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemJdkUtil
+import com.intellij.openapi.externalSystem.service.project.manage.ExternalProjectsManagerImpl
+import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.startup.StartupManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.wizard.AbstractWizardIntegration
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.settings.GradleSettings
+import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
 
 /**
@@ -85,10 +95,19 @@ class ASWizardIntegration : AbstractWizardIntegration() {
         projectPath: String,
         root: com.intellij.openapi.vfs.VirtualFile
     ) {
-        val logFile = File(projectPath, "wizard-debug.log")
-        logFile.writeText("CONFIG: Starting configuration\n")
-        
         try {
+            // CRITICAL: Enable all Gradle tasks (not just test tasks)
+            // By default AS sets SKIP_GRADLE_TASKS_LIST=true which shows only test tasks
+            try {
+                val experimentalSettings = Class.forName("com.android.tools.idea.gradle.project.GradleExperimentalSettings")
+                val getInstance = experimentalSettings.getMethod("getInstance")
+                val instance = getInstance.invoke(null)
+                val skipTasksField = experimentalSettings.getField("SKIP_GRADLE_TASKS_LIST")
+                skipTasksField.setBoolean(instance, false)
+            } catch (e: Exception) {
+                // If we can't set this (e.g., in IntelliJ IDEA), it's not critical
+            }
+            
             // Configure Gradle (like AS does in GradleProjectImporter.configureNewProject)
             val gradleSettings = GradleSettings.getInstance(project)
             val projectSettings = GradleProjectSettings()
@@ -96,19 +115,22 @@ class ASWizardIntegration : AbstractWizardIntegration() {
             projectSettings.gradleJvm = ExternalSystemJdkUtil.USE_PROJECT_JDK
             projectSettings.isResolveModulePerSourceSet = false
             
-            logFile.appendText("CONFIG: Linking Gradle project\n")
             gradleSettings.linkProject(projectSettings)
             
-            // Initialize Git
+            // Setup project (like AS does)
+            ExternalProjectsManagerImpl.setupCreatedProject(project)
+            
+            // Initialize Git using platform API (respects .gitignore)
             if (shouldInitGit) {
-                logFile.appendText("CONFIG: Initializing Git\n")
                 GitRepositoryInitializer.getInstance()?.initRepository(project, root, true)
-                logFile.appendText("CONFIG: Git initialized\n")
             }
             
-            logFile.appendText("CONFIG: Configuration complete\n")
+            // Schedule Gradle sync after project opens
+            StartupManager.getInstance(project).runAfterOpened {
+                val spec = ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
+                ExternalSystemUtil.refreshProjects(spec)
+            }
         } catch (e: Exception) {
-            logFile.appendText("CONFIG ERROR: ${e.message}\n${e.stackTraceToString()}\n")
             e.printStackTrace()
         }
     }
