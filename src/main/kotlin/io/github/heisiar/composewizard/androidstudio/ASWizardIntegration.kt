@@ -2,11 +2,13 @@ package io.github.heisiar.composewizard.androidstudio
 
 import com.intellij.openapi.GitRepositoryInitializer
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.externalSystem.service.execution.ExternalSystemJdkUtil
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.wizard.AbstractWizardIntegration
+import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
+import org.jetbrains.plugins.gradle.settings.GradleSettings
 import java.io.File
 
 /**
@@ -33,23 +35,29 @@ class ASWizardIntegration : AbstractWizardIntegration() {
     override fun openProject(projectPath: String) {
         ApplicationManager.getApplication().invokeLater {
             try {
-                val projectManager = ProjectManager.getInstance()
-                val newProject = projectManager.loadAndOpenProject(projectPath)
+                val projectManager = com.intellij.openapi.project.ex.ProjectManagerEx.getInstanceEx()
+                val openTask = com.intellij.ide.impl.OpenProjectTask {
+                    forceOpenInNewFrame = true
+                    isNewProject = false
+                    useDefaultProjectAsTemplate = false
+                    beforeOpen = { project ->
+                        // Configure project BEFORE opening (like Android Studio does)
+                        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectPath))
+                        if (root != null) {
+                            // Synchronous VFS refresh
+                            root.refresh(false, true)
+                            
+                            // Configure Gradle and Git on EDT
+                            configureProjectBeforeOpen(project, projectPath, root)
+                        }
+                        true
+                    }
+                }
+                
+                val newProject = projectManager.openProject(File(projectPath).toPath(), openTask)
                 
                 if (newProject != null) {
                     openedProject = newProject
-                    
-                    // Initialize Git after project is opened (if requested)
-                    if (shouldInitGit) {
-                        val root = LocalFileSystem.getInstance().findFileByIoFile(File(projectPath))
-                        if (root != null) {
-                            val gitInitializer = GitRepositoryInitializer.getInstance()
-                            if (gitInitializer != null) {
-                                // Use platform API - properly respects .gitignore
-                                gitInitializer.initRepository(newProject, root, true)
-                            }
-                        }
-                    }
                 } else {
                     Messages.showErrorDialog(
                         "Failed to open the created project",
@@ -65,6 +73,43 @@ class ASWizardIntegration : AbstractWizardIntegration() {
                     "Project Creation Error"
                 )
             }
+        }
+    }
+    
+    /**
+     * Configure project in beforeOpen callback (like Android Studio does).
+     * This runs on EDT before project is fully opened.
+     */
+    private fun configureProjectBeforeOpen(
+        project: com.intellij.openapi.project.Project,
+        projectPath: String,
+        root: com.intellij.openapi.vfs.VirtualFile
+    ) {
+        val logFile = File(projectPath, "wizard-debug.log")
+        logFile.writeText("CONFIG: Starting configuration\n")
+        
+        try {
+            // Configure Gradle (like AS does in GradleProjectImporter.configureNewProject)
+            val gradleSettings = GradleSettings.getInstance(project)
+            val projectSettings = GradleProjectSettings()
+            projectSettings.externalProjectPath = projectPath
+            projectSettings.gradleJvm = ExternalSystemJdkUtil.USE_PROJECT_JDK
+            projectSettings.isResolveModulePerSourceSet = false
+            
+            logFile.appendText("CONFIG: Linking Gradle project\n")
+            gradleSettings.linkProject(projectSettings)
+            
+            // Initialize Git
+            if (shouldInitGit) {
+                logFile.appendText("CONFIG: Initializing Git\n")
+                GitRepositoryInitializer.getInstance()?.initRepository(project, root, true)
+                logFile.appendText("CONFIG: Git initialized\n")
+            }
+            
+            logFile.appendText("CONFIG: Configuration complete\n")
+        } catch (e: Exception) {
+            logFile.appendText("CONFIG ERROR: ${e.message}\n${e.stackTraceToString()}\n")
+            e.printStackTrace()
         }
     }
     
