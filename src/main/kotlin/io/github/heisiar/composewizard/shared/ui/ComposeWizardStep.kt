@@ -46,8 +46,15 @@ class ComposeWizardStep(
     private var includeWindow = false
     private var includeHotReload = false
     
+    // Library versions
+    private var hotReloadVersion: String? = null
+    private var bundledHotReloadVersion: String? = null  // GitHub version for Compose >= 1.10.0-beta01
+    
     private val wizardStartTime = System.currentTimeMillis()
     private var revalidationTrigger = androidx.compose.runtime.mutableIntStateOf(0)
+    
+    // Keep reference to latest WizardState for final sync in updateDataModel()
+    private var latestWizardState: WizardState? = null
     
     private val buttonManager by lazy { WizardButtonManager(mainPanel) }
 
@@ -75,6 +82,7 @@ class ComposeWizardStep(
                         mainPanel = mainPanel,
                         onBrowseFolder = ::browseForFolder,
                         onStateUpdate = { state, isValid ->
+                            latestWizardState = state  // Save for final sync in updateDataModel()
                             syncStateFromUI(state)
                             buttonManager.updateButtonState(isValid)
                         }
@@ -105,6 +113,8 @@ class ComposeWizardStep(
         includeSavedState = state.includeSavedState
         includeWindow = state.includeWindow
         includeHotReload = state.includeHotReload
+        hotReloadVersion = state.hotReloadVersion
+        bundledHotReloadVersion = state.bundledHotReloadVersion
     }
     
     override fun getComponent(): JComponent = mainPanel
@@ -140,6 +150,11 @@ class ComposeWizardStep(
     }
 
     override fun updateDataModel() {
+        // CRITICAL: Force sync state from UI before copying to builder
+        // This ensures user's checkbox states are captured even if onStateUpdate callback
+        // hasn't fired yet (race condition between Compose state updates and wizard lifecycle)
+        latestWizardState?.let { syncStateFromUI(it) }
+        
         val expandedPath = WizardPathUtils.expandPath(projectPathValue)
         
         // In Android Studio, projectPath already includes project name
@@ -171,6 +186,8 @@ class ComposeWizardStep(
         builder.includeSavedState = includeSavedState
         builder.includeWindow = includeWindow
         builder.includeHotReload = includeHotReload
+        builder.hotReloadVersion = hotReloadVersion
+        builder.bundledHotReloadVersion = bundledHotReloadVersion
 
         val timeSpent = System.currentTimeMillis() - wizardStartTime
         val platformsCount = listOf(targetDesktop, targetAndroid, targetIOS, targetWeb).count { it }

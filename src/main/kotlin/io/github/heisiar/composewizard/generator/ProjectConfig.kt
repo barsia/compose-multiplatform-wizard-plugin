@@ -24,6 +24,7 @@ data class ProjectConfig(
     val savedStateVersion: String? = null,
     val windowVersion: String? = null,
     val hotReloadVersion: String? = null,
+    val bundledHotReloadVersion: String? = null,  // GitHub version for Compose >= 1.10.0-beta01
     
     val includeMaterial3: Boolean = false,
     val includeMaterial3Adaptive: Boolean = false,
@@ -69,6 +70,7 @@ data class ProjectConfig(
                 savedStateVersion = builder.savedStateVersion,
                 windowVersion = builder.windowVersion,
                 hotReloadVersion = builder.hotReloadVersion,
+                bundledHotReloadVersion = builder.bundledHotReloadVersion,
                 
                 includeMaterial3 = builder.includeMaterial3,
                 includeMaterial3Adaptive = builder.includeMaterial3Adaptive,

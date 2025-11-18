@@ -71,7 +71,7 @@ fun WizardMainContent(
             state.hotReloadVersion = io.github.heisiar.composewizard.shared.ComposeVersions.COMPOSE_HOT_RELOAD_VERSION
         } else if (!shouldShowBundledHotReload) {
             state.hotReloadVersion = null
-            state.includeHotReload = false
+            // Don't reset includeHotReload here - let user control it via checkbox
         }
     }
     

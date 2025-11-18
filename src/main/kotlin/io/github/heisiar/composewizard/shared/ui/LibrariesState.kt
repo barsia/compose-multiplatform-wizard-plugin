@@ -70,8 +70,9 @@ class LibrariesState(
                 
                 if (type == LibraryType.HOT_RELOAD && cachedVersion.isNotEmpty()) {
                     wizardState.hotReloadVersion = cachedVersion
-                    wizardState.includeHotReload = true
+                    // Don't auto-enable includeHotReload - let user control it via checkbox
                     hotReloadGithubVersion = cache.getHotReloadGithubVersion(versionToLoad)
+                    wizardState.bundledHotReloadVersion = hotReloadGithubVersion
                 }
             } else {
                 needsUpdate.add(type)
@@ -96,8 +97,9 @@ class LibrariesState(
                                     
                                     if (type == LibraryType.HOT_RELOAD) {
                                         wizardState.hotReloadVersion = rawCached
-                                        wizardState.includeHotReload = true
+                                        // Don't auto-enable includeHotReload - let user control it via checkbox
                                         hotReloadGithubVersion = cache.getHotReloadGithubVersion(versionToLoad)
+                                        wizardState.bundledHotReloadVersion = hotReloadGithubVersion
                                     }
                                 }
                                 break

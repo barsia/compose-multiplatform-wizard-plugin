@@ -45,6 +45,7 @@ class WizardState {
     var savedStateVersion by mutableStateOf<String?>(null)
     var windowVersion by mutableStateOf<String?>(null)
     var hotReloadVersion by mutableStateOf<String?>(null)
+    var bundledHotReloadVersion by mutableStateOf<String?>(null)  // GitHub version for Compose >= 1.10.0-beta01
     
     var includeMaterial3 by mutableStateOf(false)
     var includeMaterial3Adaptive by mutableStateOf(false)

@@ -45,6 +45,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var savedStateVersion: String? = null
     var windowVersion: String? = null
     var hotReloadVersion: String? = null
+    var bundledHotReloadVersion: String? = null  // GitHub version for Compose >= 1.10.0-beta01
     
     var includeMaterial3: Boolean = false
     var includeMaterial3Adaptive: Boolean = false

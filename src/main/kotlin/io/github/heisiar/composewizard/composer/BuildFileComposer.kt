@@ -2,6 +2,7 @@ package io.github.heisiar.composewizard.composer
 
 import io.github.heisiar.composewizard.generator.ProjectConfig
 import io.github.heisiar.composewizard.shared.ModularResourceCopier
+import io.github.heisiar.composewizard.shared.services.VersionComparison
 import java.io.File
 
 class BuildFileComposer(
@@ -129,6 +130,76 @@ class BuildFileComposer(
         content = content.replace("{{KOTLIN_VERSION}}", config.kotlinVersion)
         content = content.replace("{{LIFECYCLE_VERSION}}", config.lifecycleVersion ?: "2.9.5")
         
+        // Android blocks
+        content = if (config.targetAndroid) {
+            val androidVersions = """agp = "8.11.2"
+android-compileSdk = "36"
+android-minSdk = "24"
+android-targetSdk = "36"
+androidx-activity = "1.11.0"
+androidx-appcompat = "1.7.1"
+androidx-core = "1.17.0""""
+            val androidLibraries = """androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }"""
+            val androidPlugins = """androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }"""
+            
+            content.replace("{{ANDROID_VERSIONS_BLOCK}}", "\n$androidVersions")
+                .replace("{{ANDROID_LIBRARIES_BLOCK}}", "\n$androidLibraries")
+                .replace("{{ANDROID_PLUGINS_BLOCK}}", "\n$androidPlugins")
+        } else {
+            content.replace("{{ANDROID_VERSIONS_BLOCK}}", "")
+                .replace("{{ANDROID_LIBRARIES_BLOCK}}", "")
+                .replace("{{ANDROID_PLUGINS_BLOCK}}", "")
+        }
+        
+        // Desktop blocks
+        content = if (config.targetDesktop) {
+            val desktopVersions = "\nkotlinx-coroutines = \"1.10.2\""
+            val desktopLibraries = "\nkotlinx-coroutinesSwing = { module = \"org.jetbrains.kotlinx:kotlinx-coroutines-swing\", version.ref = \"kotlinx-coroutines\" }"
+            
+            content.replace("{{DESKTOP_VERSIONS_BLOCK}}", desktopVersions)
+                .replace("{{DESKTOP_LIBRARIES_BLOCK}}", desktopLibraries)
+        } else {
+            content.replace("{{DESKTOP_VERSIONS_BLOCK}}", "")
+                .replace("{{DESKTOP_LIBRARIES_BLOCK}}", "")
+        }
+        
+        // Test blocks
+        val isMultiplatform = listOf(config.targetAndroid, config.targetDesktop, config.targetIOS, config.targetWeb).count { it } > 1
+        content = if (config.includeTests) {
+            // For single-platform Android projects, include espresso/testExt
+            // For multiplatform projects, exclude them (use only Kotlin common tests)
+            val testVersions = if (config.targetAndroid && !isMultiplatform) {
+                "\nandroidx-espresso = \"3.7.0\"\nandroidx-testExt = \"1.3.0\""
+            } else {
+                ""
+            }
+            val testJunitVersion = "\njunit = \"4.13.2\""
+            val testLibraries = if (config.targetAndroid && !isMultiplatform) {
+                """
+androidx-testExt-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
+androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+junit = { module = "junit:junit", version.ref = "junit" }"""
+            } else {
+                """
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+junit = { module = "junit:junit", version.ref = "junit" }"""
+            }
+            
+            content.replace("{{TEST_VERSIONS_BLOCK}}", testVersions)
+                .replace("{{TEST_JUNIT_VERSION_BLOCK}}", testJunitVersion)
+                .replace("{{TEST_LIBRARIES_BLOCK}}", "$testLibraries")
+        } else {
+            content.replace("{{TEST_VERSIONS_BLOCK}}", "")
+                .replace("{{TEST_JUNIT_VERSION_BLOCK}}", "")
+                .replace("{{TEST_LIBRARIES_BLOCK}}", "")
+        }
+        
         content = replaceOptionalLibraryVersionBlock(content, "MATERIAL3_VERSION_BLOCK", 
                                                      config.includeMaterial3, config.material3Version, "compose-material3")
         content = replaceOptionalLibraryVersionBlock(content, "MATERIAL3_ADAPTIVE_VERSION_BLOCK",
@@ -159,62 +230,30 @@ class BuildFileComposer(
         content = replaceOptionalLibraryLibrariesBlock(content, "WINDOW_LIBRARIES_BLOCK",
                                                        config.includeWindow, "androidx-window")
         
-        if (!config.includeTests) {
-            content = content.lines()
-                .filterNot { line ->
-                    line.contains("junit") ||
-                    line.contains("testExt") ||
-                    line.contains("espresso") ||
-                    line.contains("kotlin-test")
-                }
-                .joinToString("\n")
+        // Hot Reload blocks
+        // Logic:
+        // 1. For Compose < 1.10.0-beta01: Optional, user controls via checkbox
+        // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user overrides default version
+        val shouldIncludeHotReload = when {
+            // Compose < 1.10.0-beta01: Optional library
+            VersionComparison.isComposeVersionLessThan(config.composeVersion, "1.10.0-beta01") -> 
+                config.includeHotReload && config.hotReloadVersion != null
+            
+            // Compose >= 1.10.0-beta01: Bundled, add only if user overrides
+            else -> 
+                config.hotReloadVersion != null && 
+                config.hotReloadVersion != config.bundledHotReloadVersion
         }
         
-        if (!config.targetAndroid) {
-            content = content.lines()
-                .filterNot { line ->
-                    line.contains("agp =") ||
-                    line.contains("android-compileSdk") ||
-                    line.contains("android-minSdk") ||
-                    line.contains("android-targetSdk") ||
-                    line.contains("androidx-activity") ||
-                    line.contains("androidx-appcompat") ||
-                    line.contains("androidx-core") ||
-                    line.contains("androidApplication") ||
-                    line.contains("androidLibrary")
-                }
-                .joinToString("\n")
+        content = if (shouldIncludeHotReload) {
+            content.replace("{{HOT_RELOAD_VERSION_BLOCK}}", "\ncomposeHotReload = \"${config.hotReloadVersion}\"")
+                .replace("{{HOT_RELOAD_PLUGIN_BLOCK}}", "\ncomposeHotReload = { id = \"org.jetbrains.compose.hot-reload\", version.ref = \"composeHotReload\" }")
+        } else {
+            content.replace("{{HOT_RELOAD_VERSION_BLOCK}}", "")
+                .replace("{{HOT_RELOAD_PLUGIN_BLOCK}}", "")
         }
         
-        if (!config.targetDesktop) {
-            content = content.lines()
-                .filterNot { line ->
-                    line.contains("kotlinx-coroutines") ||
-                    line.contains("kotlinx-coroutinesSwing")
-                }
-                .joinToString("\n")
-        }
-        
-        if (!config.includeHotReload) {
-            content = content.lines()
-                .filterNot { line ->
-                    line.contains("composeHotReload") && line.contains("=")
-                }
-                .joinToString("\n")
-        }
-        
-        // For multiplatform projects, remove Android-specific test libraries (espresso, testExt)
-        // They are only needed for Android single-platform projects with instrumented tests
-        val isMultiplatform = listOf(config.targetAndroid, config.targetDesktop, config.targetIOS, config.targetWeb).count { it } > 1
-        if (isMultiplatform) {
-            content = content.lines()
-                .filterNot { line ->
-                    line.contains("androidx-espresso") ||
-                    line.contains("androidx-testExt")
-                }
-                .joinToString("\n")
-        }
-        
+        // Clean up multiple empty lines
         content = content.replace(Regex("\n{3,}"), "\n\n")
         
         File(targetPath, "gradle/libs.versions.toml").apply {

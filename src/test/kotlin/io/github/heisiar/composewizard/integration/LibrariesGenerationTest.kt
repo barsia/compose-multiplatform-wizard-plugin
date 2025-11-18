@@ -135,17 +135,27 @@ class LibrariesGenerationTest {
             val libsVersions = File(tempDir, "gradle/libs.versions.toml").readText()
             
             if (includeMaterial3) {
+                // When Material3 is enabled, use libs catalog version
                 assertTrue(buildGradle.contains("implementation(libs.compose.material3)"), 
-                    "build.gradle.kts should contain compose.material3 dependency")
+                    "build.gradle.kts should contain libs.compose.material3 dependency when Material3 is enabled")
                 assertTrue(libsVersions.contains("compose-material3 = \"1.10.0-alpha04\""), 
-                    "libs.versions.toml should contain material3 version")
+                    "libs.versions.toml should contain material3 version when Material3 is enabled")
                 assertTrue(libsVersions.contains("""compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3""""), 
-                    "libs.versions.toml should contain material3 library definition")
+                    "libs.versions.toml should contain material3 library definition when Material3 is enabled")
+                
+                // Should NOT contain basic compose.material3
+                assertFalse(buildGradle.contains("implementation(compose.material3)"), 
+                    "build.gradle.kts should not contain basic compose.material3 when Material3 library is enabled")
             } else {
+                // When Material3 is disabled, use basic compose.material3 (from Compose BOM)
+                assertTrue(buildGradle.contains("implementation(compose.material3)"), 
+                    "build.gradle.kts should contain basic compose.material3 when Material3 library is disabled")
+                
+                // Should NOT contain libs catalog version
                 assertFalse(buildGradle.contains("implementation(libs.compose.material3)"), 
-                    "build.gradle.kts should not contain compose.material3 dependency")
+                    "build.gradle.kts should not contain libs.compose.material3 when Material3 library is disabled")
                 assertFalse(libsVersions.contains("compose-material3 = \"1.10.0-alpha04\""), 
-                    "libs.versions.toml should not contain material3 version")
+                    "libs.versions.toml should not contain material3 version when Material3 library is disabled")
             }
         }
     }
@@ -346,6 +356,54 @@ class LibrariesGenerationTest {
                     "build.gradle.kts should not contain androidx.window.core dependency")
                 assertFalse(libsVersions.contains("androidx-window-core = \"1.5.0-rc01\""), 
                     "libs.versions.toml should not contain window-core version")
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `test Hot Reload inclusion`(includeHotReload: Boolean) {
+        TemporaryProjectHelper.withTempProject("hotreload-test-") { tempDir ->
+            val builder = ProjectFixtures.desktopConfig(
+                projectName = "HotReloadTest",
+                packageName = "com.example.hotreloadtest"
+            ).apply {
+                this.includeHotReload = includeHotReload
+                this.hotReloadVersion = if (includeHotReload) "1.0.0-rc02" else null
+                this.bundledHotReloadVersion = null  // Compose < 1.10.0-beta01 (optional library)
+            }
+            
+            ProjectCreator.createProjectStructure(
+                projectPath = tempDir.absolutePath,
+                projectName = builder.projectName,
+                builder = builder,
+                useCache = false
+            )
+            
+            val rootBuildGradle = File(tempDir, "build.gradle.kts").readText()
+            val composeAppBuildGradle = File(tempDir, "composeApp/build.gradle.kts").readText()
+            val libsVersions = File(tempDir, "gradle/libs.versions.toml").readText()
+            
+            if (includeHotReload) {
+                // When Hot Reload is enabled
+                assertTrue(rootBuildGradle.contains("alias(libs.plugins.composeHotReload)"), 
+                    "root build.gradle.kts should contain composeHotReload plugin when Hot Reload is enabled")
+                assertTrue(composeAppBuildGradle.contains("alias(libs.plugins.composeHotReload)"), 
+                    "composeApp/build.gradle.kts should contain composeHotReload plugin when Hot Reload is enabled")
+                assertTrue(libsVersions.contains("composeHotReload = \"1.0.0-rc02\""), 
+                    "libs.versions.toml should contain Hot Reload version when Hot Reload is enabled")
+                assertTrue(libsVersions.contains("""composeHotReload = { id = "org.jetbrains.compose.hot-reload""""), 
+                    "libs.versions.toml should contain Hot Reload plugin definition when Hot Reload is enabled")
+            } else {
+                // When Hot Reload is disabled
+                assertFalse(rootBuildGradle.contains("alias(libs.plugins.composeHotReload)"), 
+                    "root build.gradle.kts should NOT contain composeHotReload plugin when Hot Reload is disabled")
+                assertFalse(composeAppBuildGradle.contains("alias(libs.plugins.composeHotReload)"), 
+                    "composeApp/build.gradle.kts should NOT contain composeHotReload plugin when Hot Reload is disabled")
+                assertFalse(libsVersions.contains("composeHotReload = \"1.0.0-rc02\""), 
+                    "libs.versions.toml should NOT contain Hot Reload version when Hot Reload is disabled")
+                assertFalse(libsVersions.contains("""composeHotReload = { id = "org.jetbrains.compose.hot-reload""""), 
+                    "libs.versions.toml should NOT contain Hot Reload plugin definition when Hot Reload is disabled")
             }
         }
     }

@@ -124,6 +124,7 @@ object ProjectCreator {
                 savedStateVersion = savedStateVersion,
                 windowVersion = windowVersion,
                 hotReloadVersion = builder.hotReloadVersion,
+                bundledHotReloadVersion = builder.bundledHotReloadVersion,
                 includeMaterial3 = builder.includeMaterial3,
                 includeMaterial3Adaptive = builder.includeMaterial3Adaptive,
                 includeNavigation = builder.includeNavigation,
@@ -155,7 +156,24 @@ object ProjectCreator {
             if (builder.initGit) {
                 composer.addFeature(io.github.heisiar.composewizard.composer.features.GitFeature())
             }
-            if (builder.includeHotReload) {
+            
+            // Hot Reload logic (same as in BuildFileComposer):
+            // 1. For Compose < 1.10.0-beta01: Optional, add if user enabled
+            // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user overrides
+            val shouldIncludeHotReloadFeature = when {
+                // Compose < 1.10.0-beta01: Optional library
+                io.github.heisiar.composewizard.shared.services.VersionComparison.isComposeVersionLessThan(
+                    builder.composeVersion, "1.10.0-beta01"
+                ) -> 
+                    builder.includeHotReload && builder.hotReloadVersion != null
+                
+                // Compose >= 1.10.0-beta01: Bundled, add only if user overrides
+                else -> 
+                    builder.hotReloadVersion != null && 
+                    builder.hotReloadVersion != builder.bundledHotReloadVersion
+            }
+            
+            if (shouldIncludeHotReloadFeature) {
                 composer.addFeature(io.github.heisiar.composewizard.composer.features.HotReloadFeature())
             }
             
