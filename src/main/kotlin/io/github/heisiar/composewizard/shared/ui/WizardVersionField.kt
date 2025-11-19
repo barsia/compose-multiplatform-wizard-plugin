@@ -5,7 +5,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -110,28 +109,47 @@ fun ComposeVersionField(
                 }
 
                 if (!enableDevVersions && lastKnownVersion.value.isNotEmpty()) {
+                    val releaseNotesInteractionSource = remember { MutableInteractionSource() }
+                    val isReleaseNotesFocused by releaseNotesInteractionSource.collectIsFocusedAsState()
+                    val focusBorderColor = Color(0xFF3574F0)
+                    
                     Tooltip(tooltip = { Text("Release Notes") }) {
                         Box(
                             modifier = Modifier
-                                .size(12.dp)
-                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                                .clickable {
-                                    try {
-                                        if (Desktop.isDesktopSupported()) {
-                                            Desktop.getDesktop().browse(URI("https://github.com/JetBrains/compose-multiplatform/releases/tag/v${lastKnownVersion.value}"))
-                                        }
-                                    } catch (e: Exception) {
-                                        // Ignore
-                                    }
-                                },
+                                .size(16.dp)
+                                .border(
+                                    width = if (isReleaseNotesFocused) 1.dp else 0.dp,
+                                    color = if (isReleaseNotesFocused) focusBorderColor else Color.Transparent,
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                                )
+                                .padding(2.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                key = WizardIconKeys.ExternalLink,
-                                contentDescription = "Release Notes",
-                                modifier = Modifier.size(12.dp),
-                                tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .pointerInput(lastKnownVersion.value) {
+                                        detectTapGestures {
+                                            try {
+                                                if (Desktop.isDesktopSupported()) {
+                                                    Desktop.getDesktop().browse(URI("https://github.com/JetBrains/compose-multiplatform/releases/tag/v${lastKnownVersion.value}"))
+                                                }
+                                            } catch (e: Exception) {
+                                                // Ignore
+                                            }
+                                        }
+                                    }
+                                    .focusable(interactionSource = releaseNotesInteractionSource)
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    key = WizardIconKeys.ExternalLink,
+                                    contentDescription = "Release Notes",
+                                    modifier = Modifier.size(10.dp),
+                                    tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
@@ -154,7 +172,7 @@ fun ComposeVersionField(
                 
                 Box(modifier = Modifier.offset(x = shakeOffset.value.dp)) {
                     Tooltip(tooltip = { 
-                        Text(if (enableDevVersions) "Dev versions" else "Release versions") 
+                        Text(if (enableDevVersions) "Dev Versions" else "Release Versions") 
                     }) {
                         CompactSwitch(
                             checked = enableDevVersions,
@@ -424,50 +442,52 @@ fun ComposeVersionField(
                 
                 val focusBorderColor = Color(0xFF3574F0)
 
-               Box(
-                   modifier = Modifier
-                       .size(20.dp)
-                       .border(
-                           width = if (isRefreshFocused) 1.dp else 0.dp,
-                           color = if (isRefreshFocused) focusBorderColor else Color.Transparent,
-                           shape = CircleShape
-                       )
-                       .padding(2.dp),
-                   contentAlignment = Alignment.Center
-               ) {
-                    Icon(
-                        key = WizardIconKeys.RefreshVersions,
-                        contentDescription = "Refresh versions",
-                        modifier = Modifier
-                            .size(16.dp)
-                            .graphicsLayer { rotationZ = rotation.value % 360f }
-                            .focusRequester(refreshFocusRequester)
-                            .onKeyEvent { keyEvent: KeyEvent ->
-                                if (!isLoading && 
-                                    (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
-                                    keyEvent.type == KeyEventType.KeyDown
-                                ) {
-                                    isManualRefresh = true
-                                    onRefreshVersions()
-                                    refreshTrigger++
-                                    shouldRestoreFocus = true
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                            .pointerInput(isLoading) {
-                                if (!isLoading) {
-                                    detectTapGestures {
+               Tooltip(tooltip = { Text("Refresh Versions") }) {
+                   Box(
+                       modifier = Modifier
+                           .size(20.dp)
+                           .border(
+                               width = if (isRefreshFocused) 1.dp else 0.dp,
+                               color = if (isRefreshFocused) focusBorderColor else Color.Transparent,
+                               shape = CircleShape
+                           )
+                           .padding(2.dp),
+                       contentAlignment = Alignment.Center
+                   ) {
+                        Icon(
+                            key = WizardIconKeys.RefreshVersions,
+                            contentDescription = "Refresh versions",
+                            modifier = Modifier
+                                .size(16.dp)
+                                .graphicsLayer { rotationZ = rotation.value % 360f }
+                                .focusRequester(refreshFocusRequester)
+                                .onKeyEvent { keyEvent: KeyEvent ->
+                                    if (!isLoading && 
+                                        (keyEvent.key == Key.Enter || keyEvent.key == Key.Spacebar) && 
+                                        keyEvent.type == KeyEventType.KeyDown
+                                    ) {
                                         isManualRefresh = true
                                         onRefreshVersions()
                                         refreshTrigger++
+                                        shouldRestoreFocus = true
+                                        true
+                                    } else {
+                                        false
                                     }
                                 }
-                            }
-                            .focusable(interactionSource = refreshInteractionSource, enabled = !isLoading),
-                        tint = JewelTheme.globalColors.text.normal
-                    )
+                                .pointerInput(isLoading) {
+                                    if (!isLoading) {
+                                        detectTapGestures {
+                                            isManualRefresh = true
+                                            onRefreshVersions()
+                                            refreshTrigger++
+                                        }
+                                    }
+                                }
+                                .focusable(interactionSource = refreshInteractionSource, enabled = !isLoading),
+                            tint = JewelTheme.globalColors.text.normal
+                        )
+                    }
                 }
             }
         }
