@@ -5,6 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,9 +22,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,20 +49,27 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import io.github.heisiar.composewizard.shared.ComposeVersions
+import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.jewel.foundation.lazy.rememberSelectableLazyListState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.ListComboBox
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
 import java.awt.Cursor
+import java.awt.Desktop
+import java.net.URI
 
 private const val ROTATION_DURATION_MS = 500
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ComposeVersionField(
-    cache: io.github.heisiar.composewizard.shared.services.ComposeVersionCache,
+    cache: ComposeVersionCache,
     enableDevVersions: Boolean,
     selectedVersion: String,
     onVersionSelected: (String) -> Unit,
@@ -79,7 +90,52 @@ fun ComposeVersionField(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Compose Version", style = JewelTheme.defaultTextStyle)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Compose Version", style = JewelTheme.defaultTextStyle)
+
+                // Cache the last known version for the link to avoid flickering
+                // Reset cache when switching to Dev mode
+                val lastKnownVersion = remember(enableDevVersions) { 
+                    mutableStateOf(if (enableDevVersions) "" else selectedVersion) 
+                }
+                
+                // Update cache when in Releases mode and version is available
+                SideEffect {
+                    if (!enableDevVersions && selectedVersion.isNotEmpty()) {
+                        lastKnownVersion.value = selectedVersion
+                    }
+                }
+
+                if (!enableDevVersions && lastKnownVersion.value.isNotEmpty()) {
+                    Tooltip(tooltip = { Text("Release Notes") }) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                                .clickable {
+                                    try {
+                                        if (Desktop.isDesktopSupported()) {
+                                            Desktop.getDesktop().browse(URI("https://github.com/JetBrains/compose-multiplatform/releases/tag/v${lastKnownVersion.value}"))
+                                        }
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                key = WizardIconKeys.ExternalLink,
+                                contentDescription = "Release Notes",
+                                modifier = Modifier.size(12.dp),
+                                tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.weight(1f))
             
@@ -135,8 +191,8 @@ fun ComposeVersionField(
             }
             
             isLoading = true
-            
-            kotlinx.coroutines.delay(200)
+
+            delay(200)
             
             while (true) {
                 val isCurrentlyLoading = if (enableDevVersions) {
@@ -161,8 +217,8 @@ fun ComposeVersionField(
                         break
                     }
                 }
-                
-                kotlinx.coroutines.delay(100)
+
+                delay(100)
             }
         }
         
@@ -188,8 +244,8 @@ fun ComposeVersionField(
                     isLoading = false
                     break
                 }
-                
-                kotlinx.coroutines.delay(100)
+
+                delay(100)
             }
         }
 
@@ -203,7 +259,7 @@ fun ComposeVersionField(
                     when {
                         isLoading && versions == null -> listOf("")
                         versions != null && versions.isEmpty() && !isLoading -> listOf("Dev versions unavailable")
-                        else -> versions ?: io.github.heisiar.composewizard.shared.ComposeVersions.STABLE_VERSIONS_HARDCODED
+                        else -> versions ?: ComposeVersions.STABLE_VERSIONS_HARDCODED
                     }
                 }
                 
@@ -221,69 +277,69 @@ fun ComposeVersionField(
                     .widthIn(min = 200.dp)
                     .weight(1f)
                         ) {
-                            androidx.compose.runtime.key(enableDevVersions) {
-                                val comboBoxFocusRequester = remember { FocusRequester() }
-                                val listState = rememberSelectableLazyListState(currentIndex)
-                                var isPopupVisible by remember { mutableStateOf(false) }
-                                
-                                LaunchedEffect(currentIndex, items) {
-                                    if (currentIndex >= 0 && currentIndex < items.size) {
-                                        listState.selectedKeys = setOf(currentIndex)
-                                    }
+                key(enableDevVersions) {
+                    val comboBoxFocusRequester = remember { FocusRequester() }
+                    val listState = rememberSelectableLazyListState(currentIndex)
+                    var isPopupVisible by remember { mutableStateOf(false) }
+                    
+                    LaunchedEffect(currentIndex, items) {
+                        if (currentIndex >= 0 && currentIndex < items.size) {
+                            listState.selectedKeys = setOf(currentIndex)
+                        }
+                    }
+
+                    ListComboBox(
+                        items = items,
+                        selectedIndex = currentIndex,
+                        onSelectedItemChange = { index ->
+                            availableVersions?.let { versions ->
+                                if (versions.isNotEmpty() && index in versions.indices) {
+                                    val newSelection = versions[index]
+                                    displayedVersion = newSelection
+                                    onVersionSelected(newSelection)
                                 }
-                                
-                                org.jetbrains.jewel.ui.component.ListComboBox(
-                                    items = items,
-                                    selectedIndex = currentIndex,
-                                    onSelectedItemChange = { index ->
-                                        availableVersions?.let { versions ->
-                                            if (versions.isNotEmpty() && index in versions.indices) {
-                                                val newSelection = versions[index]
-                                                displayedVersion = newSelection
-                                                onVersionSelected(newSelection)
+                            }
+                        },
+                        onPopupVisibleChange = { visible -> isPopupVisible = visible },
+                        enabled = !isLoading && availableVersions?.isNotEmpty() == true,
+                        listState = listState,
+                        itemKeys = { index, _ -> index },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(comboBoxFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown && isPopupVisible) {
+                                    val versions = availableVersions
+                                    if (!versions.isNullOrEmpty()) {
+                                        when (event.key) {
+                                            Key.DirectionDown -> {
+                                                val newIndex = (currentIndex + 1).coerceAtMost(versions.lastIndex)
+                                                if (newIndex != currentIndex) {
+                                                    listState.selectedKeys = setOf(newIndex)
+                                                    displayedVersion = versions[newIndex]
+                                                    onVersionSelected(versions[newIndex])
+                                                }
+                                                true
                                             }
+                                            Key.DirectionUp -> {
+                                                val newIndex = (currentIndex - 1).coerceAtLeast(0)
+                                                if (newIndex != currentIndex) {
+                                                    listState.selectedKeys = setOf(newIndex)
+                                                    displayedVersion = versions[newIndex]
+                                                    onVersionSelected(versions[newIndex])
+                                                }
+                                                true
+                                            }
+                                            else -> false
                                         }
-                                    },
-                                    onPopupVisibleChange = { visible -> isPopupVisible = visible },
-                                    enabled = !isLoading && availableVersions?.isNotEmpty() == true,
-                                    listState = listState,
-                                    itemKeys = { index, _ -> index },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(comboBoxFocusRequester)
-                                        .onPreviewKeyEvent { event ->
-                                            if (event.type == KeyEventType.KeyDown && isPopupVisible) {
-                                                val versions = availableVersions
-                                                if (!versions.isNullOrEmpty()) {
-                                                    when (event.key) {
-                                                        Key.DirectionDown -> {
-                                                            val newIndex = (currentIndex + 1).coerceAtMost(versions.lastIndex)
-                                                            if (newIndex != currentIndex) {
-                                                                listState.selectedKeys = setOf(newIndex)
-                                                                displayedVersion = versions[newIndex]
-                                                                onVersionSelected(versions[newIndex])
-                                                            }
-                                                            true
-                                                        }
-                                                        Key.DirectionUp -> {
-                                                            val newIndex = (currentIndex - 1).coerceAtLeast(0)
-                                                            if (newIndex != currentIndex) {
-                                                                listState.selectedKeys = setOf(newIndex)
-                                                                displayedVersion = versions[newIndex]
-                                                                onVersionSelected(versions[newIndex])
-                                                            }
-                                                            true
-                                                        }
-                                                        else -> false
-                                                    }
-                                                } else false
-                                            } else false
-                                        }
-                                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
-                        maxPopupHeight = 280.dp,
-                        style = textFieldStyleComboBox()
-                    )
-                }
+                                    } else false
+                                } else false
+                            }
+                            .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))),
+            maxPopupHeight = 280.dp,
+            style = textFieldStyleComboBox()
+        )
+    }
             }
 
             Box(
@@ -305,7 +361,7 @@ fun ComposeVersionField(
                 val coroutineScope = rememberCoroutineScope()
                 
                 // Update loading state on every recomposition
-                androidx.compose.runtime.SideEffect {
+                SideEffect {
                     isLoadingState.value = isLoading
                 }
                 
@@ -318,8 +374,8 @@ fun ComposeVersionField(
                                     isAnimating = true
                                     val startTime = System.currentTimeMillis()
                                     var rotationCount = 0
-                                    var hasMinimumRotation = false
-                                    
+                                    var hasMinimumRotation: Boolean
+
                                     do {
                                         rotationCount++
                                         rotation.animateTo(
@@ -332,7 +388,7 @@ fun ComposeVersionField(
                                         val elapsed = System.currentTimeMillis() - startTime
                                         hasMinimumRotation = elapsed >= ROTATION_DURATION_MS
                                     } while (isLoadingState.value || !hasMinimumRotation)
-                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                } catch (e: CancellationException) {
                                     throw e
                                 } finally {
                                     isAnimating = false
@@ -360,7 +416,7 @@ fun ComposeVersionField(
                 // Restore focus after loading completes
                 LaunchedEffect(isLoading, shouldRestoreFocus) {
                     if (!isLoading && shouldRestoreFocus) {
-                        kotlinx.coroutines.delay(100)
+                        delay(100)
                         refreshFocusRequester.requestFocus()
                         shouldRestoreFocus = false
                     }
@@ -374,7 +430,7 @@ fun ComposeVersionField(
                        .border(
                            width = if (isRefreshFocused) 1.dp else 0.dp,
                            color = if (isRefreshFocused) focusBorderColor else Color.Transparent,
-                           shape = androidx.compose.foundation.shape.CircleShape
+                           shape = CircleShape
                        )
                        .padding(2.dp),
                    contentAlignment = Alignment.Center
