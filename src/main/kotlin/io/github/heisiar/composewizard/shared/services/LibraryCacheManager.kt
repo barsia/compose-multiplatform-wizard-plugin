@@ -1,8 +1,11 @@
 package io.github.heisiar.composewizard.shared.services
 
+import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.LibraryType
 
 class LibraryCacheManager(private val state: ComposeVersionCacheState) {
+    
+    private val LOG = Logger.getInstance(LibraryCacheManager::class.java)
     
     companion object {
         private const val MAX_LIBRARY_CACHE_SIZE = 200
@@ -21,8 +24,10 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
         val isFromBundleMap = getIsFromBundleMap(type)
         
         synchronized(versionsMap) {
+            LOG.info("[CacheManager] 💾 Caching $type for $composeVersion: version=$version, isFromFallback=$isFromFallback, mapInstance=${System.identityHashCode(versionsMap)}")
             versionsMap[composeVersion] = version
             isFromBundleMap[composeVersion] = isFromFallback
+            LOG.info("[CacheManager] 💾 After caching: cacheSize=${versionsMap.size}, keys=${versionsMap.keys.toList()}")
             
             while (versionsMap.size > MAX_LIBRARY_CACHE_SIZE) {
                 val oldestKey = versionsMap.keys.first()
@@ -37,8 +42,11 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
     }
     
     fun invalidateLibraryCache() {
+        LOG.warn("[CacheManager] ❌❌❌ invalidateLibraryCache() called! Clearing ALL library caches!", Exception("Stack trace"))
         for (type in LibraryRegistry.getAllTypes()) {
-            getVersionsMap(type).clear()
+            val map = getVersionsMap(type)
+            LOG.warn("[CacheManager] ❌ Clearing $type cache (had ${map.size} versions, keys=${map.keys.take(3)})")
+            map.clear()
             getIsFromBundleMap(type).clear()
         }
     }
@@ -50,7 +58,10 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
     
 
     fun getRawCachedVersion(composeVersion: String, type: LibraryType): String? {
-        return getVersionsMap(type)[composeVersion]
+        val versionsMap = getVersionsMap(type)
+        val result = versionsMap[composeVersion]
+        LOG.info("[CacheManager] getRawCachedVersion($composeVersion, $type): result=$result, cacheSize=${versionsMap.size}, cacheKeys=${versionsMap.keys.take(5)}, mapInstance=${System.identityHashCode(versionsMap)}")
+        return result
     }
 
     fun isLibraryFromBundle(composeVersion: String, type: LibraryType): Boolean {

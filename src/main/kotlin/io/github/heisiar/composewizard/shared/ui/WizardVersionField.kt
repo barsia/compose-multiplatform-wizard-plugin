@@ -196,10 +196,20 @@ fun ComposeVersionField(
             onVersionSelected("")
             toggleTrigger++
             
-            if (enableDevVersions) {
-                cache.forceReloadDev()
+            // Check if versions are already cached
+            val cachedVersions = if (enableDevVersions) {
+                cache.getDevVersions()
             } else {
-                cache.forceReloadStable()
+                cache.getStableVersions()
+            }
+            
+            // Only reload if cache is empty
+            if (cachedVersions.isNullOrEmpty()) {
+                if (enableDevVersions) {
+                    cache.forceReloadDev()
+                } else {
+                    cache.forceReloadStable()
+                }
             }
         }
 

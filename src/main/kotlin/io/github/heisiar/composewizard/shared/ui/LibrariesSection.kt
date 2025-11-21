@@ -258,6 +258,10 @@ private fun LibrariesSectionContent(
     val showError = state.composeVersion.isEmpty() && state.enableDevVersions && devVersions?.isEmpty() == true
     val showSkeletons = (state.composeVersion.isEmpty() && !showError) || (!state.composeVersion.isEmpty() && !librariesLoaded)
     
+    androidx.compose.runtime.SideEffect {
+        println("[LibrariesSection] UI State: composeVersion=${state.composeVersion}, libraryVersions.size=${librariesState.libraryVersions.size}, isLoadingVersions=${librariesState.isLoadingVersions}, librariesLoaded=$librariesLoaded, showSkeletons=$showSkeletons")
+    }
+    
     when {
         showError -> {
             Box(

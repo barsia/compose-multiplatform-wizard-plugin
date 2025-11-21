@@ -73,9 +73,6 @@ class LibraryVersionResolver(
         if (versionsMap[composeVersion] == "NOT_FOUND") {
             versionsMap.remove(composeVersion)
         }
-        synchronized(webUIResultsCache) {
-            webUIResultsCache.remove(composeVersion)
-        }
     }
     
     fun getLifecycleVersion(composeVersion: String): String? {

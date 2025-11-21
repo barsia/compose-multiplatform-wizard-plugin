@@ -93,6 +93,7 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     private fun checkPluginUpdate() {
         val currentVersion = getCurrentPluginVersion()
+        logger.info("[ComposeVersionCache] checkPluginUpdate: currentVersion=$currentVersion")
         if (currentVersion == null) {
             logger.warn("Unable to determine current plugin version")
             return
@@ -100,10 +101,13 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         
         val settings = WizardSettings.getInstance()
         val lastVersion = settings.lastPluginVersion
+        logger.info("[ComposeVersionCache] checkPluginUpdate: lastVersion=$lastVersion")
         
         if (lastVersion.isNotEmpty() && lastVersion != currentVersion) {
-            logger.info("Plugin updated from $lastVersion to $currentVersion, clearing cache")
+            logger.info("[ComposeVersionCache] ❌ Plugin updated from $lastVersion to $currentVersion, CLEARING ALL CACHE")
             clearAllCache()
+        } else {
+            logger.info("[ComposeVersionCache] ✅ Plugin version unchanged, keeping cache")
         }
         
         settings.lastPluginVersion = currentVersion
@@ -125,11 +129,17 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     override fun getState(): ComposeVersionCacheState {
+        logger.info("[ComposeVersionCache] getState() called")
         return persistentState
     }
     
     override fun loadState(state: ComposeVersionCacheState) {
+        logger.info("[ComposeVersionCache] loadState() called. Incoming state has ${state.libraryVersions.size} library types cached")
+        state.libraryVersions.forEach { (type, versions) ->
+            logger.info("[ComposeVersionCache]   - $type: ${versions.size} versions cached, keys=${versions.keys.take(3)}")
+        }
         XmlSerializerUtil.copyBean(state, persistentState)
+        logger.info("[ComposeVersionCache] After copyBean, persistentState has ${persistentState.libraryVersions.size} library types")
         checkPluginUpdate()
         initializeCache()
     }
@@ -274,13 +284,17 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     fun forceReloadStable() {
         coreCache.forceReloadStable {
-            invalidateLibraryCache()
+            // DO NOT invalidate library cache here!
+            // Library versions are independent from Compose version list
+            // Invalidating here causes skeletons on every Releases/Dev switch
         }
     }
     
     fun forceReloadDev() {
         coreCache.forceReloadDev {
-            invalidateLibraryCache()
+            // DO NOT invalidate library cache here!
+            // Library versions are independent from Compose version list
+            // Invalidating here causes skeletons on every Releases/Dev switch
         }
     }
     
