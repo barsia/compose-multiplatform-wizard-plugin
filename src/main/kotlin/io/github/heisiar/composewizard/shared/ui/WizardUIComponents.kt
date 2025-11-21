@@ -306,3 +306,28 @@ fun BundledLibraryIndicator() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RequiredLibraryIndicator() {
+    Tooltip(
+        tooltip = { Text("Included in the base template and cannot be disabled") },
+        tooltipPlacement = TooltipPlacement.ComponentRect(
+            anchor = Alignment.TopCenter,
+            alignment = Alignment.TopCenter
+        )
+    ) {
+        Icon(
+            key = org.jetbrains.jewel.ui.icons.AllIconsKeys.Nodes.Favorite,
+            contentDescription = "Required library",
+            modifier = Modifier
+                .size(12.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { }
+                .pointerHoverIcon(PointerIcon(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.DEFAULT_CURSOR))),
+            tint = JewelTheme.globalColors.text.normal.copy(alpha = 0.65f)
+        )
+    }
+}
+

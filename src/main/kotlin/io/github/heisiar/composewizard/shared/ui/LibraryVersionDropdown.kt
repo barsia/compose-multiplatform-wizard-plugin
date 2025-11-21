@@ -200,9 +200,13 @@ fun LibraryVersionDropdown(
                 
                 val showPinIcon = isFromFallback && 
                                   libraryType != LibraryType.HOT_RELOAD && 
+                                  libraryType != LibraryType.LIFECYCLE &&
                                   selectedVersion != bundledVersion
                 
-                if (showHotReloadLock || showPinIcon) {
+                val showRequiredLibraryIcon = !effectiveEnabled && 
+                                              libraryType == LibraryType.LIFECYCLE
+                
+                if (showHotReloadLock || showPinIcon || showRequiredLibraryIcon) {
                     Spacer(modifier = Modifier.width(3.dp))
                     Box(
                         modifier = Modifier
@@ -210,10 +214,10 @@ fun LibraryVersionDropdown(
                             .focusProperties { canFocus = false },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (showHotReloadLock) {
-                            BundledLibraryIndicator()
-                        } else {
-                            PinnedVersionIndicator(isPinned = true)
+                        when {
+                            showHotReloadLock -> BundledLibraryIndicator()
+                            showRequiredLibraryIcon -> RequiredLibraryIndicator()
+                            else -> PinnedVersionIndicator(isPinned = true)
                         }
                     }
                 }
