@@ -170,7 +170,12 @@ fun LibraryVersionDropdown(
         if (effectiveEnabled) {
             checkboxContent()
         } else {
-            Tooltip(tooltip = { Text("Included in the base template and cannot be disabled") }) {
+            val tooltipText = if (isNewComposeForHotReload) {
+                "This version is bundled with the Compose Multiplatform release"
+            } else {
+                "Included in the base template and cannot be disabled"
+            }
+            Tooltip(tooltip = { Text(tooltipText) }) {
                 checkboxContent()
             }
         }

@@ -1,8 +1,8 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.3.0-Beta2"
+    id("org.jetbrains.kotlin.jvm") version "2.2.21"
     id("org.jetbrains.intellij.platform") version "2.10.4"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.3.0-Beta2"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
 }
 
 // Configure Java toolchain for the entire project (required for Jewel)
@@ -15,30 +15,34 @@ java {
 group = "io.github.heisiar"
 version = "1.0.0"
 
-// Platform configuration: Build against AS 251.x for maximum compatibility
-// Compose Compiler generates code for specific runtime version - use oldest supported
+// Platform configuration: Build for IDEA 2025.3+ or AS 2025.2+
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.2.4" else "2025.2.2.4"  // AS Otter 2025.2.2 Canary 4, IDEA for testing
+val platformVersion = if (runIntellijIdea) "2025.3" else "2025.2.2.4"
 
 repositories {
     mavenCentral()
     google()
     intellijPlatform {
         defaultRepositories()
+        snapshots()  // For IDEA 2025.3 EAP
     }
 }
 
 dependencies {
     intellijPlatform {
-        // Base platform - Android Studio (for wizard API) or IntelliJ IDEA (for testing)
-        create(platformType, platformVersion)
+        // Base platform: IDEA 2025.3 or AS 2025.2.2.4
+        if (runIntellijIdea) {
+            local("/Users/Siarhei.Baradulia/Applications/IntelliJ IDEA Ultimate 2025.3 Nightly.app")
+        } else {
+            create(platformType, platformVersion)
+        }
         
         // Gradle support
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.kotlin")
         
-        // Android plugin - only when building against AS
+        // Android plugin - only for AS
         if (!runIntellijIdea) {
             bundledPlugin("org.jetbrains.android")
         }
@@ -46,10 +50,10 @@ dependencies {
         // Test framework
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
         
-        // Compose UI - provides compile-time APIs
+        // Compose UI - provided by platform (compileOnly)
         composeUI()
         
-        // Jewel UI library for SwingBridgeTheme
+        // Jewel UI library - provided by platform (compileOnly)
         bundledModule("intellij.platform.jewel.foundation")
         bundledModule("intellij.platform.jewel.ui")
         bundledModule("intellij.platform.jewel.ideLafBridge")
@@ -59,14 +63,8 @@ dependencies {
         bundledModule("intellij.libraries.skiko")
     }
     
-    // All Compose and Skiko dependencies are provided by platform via bundledModule() above
-    // No need to include them explicitly to avoid ClassLoader conflicts
-    
-    // Android Studio API - only for compilation when building against AS
-    if (!runIntellijIdea) {
-        compileOnly("com.android.tools:sdk-common:31.7.2")
-        compileOnly("com.android.tools.build:gradle-api:8.7.3")
-    }
+    // All Compose and Jewel provided by platform
+    // Plugin size: ~3 MB (no bundled libraries)
     
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
@@ -82,7 +80,8 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "252"  // Support AS 2025.2+ (Otter) and IDEA 2025.2+
+            // IDEA 2025.3+ (253) or AS 2025.2+ (252)
+            sinceBuild = if (runIntellijIdea) "253" else "252"
             untilBuild = "262.*"
         }
         
@@ -92,32 +91,15 @@ intellijPlatform {
             <h3>1.0.0</h3>
             <ul>
               <li>Initial release</li>
-              <li>Support for IntelliJ IDEA and Android Studio</li>
+              <li>Requires IntelliJ IDEA 2025.3+ or Android Studio 2025.2+</li>
               <li>Multi-platform project templates (Desktop, Android, iOS, Web)</li>
+              <li>Advanced Compose-based wizard UI</li>
             </ul>
         """.trimIndent()
     }
 }
 
-// Exclude Android Studio-specific code when building for IDEA
-sourceSets {
-    main {
-        java {
-            if (runIntellijIdea) {
-                exclude("**/androidstudio/**")
-            }
-        }
-        kotlin {
-            if (runIntellijIdea) {
-                exclude("**/androidstudio/**")
-            }
-        }
-    }
-}
-
 tasks {
-    // Java toolchain is configured globally above, no need to set compatibility here
-    
     test {
         useJUnitPlatform()
         testLogging {
@@ -125,27 +107,21 @@ tasks {
             showStandardStreams = false
         }
     }
-    
+
     runIde {
-        // Enable FUS (Feature Usage Statistics) for local testing
         jvmArgs(
             "-Xmx2048m",
-            "-Dfus.internal.test.mode=true",  // Enable local FUS event logging (no data sent to JetBrains)
-            "-Didea.is.internal=true"          // Enable internal mode (access to FUS Event Log viewer)
+            "-Dfus.internal.test.mode=true",
+            "-Didea.is.internal=true"
         )
         autoReload = true
-        
-        doFirst {
-            val platform = if (runIntellijIdea) "IntelliJ IDEA" else "Android Studio"
-            println("==============================================")
-            println("  Running plugin in: $platform ($platformType $platformVersion)")
-            println("  FUS Test Mode: ENABLED (events logged locally)")
-            println("==============================================")
-        }
     }
     
     buildPlugin {
-        archiveFileName = "compose-multiplatform-wizard-$version.zip"
+        archiveBaseName.set("compose-multiplatform-wizard-plugin")
+        archiveVersion.set(project.version.toString())
+        // Add suffix based on target platform
+        archiveClassifier.set(if (runIntellijIdea) "ij" else "ai")
     }
 }
 

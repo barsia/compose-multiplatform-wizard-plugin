@@ -56,3 +56,4 @@ interface ProjectFeature {
      */
     fun getLibraryDeclarations(config: ProjectConfig): Map<String, String> = emptyMap()
 }
+

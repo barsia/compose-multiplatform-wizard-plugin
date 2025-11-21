@@ -138,3 +138,4 @@ class WizardStateIntegrationTest {
         assertEquals(state.tests, builder.includeTests, "Tests flag must match")
     }
 }
+
