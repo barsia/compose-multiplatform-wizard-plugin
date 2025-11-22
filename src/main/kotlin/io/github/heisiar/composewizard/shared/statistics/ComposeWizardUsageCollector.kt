@@ -4,6 +4,7 @@ import com.intellij.internal.statistic.eventLog.EventLogGroup
 import com.intellij.internal.statistic.eventLog.events.EventFields
 import com.intellij.internal.statistic.service.fus.collectors.CounterUsagesCollector
 import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.application.ApplicationManager
 
 object ComposeWizardUsageCollector : CounterUsagesCollector() {
     
@@ -137,12 +138,16 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
 
     // Public logging methods
     
+    private fun shouldLog(): Boolean = ApplicationManager.getApplication() != null
+
     private fun getIdeType(): String {
+        if (!shouldLog()) return "TEST"
         // Return product code: AI (Android Studio), IU/IC (IntelliJ IDEA), PS (PhpStorm), etc.
         return ApplicationInfo.getInstance().build.productCode ?: "UNKNOWN"
     }
 
     fun logWizardOpened() {
+        if (!shouldLog()) return
         WIZARD_OPENED.log(getIdeType())
     }
 
@@ -153,6 +158,7 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
         usedDevVersions: Boolean,
         timeSpentMs: Long
     ) {
+        if (!shouldLog()) return
         WIZARD_COMPLETED.log(
             IDE_TYPE.with(getIdeType()),
             PLATFORMS_COUNT.with(platformsCount),
@@ -164,38 +170,47 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
     }
 
     fun logPlatformToggled(platform: String, selected: Boolean) {
+        if (!shouldLog()) return
         PLATFORM_TOGGLED.log(getIdeType(), platform, selected)
     }
 
     fun logTestsToggled(enabled: Boolean) {
+        if (!shouldLog()) return
         TESTS_TOGGLED.log(getIdeType(), enabled)
     }
 
     fun logGitToggled(enabled: Boolean) {
+        if (!shouldLog()) return
         GIT_TOGGLED.log(getIdeType(), enabled)
     }
 
     fun logDevVersionsUnlocked() {
+        if (!shouldLog()) return
         DEV_VERSIONS_UNLOCKED.log(getIdeType())
     }
     
     fun logDevVersionsVisibilityToggled(visible: Boolean, toggleCount: Int) {
+        if (!shouldLog()) return
         DEV_VERSIONS_VISIBILITY_TOGGLED.log(getIdeType(), visible, toggleCount)
     }
 
     fun logDevVersionsToggled(enabled: Boolean) {
+        if (!shouldLog()) return
         DEV_VERSIONS_TOGGLED.log(getIdeType(), enabled)
     }
     
     fun logVersionDropdownOpened() {
+        if (!shouldLog()) return
         VERSION_DROPDOWN_OPENED.log(getIdeType())
     }
     
     fun logVersionRefreshClicked() {
+        if (!shouldLog()) return
         VERSION_REFRESH_CLICKED.log(getIdeType())
     }
 
     fun logComposeVersionSelected(version: String, isDevVersion: Boolean) {
+        if (!shouldLog()) return
         COMPOSE_VERSION_SELECTED.log(
             IDE_TYPE.with(getIdeType()),
             COMPOSE_VERSION.with(version),
@@ -204,13 +219,14 @@ object ComposeWizardUsageCollector : CounterUsagesCollector() {
     }
 
     fun logFieldEdited(field: String, hasContent: Boolean) {
+        if (!shouldLog()) return
         FIELD_EDITED.log(getIdeType(), field, hasContent)
     }
 
     fun logValidationError(field: String, errorType: String) {
+        if (!shouldLog()) return
         VALIDATION_ERROR.log(getIdeType(), field, errorType)
     }
 
     override fun getGroup(): EventLogGroup = GROUP
 }
-
