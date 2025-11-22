@@ -96,6 +96,17 @@ object ComposeVersions {
      * To add new versions: add entry here, everything else updates automatically.
      */
     val LIBRARY_BUNDLES = linkedMapOf(
+        "1.10.0-beta02" to ComposeLibraryVersions(
+            composeVersion = "1.10.0-beta02",
+            kotlinVersion = "2.2.21",
+            lifecycleVersion = "2.10.0-alpha05",
+            material3Version = "1.10.0-alpha05",
+            material3AdaptiveVersion = "1.3.0-alpha02",
+            navigation3Version = "1.0.0-alpha05",
+            navigationEventVersion = "1.0.0-beta02",
+            savedStateVersion = "1.4.0-rc01",
+            windowVersion = "1.5.0"
+        ),
         "1.10.0-beta01" to ComposeLibraryVersions(
             composeVersion = "1.10.0-beta01",
             kotlinVersion = "2.2.21",

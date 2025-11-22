@@ -282,6 +282,34 @@ object ProjectFixtures {
         this.includeHotReload = false
         this.enableDevVersions = true
     }
+
+    val IOS_DESKTOP_LIBRARIES_TESTS_CONFIG: ComposeMultiplatformModuleBuilder
+        get() = createBuilder(
+            projectName = "IosDesktopLibrariesTests",
+            projectId = "org.ios.desktop.libraries.tests",
+            composeVersion = "1.10.0-beta02",
+            targetIOS = true,
+            targetDesktop = true,
+            includeTests = true
+        ).apply {
+            lifecycleVersion = "2.10.0-alpha05"
+            material3Version = "1.10.0-alpha05"
+            material3AdaptiveVersion = "1.3.0-alpha02"
+            navigationEventVersion = "1.0.0-beta02"
+            navigation3Version = "1.0.0-alpha05"
+            windowVersion = "1.5.0"
+            savedStateVersion = "1.4.0-rc01"
+            hotReloadVersion = "1.0.0-rc03"
+            
+            includeMaterial3 = true
+            includeMaterial3Adaptive = true
+            includeNavigation3 = true
+            includeNavigationEvent = true
+            includeSavedState = false
+            includeWindow = false
+            includeHotReload = false
+            enableDevVersions = true
+        }
     
     /**
      * Creates a ComposeMultiplatformModuleBuilder with the specified configuration.

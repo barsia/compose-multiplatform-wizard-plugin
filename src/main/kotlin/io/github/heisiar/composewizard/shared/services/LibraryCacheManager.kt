@@ -73,18 +73,21 @@ class LibraryCacheManager(private val state: ComposeVersionCacheState) {
     }
     
     fun cacheHotReloadGithubVersion(composeVersion: String, githubVersion: String) {
-        synchronized(state.hotReloadGithubVersions) {
-            state.hotReloadGithubVersions[composeVersion] = githubVersion
+        val versions = state.hotReloadGithubVersions ?: linkedMapOf<String, String>().also { 
+            state.hotReloadGithubVersions = it 
+        }
+        synchronized(versions) {
+            versions[composeVersion] = githubVersion
             
-            while (state.hotReloadGithubVersions.size > MAX_LIBRARY_CACHE_SIZE) {
-                val oldestKey = state.hotReloadGithubVersions.keys.first()
-                state.hotReloadGithubVersions.remove(oldestKey)
+            while (versions.size > MAX_LIBRARY_CACHE_SIZE) {
+                val oldestKey = versions.keys.first()
+                versions.remove(oldestKey)
             }
         }
     }
     
     fun getHotReloadGithubVersion(composeVersion: String): String? {
-        return state.hotReloadGithubVersions[composeVersion]
+        return state.hotReloadGithubVersions?.get(composeVersion)
     }
 }
 

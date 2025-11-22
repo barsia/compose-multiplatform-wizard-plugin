@@ -12,12 +12,8 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.heisiar.composewizard.shared.LibraryType
 import io.github.heisiar.composewizard.shared.settings.WizardSettings
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.launch
 
 @Service(Service.Level.APP)
 @State(
@@ -119,10 +115,10 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
         persistentState.stableLastLoadTime = 0L
         persistentState.devLastLoadTime = 0L
         
-        persistentState.libraryVersions.clear()
-        persistentState.libraryIsFromBundle.clear()
-        persistentState.libraryAvailableVersions.clear()
-        persistentState.libraryAvailableLastLoadTime.clear()
+        persistentState.libraryVersions?.clear()
+        persistentState.libraryIsFromBundle?.clear()
+        persistentState.libraryAvailableVersions?.clear()
+        persistentState.libraryAvailableLastLoadTime?.clear()
         persistentState.hotReloadGithubVersions = linkedMapOf()
         
         logger.info("All cache cleared after plugin update")
@@ -134,12 +130,62 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     }
     
     override fun loadState(state: ComposeVersionCacheState) {
-        logger.info("[ComposeVersionCache] loadState() called. Incoming state has ${state.libraryVersions.size} library types cached")
-        state.libraryVersions.forEach { (type, versions) ->
-            logger.info("[ComposeVersionCache]   - $type: ${versions.size} versions cached, keys=${versions.keys.take(3)}")
+        logger.info("[ComposeVersionCache] loadState() called")
+        
+        val libraryVersions = state.libraryVersions
+        if (libraryVersions != null) {
+            logger.info("[ComposeVersionCache] Incoming state has ${libraryVersions.size} library types cached")
+            libraryVersions.forEach { (type, versions) ->
+                if (versions != null) {
+                    logger.info("[ComposeVersionCache]   - $type: ${versions.size} versions cached, keys=${versions.keys.take(3)}")
+                } else {
+                    logger.info("[ComposeVersionCache]   - $type: versions is null")
+                }
+            }
+        } else {
+            logger.info("[ComposeVersionCache] Incoming state has null libraryVersions")
         }
+        
         XmlSerializerUtil.copyBean(state, persistentState)
-        logger.info("[ComposeVersionCache] After copyBean, persistentState has ${persistentState.libraryVersions.size} library types")
+        
+        val persistentLibraryVersions = persistentState.libraryVersions
+        if (persistentLibraryVersions != null) {
+            logger.info("[ComposeVersionCache] After copyBean, persistentState has ${persistentLibraryVersions.size} library types")
+        } else {
+            logger.warn("[ComposeVersionCache] After copyBean, persistentState.libraryVersions is null, initializing with empty map")
+            persistentState.libraryVersions = mutableMapOf()
+        }
+        
+        if (persistentState.libraryIsFromBundle == null) {
+            logger.warn("[ComposeVersionCache] persistentState.libraryIsFromBundle is null, initializing with empty map")
+            persistentState.libraryIsFromBundle = mutableMapOf()
+        }
+        
+        if (persistentState.libraryAvailableVersions == null) {
+            logger.warn("[ComposeVersionCache] persistentState.libraryAvailableVersions is null, initializing with empty map")
+            persistentState.libraryAvailableVersions = mutableMapOf()
+        }
+        
+        if (persistentState.libraryAvailableLastLoadTime == null) {
+            logger.warn("[ComposeVersionCache] persistentState.libraryAvailableLastLoadTime is null, initializing with empty map")
+            persistentState.libraryAvailableLastLoadTime = mutableMapOf()
+        }
+        
+        if (persistentState.hotReloadGithubVersions == null) {
+            logger.warn("[ComposeVersionCache] persistentState.hotReloadGithubVersions is null, initializing with empty map")
+            persistentState.hotReloadGithubVersions = linkedMapOf()
+        }
+        
+        if (persistentState.stableVersions == null) {
+            logger.warn("[ComposeVersionCache] persistentState.stableVersions is null, initializing with empty list")
+            persistentState.stableVersions = emptyList()
+        }
+        
+        if (persistentState.devVersions == null) {
+            logger.warn("[ComposeVersionCache] persistentState.devVersions is null, initializing with empty list")
+            persistentState.devVersions = emptyList()
+        }
+        
         checkPluginUpdate()
         initializeCache()
     }

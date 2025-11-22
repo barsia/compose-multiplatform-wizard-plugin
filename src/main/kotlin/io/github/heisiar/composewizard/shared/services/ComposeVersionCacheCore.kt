@@ -3,17 +3,9 @@ package io.github.heisiar.composewizard.shared.services
 import com.intellij.openapi.diagnostic.Logger
 import io.github.heisiar.composewizard.shared.ComposeVersions
 import io.github.heisiar.composewizard.shared.utils.ComposeVersionComparator
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 class ComposeVersionCacheCore(
     private val state: ComposeVersionCacheState,
@@ -60,8 +52,9 @@ class ComposeVersionCacheCore(
             return null
         }
         
-        if (state.stableVersions.isNotEmpty() && !isStableCacheExpired()) {
-            return state.stableVersions
+        val stableVersions = state.stableVersions ?: emptyList()
+        if (stableVersions.isNotEmpty() && !isStableCacheExpired()) {
+            return stableVersions
         }
         
         if (!isLoadingStable) {
@@ -73,7 +66,7 @@ class ComposeVersionCacheCore(
             return null
         }
         
-        val versions = state.stableVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS_HARDCODED }
+        val versions = stableVersions.ifEmpty { ComposeVersions.STABLE_VERSIONS_HARDCODED }
         val sorted = versions.sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
         return sorted
     }
@@ -97,7 +90,8 @@ class ComposeVersionCacheCore(
     }
     
     private fun isStableCacheExpired(): Boolean {
-        if (state.stableLastLoadTime == 0L || state.stableVersions.isEmpty()) return true
+        val stableVersions = state.stableVersions ?: emptyList()
+        if (state.stableLastLoadTime == 0L || stableVersions.isEmpty()) return true
         return (System.currentTimeMillis() - state.stableLastLoadTime) > CACHE_TTL_MS
     }
     
@@ -108,7 +102,8 @@ class ComposeVersionCacheCore(
     
     suspend fun getStableVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingStable) {
-            return@withContext if (state.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else state.stableVersions
+            val stableVersions = state.stableVersions ?: emptyList()
+            return@withContext if (stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else stableVersions
         }
         
         withTimeoutOrNull(timeoutMs) {
@@ -117,7 +112,8 @@ class ComposeVersionCacheCore(
             }
         }
         
-        if (state.stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else state.stableVersions
+        val stableVersions = state.stableVersions ?: emptyList()
+        if (stableVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else stableVersions
     }
     
     fun getStableVersionsBlocking(timeoutMs: Long = 3000): List<String> {
@@ -128,7 +124,8 @@ class ComposeVersionCacheCore(
     
     suspend fun getDevVersionsSuspend(timeoutMs: Long = 3000): List<String> = withContext(Dispatchers.IO) {
         if (!isLoadingDev) {
-            return@withContext if (state.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else state.devVersions
+            val devVersions = state.devVersions ?: emptyList()
+            return@withContext if (devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else devVersions
         }
         
         withTimeoutOrNull(timeoutMs) {
@@ -137,7 +134,8 @@ class ComposeVersionCacheCore(
             }
         }
         
-        if (state.devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else state.devVersions
+        val devVersions = state.devVersions ?: emptyList()
+        if (devVersions.isEmpty()) ComposeVersions.STABLE_VERSIONS_HARDCODED else devVersions
     }
     
     fun getDevVersionsBlocking(timeoutMs: Long = 3000): List<String> {
@@ -159,12 +157,13 @@ class ComposeVersionCacheCore(
             return true
         }
         
-        if (state.stableVersions.isEmpty()) {
+        val stableVersions = state.stableVersions ?: emptyList()
+        if (stableVersions.isEmpty()) {
             return true
         }
         
         val hardcoded = ComposeVersions.STABLE_VERSIONS_HARDCODED.toSet()
-        val cached = state.stableVersions.toSet()
+        val cached = stableVersions.toSet()
         return cached.all { it in hardcoded }
     }
     
@@ -173,7 +172,8 @@ class ComposeVersionCacheCore(
             return true
         }
         
-        if (state.devVersions.isEmpty()) {
+        val devVersions = state.devVersions ?: emptyList()
+        if (devVersions.isEmpty()) {
             return true
         }
         
@@ -240,7 +240,8 @@ class ComposeVersionCacheCore(
                 throw e
             } catch (e: Exception) {
                 logger.warn("Failed to load stable Compose versions from Maven, using hardcoded fallback: ${e.message}")
-                if (state.stableVersions.isEmpty()) {
+                val stableVersions = state.stableVersions ?: emptyList()
+                if (stableVersions.isEmpty()) {
                     // Fallback: use LIBRARY_BUNDLES as the only source when Maven is unreachable
                     state.stableVersions = ComposeVersions.STABLE_VERSIONS_HARDCODED
                     state.stableLastLoadTime = System.currentTimeMillis()
