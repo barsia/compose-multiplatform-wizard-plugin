@@ -4,7 +4,7 @@ A unified IntelliJ Platform plugin that provides project creation wizard for Com
 
 ## Features
 
-- **Universal Support**: Works in both IntelliJ IDEA and Android Studio
+- **Universal Support**: Works in IntelliJ IDEA and Android Studio
 - **Multi-platform Templates**: Create projects for Desktop, Android, iOS, and Web
 - **Smart Configuration**: Platform-specific integration that adapts to the IDE
 - **Shared Core**: Common template processing logic across both IDEs
@@ -19,7 +19,7 @@ A unified IntelliJ Platform plugin that provides project creation wizard for Com
 This plugin uses a unified codebase with platform-specific integrations:
 
 - `shared/` - Common logic shared across both IDEs:
-  - `ui/` - **Shared Compose UI** - Single wizard UI built with Jetpack Compose that works in both IDEA and AS
+  - `ui/` - **Shared Compose UI** - Single wizard UI built with Jetpack Compose that works in IDEA and AS
     - **Main Wizard** (164 lines):
       - `ComposeWizardStep.kt` - Main wizard step implementation using `ModuleWizardStep`
       - `WizardMainContent.kt` - Main UI layout and composition (orchestration layer)

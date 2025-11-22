@@ -67,27 +67,27 @@ fun WizardFooter(state: WizardState) {
                             detectTapGestures {
                                 try {
                                     if (Desktop.isDesktopSupported()) {
-                                    val issueTitle = URLEncoder.encode("[BUG / FEATURE]", "UTF-8")
-                                    val appInfo = ApplicationInfo.getInstance()
-                                    val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
-                                    val ideVersion = appInfo.fullVersion
-                                    val issueBody = URLEncoder.encode(
-                                        "**Plugin:** Compose Multiplatform Wizard 0.1.0\n" +
-                                        "**IDE:** $ideName $ideVersion\n\n" +
+                                        val appInfo = ApplicationInfo.getInstance()
+                                        val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
+                                        val ideVersion = appInfo.fullVersion
+                                        val issueTitle = URLEncoder.encode("[BUG / FEATURE] ", "UTF-8")
+                                        val issueBody = URLEncoder.encode(
+                                            "**Plugin:** Compose Multiplatform Wizard 0.1.0\n" +
+                                            "**IDE:** $ideName $ideVersion\n\n" +
                                             "**Description:**\n" +
                                             "<!-- Please describe the issue you encountered -->\n\n" +
                                             "**Steps to Reproduce:**\n" +
                                             "1. \n" +
                                             "2. \n" +
                                             "3. \n\n" +
-                                        "**Expected Result:**\n" +
-                                        "<!-- What did you expect to happen? -->\n\n" +
-                                        "**Actual Result:**\n" +
-                                        "<!-- What actually happened? -->\n\n" +
-                                        "**Screenshots / Screencast:**\n" +
-                                        "<!-- If applicable, drag and drop screenshots or screencast here -->\n\n" +
-                                        "**Logs:**\n" +
-                                        "<!-- Attach relevant logs: Open Help → Show Log in Finder / Explorer → Drag and drop the log file or paste error messages here -->",
+                                            "**Expected Result:**\n" +
+                                            "<!-- What did you expect to happen? -->\n\n" +
+                                            "**Actual Result:**\n" +
+                                            "<!-- What actually happened? -->\n\n" +
+                                            "**Screenshots / Screencast:**\n" +
+                                            "<!-- If applicable, drag and drop screenshots or screencast here -->\n\n" +
+                                            "**Logs:**\n" +
+                                            "<!-- Attach relevant logs: Open Help → Show Log in Finder / Explorer → Drag and drop the log file or paste error messages here -->",
                                             "UTF-8"
                                         )
                                         Desktop.getDesktop().browse(
