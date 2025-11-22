@@ -215,12 +215,6 @@ junit = { module = "junit:junit", version.ref = "junit" }"""
         content = replaceOptionalLibraryVersionBlock(content, "WINDOW_VERSION_BLOCK",
                                                      config.includeWindow, config.windowVersion, "androidx-window-core")
         
-        content = replaceOptionalLibraryLibrariesBlock(content, "MATERIAL3_LIBRARIES_BLOCK",
-                                                       config.includeMaterial3, "androidx-material3")
-        content = replaceOptionalLibraryLibrariesBlock(content, "MATERIAL3_ADAPTIVE_LIBRARIES_BLOCK",
-                                                       config.includeMaterial3Adaptive, "androidx-material3-adaptive")
-        content = replaceOptionalLibraryLibrariesBlock(content, "NAVIGATION_LIBRARIES_BLOCK",
-                                                       config.includeNavigation, "androidx-navigation")
         content = replaceOptionalLibraryLibrariesBlock(content, "NAVIGATION3_LIBRARIES_BLOCK",
                                                        config.includeNavigation3, "androidx-navigation3")
         content = replaceOptionalLibraryLibrariesBlock(content, "NAVIGATION_EVENT_LIBRARIES_BLOCK",
@@ -229,18 +223,25 @@ junit = { module = "junit:junit", version.ref = "junit" }"""
                                                        config.includeSavedState, "androidx-savedstate")
         content = replaceOptionalLibraryLibrariesBlock(content, "WINDOW_LIBRARIES_BLOCK",
                                                        config.includeWindow, "androidx-window")
+        content = replaceOptionalLibraryLibrariesBlock(content, "MATERIAL3_LIBRARIES_BLOCK",
+                                                       config.includeMaterial3, "androidx-material3")
+        content = replaceOptionalLibraryLibrariesBlock(content, "MATERIAL3_ADAPTIVE_LIBRARIES_BLOCK",
+                                                       config.includeMaterial3Adaptive, "androidx-material3-adaptive")
+        content = replaceOptionalLibraryLibrariesBlock(content, "NAVIGATION_LIBRARIES_BLOCK",
+                                                       config.includeNavigation, "androidx-navigation")
         
         // Hot Reload blocks
         // Logic:
         // 1. For Compose < 1.10.0-beta01: Optional, user controls via checkbox
-        // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user overrides default version
+        // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user explicitly enabled AND overrides default version
         val shouldIncludeHotReload = when {
             // Compose < 1.10.0-beta01: Optional library
             VersionComparison.isComposeVersionLessThan(config.composeVersion, "1.10.0-beta01") -> 
                 config.includeHotReload && config.hotReloadVersion != null
             
-            // Compose >= 1.10.0-beta01: Bundled, add only if user overrides
+            // Compose >= 1.10.0-beta01: Bundled, add only if user enabled AND overrides
             else -> 
+                config.includeHotReload &&
                 config.hotReloadVersion != null && 
                 config.hotReloadVersion != config.bundledHotReloadVersion
         }
@@ -253,8 +254,6 @@ junit = { module = "junit:junit", version.ref = "junit" }"""
                 .replace("{{HOT_RELOAD_PLUGIN_BLOCK}}", "")
         }
         
-        // Clean up multiple empty lines
-        content = content.replace(Regex("\n{3,}"), "\n\n")
         
         File(targetPath, "gradle/libs.versions.toml").apply {
             parentFile.mkdirs()
@@ -403,7 +402,7 @@ junit = { module = "junit:junit", version.ref = "junit" }"""
     
     private fun replaceOptionalLibraryVersionBlock(content: String, placeholder: String, include: Boolean, version: String?, versionKey: String): String {
         val replacement = if (include && version != null) {
-            "$versionKey = \"$version\""
+            "\n$versionKey = \"$version\""
         } else {
             ""
         }
@@ -412,17 +411,14 @@ junit = { module = "junit:junit", version.ref = "junit" }"""
     
     private fun replaceOptionalLibraryLibrariesBlock(content: String, placeholder: String, include: Boolean, libraryPrefix: String): String {
         val replacement = if (include) {
-            when (libraryPrefix) {
-                "androidx-material3" -> """compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "compose-material3" }"""
-                "androidx-material3-adaptive" -> """compose-material3-adaptive = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive", version.ref = "compose-material3-adaptive" }
-compose-material3-adaptive-layout = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-layout", version.ref = "compose-material3-adaptive" }
-compose-material3-adaptive-navigation = { group = "org.jetbrains.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "compose-material3" }
-compose-material3-adaptive-nav3 = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "compose-material3-adaptive" }"""
-                "androidx-navigation" -> """androidx-navigation = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "androidx-navigation" }"""
-                "androidx-navigation3" -> """compose-navigation3-ui = { group = "org.jetbrains.androidx.navigation3", name = "navigation3-ui", version.ref = "compose-navigation3-ui" }"""
-                "androidx-navigation-event" -> """compose-navigationevent = { group = "org.jetbrains.androidx.navigationevent", name = "navigationevent-compose", version.ref = "compose-navigationevent" }"""
-                "androidx-savedstate" -> """androidx-savedstate = { group = "org.jetbrains.androidx.savedstate", name = "savedstate", version.ref = "androidx-savedstate" }"""
-                "androidx-window" -> """androidx-window-core = { group = "org.jetbrains.androidx.window", name = "window-core", version.ref = "androidx-window-core" }"""
+            "\n" + when (libraryPrefix) {
+                "androidx-material3" -> "compose-material3 = { group = \"org.jetbrains.compose.material3\", name = \"material3\", version.ref = \"compose-material3\" }"
+                "androidx-material3-adaptive" -> "compose-material3-adaptive = { group = \"org.jetbrains.compose.material3.adaptive\", name = \"adaptive\", version.ref = \"compose-material3-adaptive\" }\ncompose-material3-adaptive-layout = { group = \"org.jetbrains.compose.material3.adaptive\", name = \"adaptive-layout\", version.ref = \"compose-material3-adaptive\" }\ncompose-material3-adaptive-navigation = { group = \"org.jetbrains.compose.material3\", name = \"material3-adaptive-navigation-suite\", version.ref = \"compose-material3\" }\ncompose-material3-adaptive-nav3 = { group = \"org.jetbrains.compose.material3.adaptive\", name = \"adaptive-navigation3\", version.ref = \"compose-material3-adaptive\" }"
+                "androidx-navigation" -> "androidx-navigation = { group = \"org.jetbrains.androidx.navigation\", name = \"navigation-compose\", version.ref = \"androidx-navigation\" }"
+                "androidx-navigation3" -> "compose-navigation3-ui = { group = \"org.jetbrains.androidx.navigation3\", name = \"navigation3-ui\", version.ref = \"compose-navigation3-ui\" }"
+                "androidx-navigation-event" -> "compose-navigationevent = { group = \"org.jetbrains.androidx.navigationevent\", name = \"navigationevent-compose\", version.ref = \"compose-navigationevent\" }"
+                "androidx-savedstate" -> "androidx-savedstate = { group = \"org.jetbrains.androidx.savedstate\", name = \"savedstate\", version.ref = \"androidx-savedstate\" }"
+                "androidx-window" -> "androidx-window-core = { group = \"org.jetbrains.androidx.window\", name = \"window-core\", version.ref = \"androidx-window-core\" }"
                 else -> ""
             }
         } else {

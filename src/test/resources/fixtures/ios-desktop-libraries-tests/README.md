@@ -1,6 +1,6 @@
 # IosDesktopLibrariesTests
 
-This is a Kotlin Multiplatform project targeting Desktop (JVM), Web.
+This is a Kotlin Multiplatform project targeting iOS, Desktop (JVM).
 
 * [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
   It contains several subfolders:
@@ -11,13 +11,8 @@ This is a Kotlin Multiplatform project targeting Desktop (JVM), Web.
       Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
       folder is the appropriate location.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
+* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you're sharing your UI with Compose Multiplatform,
   you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
-
-### Build and Run iOS Application
-
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE's toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
 
 ### Build and Run Desktop (JVM) Application
 
@@ -31,6 +26,11 @@ in your IDE's toolbar or run it directly from the terminal:
   ```shell
   .\gradlew.bat :composeApp:run
   ```
+
+### Build and Run iOS Application
+
+To build and run the development version of the iOS app, use the run configuration from the run widget
+in your IDE's toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
 
 ---
 

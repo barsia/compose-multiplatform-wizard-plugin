@@ -159,7 +159,7 @@ object ProjectCreator {
             
             // Hot Reload logic (same as in BuildFileComposer):
             // 1. For Compose < 1.10.0-beta01: Optional, add if user enabled
-            // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user overrides
+            // 2. For Compose >= 1.10.0-beta01: Bundled, add ONLY if user explicitly enabled AND overrides
             val shouldIncludeHotReloadFeature = when {
                 // Compose < 1.10.0-beta01: Optional library
                 io.github.heisiar.composewizard.shared.services.VersionComparison.isComposeVersionLessThan(
@@ -167,8 +167,9 @@ object ProjectCreator {
                 ) -> 
                     builder.includeHotReload && builder.hotReloadVersion != null
                 
-                // Compose >= 1.10.0-beta01: Bundled, add only if user overrides
+                // Compose >= 1.10.0-beta01: Bundled, add only if user enabled AND overrides
                 else -> 
+                    builder.includeHotReload &&
                     builder.hotReloadVersion != null && 
                     builder.hotReloadVersion != builder.bundledHotReloadVersion
             }

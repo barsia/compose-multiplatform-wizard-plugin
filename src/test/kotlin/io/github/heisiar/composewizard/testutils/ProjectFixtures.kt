@@ -308,7 +308,7 @@ object ProjectFixtures {
             includeSavedState = false
             includeWindow = false
             includeHotReload = false
-            enableDevVersions = true
+            enableDevVersions = false
         }
     
     /**
