@@ -16,28 +16,23 @@ java {
 group = "io.github.heisiar"
 version = "0.1.0"
 
-// Platform configuration: Build for IDEA 2025.3+ or AS 2025.2+
+// Platform configuration: Build for IDEA 2025.2.5+ or AS 2025.2+
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.3" else "2025.2.2.4"
+val platformVersion = if (runIntellijIdea) "2025.2.5" else "2025.2.2.4"
 
 repositories {
     mavenCentral()
     google()
     intellijPlatform {
         defaultRepositories()
-        snapshots()  // For IDEA 2025.3 EAP
     }
 }
 
 dependencies {
     intellijPlatform {
-        // Base platform: IDEA 2025.3 or AS 2025.2.2.4
-        if (runIntellijIdea) {
-            local("/Users/Siarhei.Baradulia/Applications/IntelliJ IDEA Ultimate 2025.3 Nightly.app")
-        } else {
-            create(platformType, platformVersion)
-        }
+        // Base platform: IDEA 2025.2.5 or AS 2025.2.2.4
+        create(platformType, platformVersion)
         
         // Gradle support
         bundledPlugin("com.intellij.gradle")
@@ -81,8 +76,8 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            // IDEA 2025.3+ (253) or AS 2025.2+ (252)
-            sinceBuild = if (runIntellijIdea) "253" else "252"
+            // IDEA 2025.2.5+ (252) or AS 2025.2+ (252)
+            sinceBuild = "252.2.5"
             untilBuild = "262.*"
         }
         
@@ -93,7 +88,7 @@ intellijPlatform {
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.3+ and Android Studio 2025.2+</li>
+              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2+</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()

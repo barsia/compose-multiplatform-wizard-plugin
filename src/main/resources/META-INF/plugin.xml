@@ -6,7 +6,7 @@
   <description><![CDATA[
     <p>
       A project wizard for creating <strong>Compose Multiplatform</strong> applications.
-      Works in both <strong>IntelliJ IDEA 2025.3+</strong> and <strong>Android Studio 2025.2+</strong>.
+      Works in both <strong>IntelliJ IDEA 2025.2.5+</strong> and <strong>Android Studio 2025.2+</strong>.
     </p>
     
     <h3>Features:</h3>
