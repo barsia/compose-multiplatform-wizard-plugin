@@ -1,27 +1,33 @@
 <idea-plugin allow-bundled-update="true">
   <id>io.github.heisiar.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
-  <vendor email="your-email@example.com" url="https://github.com/heisiar">heisiar</vendor>
+  <vendor url="https://github.com/heisiar">heiSiar</vendor>
   
   <description><![CDATA[
-    <strong>Universal Compose Multiplatform Project Wizard</strong><br><br>
-    Works seamlessly in both <strong>IntelliJ IDEA</strong> and <strong>Android Studio</strong>!<br><br>
+    <p>
+      A project wizard for creating <strong>Compose Multiplatform</strong> applications.
+      Works in both <strong>IntelliJ IDEA 2025.3+</strong> and <strong>Android Studio 2025.2+</strong>.
+    </p>
     
     <h3>Features:</h3>
     <ul>
-      <li>Create multi-platform projects for Desktop, Android, iOS, and Web</li>
-      <li>Smart platform detection and adaptation</li>
-      <li>Modern project templates with best practices</li>
-      <li>Version selection for Compose Multiplatform</li>
+      <li><strong>Creates ready-to-run projects</strong> with Gradle configuration for selected platforms</li>
+      <li><strong>Automatically resolves library versions</strong> from Maven Central based on Compose version</li>
+      <li><strong>Generates platform-specific code</strong> (Android manifest, iOS Xcode project, Desktop main, Web resources)</li>
+      <li><strong>Sets up optional features</strong> like Git repository, test scaffolding, and Hot Reload</li>
     </ul>
     
-    <h3>Supported Platforms:</h3>
+    <h3>Supported Target Platforms:</h3>
     <ul>
-      <li>Desktop (JVM): Windows, macOS, Linux</li>
-      <li>Android: Native Android apps</li>
-      <li>iOS: Native iOS apps (via Kotlin/Native)</li>
-      <li>Web: Browser-based apps (via Kotlin/Wasm & Kotlin/JS)</li>
+      <li><strong>Desktop (JVM):</strong> Windows, macOS, Linux applications</li>
+      <li><strong>Android:</strong> Native Android apps with Material Design</li>
+      <li><strong>iOS:</strong> Native iOS apps via Kotlin/Native (requires macOS with Xcode)</li>
+      <li><strong>Web:</strong> Browser apps via Kotlin/Wasm or Kotlin/JS</li>
     </ul>
+
+    <p>
+      <em>Note: This is an early release (0.1.0). The plugin is functional but may have rough edges.</em>
+    </p>
   ]]></description>
   
   <!-- Base platform module - available in both IntelliJ IDEA and Android Studio -->
@@ -30,8 +36,8 @@
   <!-- Base dependency - available everywhere -->
   <depends>org.jetbrains.kotlin</depends>
   
-  <!-- OPTIONAL: Compose Desktop UI (only available in IntelliJ IDEA) -->
-  <depends optional="true">com.intellij.modules.compose</depends>
+  <!-- Compose Desktop UI -->
+  <depends>com.intellij.modules.compose</depends>
   
   <!-- OPTIONAL: Android Studio support -->
   <!-- This config file is loaded ONLY when org.jetbrains.android is available -->

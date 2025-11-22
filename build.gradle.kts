@@ -14,7 +14,7 @@ java {
 }
 
 group = "io.github.heisiar"
-version = "1.0.0"
+version = "0.1.0"
 
 // Platform configuration: Build for IDEA 2025.3+ or AS 2025.2+
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
@@ -89,12 +89,12 @@ intellijPlatform {
         name = "Compose Multiplatform Wizard"
         
         changeNotes = """
-            <h3>1.0.0</h3>
+            <h3>0.1.0 - First Public Release</h3>
             <ul>
-              <li>Initial release</li>
-              <li>Requires IntelliJ IDEA 2025.3+ or Android Studio 2025.2+</li>
-              <li>Multi-platform project templates (Desktop, Android, iOS, Web)</li>
-              <li>Advanced Compose-based wizard UI</li>
+              <li>First public release</li>
+              <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
+              <li>Works in IntelliJ IDEA 2025.3+ and Android Studio 2025.2+</li>
+              <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
     }

@@ -1,33 +1,35 @@
 package io.github.heisiar.composewizard.shared.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import org.jetbrains.jewel.foundation.theme.JewelTheme
+import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.Tooltip
 import org.jetbrains.jewel.ui.theme.textFieldStyle
+import java.awt.Cursor
+import java.awt.Desktop
+import java.net.URI
+import java.net.URLEncoder
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WizardFooter(state: WizardState) {
     var clickCount by remember { mutableStateOf(0) }
@@ -49,12 +51,67 @@ fun WizardFooter(state: WizardState) {
             .padding(horizontal = if (PlatformDetector.isAndroidStudio) 16.dp else 0.dp)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.align(Alignment.CenterStart)
         ) {
+            val bugIconInteractionSource = remember { MutableInteractionSource() }
+            val isBugIconHovered by bugIconInteractionSource.collectIsHoveredAsState()
+            
+            Tooltip(tooltip = { Text("Report a ticket") }) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                try {
+                                    if (Desktop.isDesktopSupported()) {
+                                        val issueTitle = URLEncoder.encode("[BUG / FEATURE]", "UTF-8")
+                                        val issueBody = URLEncoder.encode(
+                                            "**Plugin Version:** 0.1.0\n" +
+                                            "**IDE:** ${if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"}\n\n" +
+                                            "**Description:**\n" +
+                                            "<!-- Please describe the issue you encountered -->\n\n" +
+                                            "**Steps to Reproduce:**\n" +
+                                            "1. \n" +
+                                            "2. \n" +
+                                            "3. \n\n" +
+                                        "**Expected Result:**\n" +
+                                        "<!-- What did you expect to happen? -->\n\n" +
+                                        "**Actual Result:**\n" +
+                                        "<!-- What actually happened? -->\n\n" +
+                                        "**Screenshots / Screencast:**\n" +
+                                        "<!-- If applicable, drag and drop screenshots or screencast here -->\n\n" +
+                                        "**Logs:**\n" +
+                                        "<!-- Attach relevant logs: Open Help → Show Log in Finder / Explorer → Drag and drop the log file or paste error messages here -->",
+                                            "UTF-8"
+                                        )
+                                        Desktop.getDesktop().browse(
+                                            URI("https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?title=$issueTitle&body=$issueBody")
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                            }
+                        }
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                        .hoverable(interactionSource = bugIconInteractionSource),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        BugIcon,
+                        contentDescription = "Report a bug",
+                        modifier = Modifier.size(18.dp),
+                        tint = JewelTheme.globalColors.text.normal.copy(
+                            alpha = if (isBugIconHovered) 0.8f else 0.4f
+                        )
+                    )
+                }
+            }
+            
             Text(
-                text = "v1.0.0",
+                text = "v0.1.0",
                 style = JewelTheme.defaultTextStyle,
                 color = JewelTheme.globalColors.text.normal.copy(alpha = 0.4f),
                 modifier = Modifier.pointerInput(Unit) {
