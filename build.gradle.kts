@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.2.21"
     id("org.jetbrains.intellij.platform") version "2.10.4"
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
+    id("org.jetbrains.kotlinx.kover") version "0.8.3"
 }
 
 // Configure Java toolchain for the entire project (required for Jewel)
@@ -127,5 +128,20 @@ tasks {
 
 kotlin {
     jvmToolchain(21)
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*.ComposableSingletons*",
+                    "*\$*",
+                    "*.androidstudio.*",
+                    "*.idea.*"
+                )
+            }
+        }
+    }
 }
 
