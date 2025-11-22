@@ -17,6 +17,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.intellij.openapi.application.ApplicationInfo
 import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import org.jetbrains.jewel.foundation.theme.JewelTheme
@@ -58,7 +59,7 @@ fun WizardFooter(state: WizardState) {
             val bugIconInteractionSource = remember { MutableInteractionSource() }
             val isBugIconHovered by bugIconInteractionSource.collectIsHoveredAsState()
             
-            Tooltip(tooltip = { Text("Report a ticket") }) {
+            Tooltip(tooltip = { Text("Report a bug or feature request") }) {
                 Box(
                     modifier = Modifier
                         .size(24.dp)
@@ -66,10 +67,13 @@ fun WizardFooter(state: WizardState) {
                             detectTapGestures {
                                 try {
                                     if (Desktop.isDesktopSupported()) {
-                                        val issueTitle = URLEncoder.encode("[BUG / FEATURE]", "UTF-8")
-                                        val issueBody = URLEncoder.encode(
-                                            "**Plugin Version:** 0.1.0\n" +
-                                            "**IDE:** ${if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"}\n\n" +
+                                    val issueTitle = URLEncoder.encode("[BUG / FEATURE]", "UTF-8")
+                                    val appInfo = ApplicationInfo.getInstance()
+                                    val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
+                                    val ideVersion = appInfo.fullVersion
+                                    val issueBody = URLEncoder.encode(
+                                        "**Plugin:** Compose Multiplatform Wizard 0.1.0\n" +
+                                        "**IDE:** $ideName $ideVersion\n\n" +
                                             "**Description:**\n" +
                                             "<!-- Please describe the issue you encountered -->\n\n" +
                                             "**Steps to Reproduce:**\n" +

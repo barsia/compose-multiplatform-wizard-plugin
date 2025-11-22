@@ -28,6 +28,10 @@
     <p>
       <em>Note: This is an early release (0.1.0). The plugin is functional but may have rough edges.</em>
     </p>
+    
+    <p>
+      <strong>Bug reports and feature requests:</strong> <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new">Submit on GitHub</a>
+    </p>
   ]]></description>
   
   <!-- Base platform module - available in both IntelliJ IDEA and Android Studio -->
