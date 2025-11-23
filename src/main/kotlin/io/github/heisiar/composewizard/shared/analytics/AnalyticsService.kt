@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
-import java.net.URL
 import java.util.*
 
 /**
@@ -135,7 +134,7 @@ class AnalyticsService {
         
         // Build URL with query parameters
         val urlString = "$GA4_ENDPOINT?measurement_id=$GA4_MEASUREMENT_ID&api_secret=$GA4_API_SECRET"
-        val connection = URL(urlString).openConnection() as HttpURLConnection
+        val connection = java.net.URI(urlString).toURL().openConnection() as HttpURLConnection
         
         try {
             connection.requestMethod = "POST"
