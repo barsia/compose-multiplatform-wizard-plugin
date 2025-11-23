@@ -3,7 +3,6 @@ package io.github.heisiar.composewizard.shared.analytics
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
@@ -51,28 +50,25 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
     @OptIn(ExperimentalJewelApi::class)
     override fun createCenterPanel(): JComponent {
         return ComposePanel().apply {
-            preferredSize = Dimension(620, 300) // Increased height for proper spacing
+            preferredSize = Dimension(620, 360) // Increased height for two-column layout
             setContent {
                 org.jetbrains.jewel.bridge.theme.SwingBridgeTheme {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 4.dp)
                             .focusable(false)
                             .semantics(mergeDescendants = false) {
                                 // Dialog content is readable but not focusable
                             }
                     ) {
-                        SelectionContainer(
-                            modifier = Modifier.focusable(false)
+                        // Main text content
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusable(false),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusable(false),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Header with icon and intro
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -85,24 +81,26 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
                                         contentDescription = "Compose Multiplatform Wizard Plugin Logo",
                                         modifier = Modifier
                                             .size(56.dp)
-                                            .focusable(false),
+                                            .focusable(false)
+                                            .align(Alignment.Top),
                                         tint = androidx.compose.ui.graphics.Color.Unspecified
                                     )
                                     
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .focusable(false)
+                                            .focusable(false),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            "Help us improve the Compose Multiplatform Wizard",
+                                            "Help us improve the Compose Multiplatform Wizard plugin",
                                             fontSize = 16.sp,
                                             color = JewelTheme.globalColors.text.normal,
                                             lineHeight = 22.sp
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        
                                         Text(
-                                            "We collect anonymous usage data to understand how the plugin is used and prioritize improvements.",
+                                            "By sharing anonymous usage statistics, you help us understand which features are most valuable and identify areas for improvement.",
                                             fontSize = 13.sp,
                                             color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
                                             lineHeight = 18.sp
@@ -110,109 +108,226 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
                                     }
                                 }
                                 
-                                // Two columns for what we collect/don't collect
+// Two-column layout for data collection info with colored icons
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusable(false),
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    // Left: What we collect
+                                    // Column 1: We Collect
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
                                             .focusable(false),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            "✓ We collect",
-                                            fontSize = 14.sp,
-                                            color = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                            "We Collect",
+                                            fontSize = 13.sp,
+                                            color = JewelTheme.globalColors.text.normal,
+                                            lineHeight = 18.sp
                                         )
-                                        Column(
+                                        Row(
                                             modifier = Modifier.focusable(false),
-                                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text("• Selected platforms", fontSize = 12.sp, lineHeight = 17.sp)
-                                            Text("• Plugin and IDE version", fontSize = 12.sp, lineHeight = 17.sp)
-                                            Text("• Anonymous usage patterns", fontSize = 12.sp, lineHeight = 17.sp)
+                                            Text(
+                                                "✓",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFF59A869) // Green
+                                            )
+                                            Text(
+                                                "Platform selection",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✓",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFF59A869) // Green
+                                            )
+                                            Text(
+                                                "Features used",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✓",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFF59A869) // Green
+                                            )
+                                            Text(
+                                                "Plugin version",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✓",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFF59A869) // Green
+                                            )
+                                            Text(
+                                                "IDE version",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
                                         }
                                     }
                                     
-                                    // Right: What we DON'T collect
+                                    // Column 2: We Do NOT Collect
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
                                             .focusable(false),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            "✗ We do NOT collect",
-                                            fontSize = 14.sp,
-                                            color = androidx.compose.ui.graphics.Color(0xFFFF9800)
+                                            "We Do NOT Collect",
+                                            fontSize = 13.sp,
+                                            color = JewelTheme.globalColors.text.normal,
+                                            lineHeight = 18.sp
                                         )
-                                        Column(
+                                        Row(
                                             modifier = Modifier.focusable(false),
-                                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text("• Personal information", fontSize = 12.sp, lineHeight = 17.sp)
-                                            Text("• Source code or project names", fontSize = 12.sp, lineHeight = 17.sp)
-                                            Text("• IP addresses", fontSize = 12.sp, lineHeight = 17.sp)
+                                            Text(
+                                                "✗",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFE05555) // Red
+                                            )
+                                            Text(
+                                                "Personal information",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✗",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFE05555) // Red
+                                            )
+                                            Text(
+                                                "Source code",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✗",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFE05555) // Red
+                                            )
+                                            Text(
+                                                "Project names",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.focusable(false),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "✗",
+                                                fontSize = 13.sp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFE05555) // Red
+                                            )
+                                            Text(
+                                                "IP addresses",
+                                                fontSize = 13.sp,
+                                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                                lineHeight = 18.sp
+                                            )
                                         }
                                     }
                                 }
+                                                                
+                                Text(
+                                    "All data is anonymized and used solely to improve the plugin experience.",
+                                    fontSize = 13.sp,
+                                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.7f),
+                                    lineHeight = 18.sp
+                                )
+                                
+                                Text(
+                                    "You can always change this behavior in Settings | Tools | Compose Multiplatform Wizard.",
+                                    fontSize = 13.sp,
+                                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
+                                    lineHeight = 18.sp
+                                )
+                                
+                                Text(
+                                    "The plugin operates fully regardless of your consent choice.",
+                                    fontSize = 13.sp,
+                                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
+                                    lineHeight = 18.sp
+                                )
                             }
-                        }
                         
-                        // Push note to bottom
-                        Spacer(modifier = Modifier.weight(1f))
+                        // Push privacy policy to bottom
+                        Spacer(modifier = Modifier
+                            .weight(1f)
+                            .focusable(false)
+                        )
                         
-                        // Important note - selectable
-                        SelectionContainer(
-                            modifier = Modifier.focusable(false)
-                        ) {
-                            Text(
-                                "You can always change this behavior in Settings | Tools | Compose Multiplatform Wizard.",
-                                fontSize = 12.sp,
-                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(4.dp))
-                        
-                        // Settings path and Privacy Policy on same line
+                        // Privacy Policy link
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp)
                                 .focusable(false),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            SelectionContainer(
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .focusable(false)
-                            ) {
-                                Text(
-                                    "Note: The plugin operates fully regardless of your consent choice.",
-                                    fontSize = 12.sp,
-                                    color = JewelTheme.globalColors.text.normal.copy(alpha = 0.6f)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
                             Text(
                                 "Privacy Policy",
                                 fontSize = 12.sp,
                                 color = androidx.compose.ui.graphics.Color(0xFF589DF6), // IntelliJ link blue
                                 modifier = Modifier
                                     .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                                    .pointerInput(Unit) {
+                                    .                                    pointerInput(Unit) {
                                         detectTapGestures {
-                                            BrowserUtil.browse("https://github.com/heisiar/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md")
+                                            BrowserUtil.browse("https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/PRIVACY.md")
                                         }
                                     }
                                     .semantics {
@@ -223,22 +338,24 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
                         
                         // Jewel buttons - the only focusable elements
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusable(false),
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(
-                                onClick = { 
+                                onClick = {
                                     handleDecline()
                                 }
                             ) {
                                 Text("Don't Send")
                             }
                             
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(8.dp).focusable(false))
                             
                             DefaultButton(
-                                onClick = { 
+                                onClick = {
                                     handleAgree()
                                 }
                             ) {

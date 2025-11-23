@@ -48,7 +48,7 @@ class WizardSettingsConfigurable : Configurable {
             border = JBUI.Borders.emptyLeft(32)
             add(JBLabel("<html><small>No personal data is collected. </small></html>"))
             add(HyperlinkLabel("Privacy Policy").apply {
-                setHyperlinkTarget("https://github.com/heisiar/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md")
+                setHyperlinkTarget("https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/PRIVACY.md")
                 font = JBUI.Fonts.smallFont()
             })
         }

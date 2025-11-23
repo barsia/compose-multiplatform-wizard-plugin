@@ -1,15 +1,9 @@
 package io.github.heisiar.composewizard.idea
 
 import com.intellij.ide.util.projectWizard.WizardContext
-import com.intellij.ide.wizard.AbstractNewProjectWizardStep
-import com.intellij.ide.wizard.GeneratorNewProjectWizard
+import com.intellij.ide.wizard.*
 import com.intellij.ide.wizard.GitNewProjectWizardData.Companion.gitData
-import com.intellij.ide.wizard.GitNewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
-import com.intellij.ide.wizard.NewProjectWizardStep
-import com.intellij.ide.wizard.RootNewProjectWizardStep
-import com.intellij.ide.wizard.newProjectWizardBaseStepWithoutGap
-import com.intellij.ide.wizard.setupProjectFromBuilder
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
@@ -22,10 +16,6 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
     override val icon: Icon = IconLoader.getIcon("/META-INF/compose.svg", ComposeMultiplatformGeneratorNewProjectWizard::class.java)
 
     override fun createStep(context: WizardContext): NewProjectWizardStep {
-        System.err.println("!!!!! ComposeMultiplatformGeneratorNewProjectWizard: createStep() START !!!!!")
-        System.err.println("!!!!! NEW APPROACH - Using RootNewProjectWizardStep like EmptyProject !!!!!")
-        System.err.println("!!!!! context.projectBuilder: ${context.projectBuilder} !!!!!")
-        
         // Use RootNewProjectWizardStep like EmptyProject does
         // Must include newProjectWizardBaseStepWithoutGap for project name/location
         // Include GitNewProjectWizardStep for proper Git initialization
@@ -92,37 +82,22 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
         }
 
         override fun setupProject(project: Project) {
-            System.err.println("!!!!! ComposeMultiplatformWizardStep: setupProject() START !!!!!")
-            System.err.println("!!!!!   project.name: ${project.name}")
-            System.err.println("!!!!!   project.basePath: ${project.basePath}")
-            System.err.println("!!!!!   context.projectName: ${context.projectName}")
-            
-            // CRITICAL: Override projectName from context (base wizard step)
-            // In IntelliJ IDEA, the base wizard step sets context.projectName
-            // and we must use it BEFORE calling updateDataModel()
+            // Override projectName from context (base wizard step)
             val projectName = context.projectName ?: project.name
             composeStep.setProjectName(projectName)
-            System.err.println("!!!!! Set project name from context: $projectName !!!!!")
             
-            // Update builder with UI values (now with correct project name)
+            // Update builder with UI values
             composeStep.updateDataModel()
             
-            // CRITICAL: Override initGit from GitNewProjectWizardStep
-            // In IntelliJ IDEA, Git checkbox is in GitNewProjectWizardStep, not in our UI
+            // Override initGit from GitNewProjectWizardStep
             val gitEnabled = gitData?.git ?: false
             builder.initGit = gitEnabled
-            System.err.println("!!!!! Git enabled from GitNewProjectWizardStep: $gitEnabled !!!!!")
             
-            // CRITICAL: Set contentEntryPath BEFORE calling setupProjectFromBuilder
-            // This ensures the builder uses the correct project path from the wizard
+            // Set contentEntryPath before calling setupProjectFromBuilder
             val projectPath = project.basePath ?: throw IllegalStateException("Project path is null")
             builder.contentEntryPath = projectPath
-            System.err.println("!!!!! Set builder.contentEntryPath to: $projectPath !!!!!")
             
-            // Use setupProjectFromBuilder like EmptyProject does
-            System.err.println("!!!!! Calling setupProjectFromBuilder !!!!!")
             setupProjectFromBuilder(project, builder)
-            System.err.println("!!!!! setupProjectFromBuilder completed !!!!!")
         }
     }
 }

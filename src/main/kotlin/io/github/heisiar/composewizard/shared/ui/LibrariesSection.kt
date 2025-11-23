@@ -10,33 +10,15 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,16 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.intellij.openapi.application.ApplicationManager
 import io.github.heisiar.composewizard.shared.LibraryType
-import io.github.heisiar.composewizard.shared.services.ComposeVersionCache
-import io.github.heisiar.composewizard.shared.services.HotReloadVersionService
-import io.github.heisiar.composewizard.shared.services.LifecycleVersionService
-import io.github.heisiar.composewizard.shared.services.Material3AdaptiveVersionService
-import io.github.heisiar.composewizard.shared.services.Material3VersionService
-import io.github.heisiar.composewizard.shared.services.Navigation3VersionService
-import io.github.heisiar.composewizard.shared.services.NavigationEventVersionService
-import io.github.heisiar.composewizard.shared.services.NavigationVersionService
-import io.github.heisiar.composewizard.shared.services.SavedStateVersionService
-import io.github.heisiar.composewizard.shared.services.WindowVersionService
+import io.github.heisiar.composewizard.shared.services.*
 import io.github.heisiar.composewizard.shared.settings.WizardSettings
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
@@ -257,10 +230,6 @@ private fun LibrariesSectionContent(
     val librariesLoaded = librariesState.libraryVersions.isNotEmpty() && !librariesState.isLoadingVersions
     val showError = state.composeVersion.isEmpty() && state.enableDevVersions && devVersions?.isEmpty() == true
     val showSkeletons = (state.composeVersion.isEmpty() && !showError) || (!state.composeVersion.isEmpty() && !librariesLoaded)
-    
-    androidx.compose.runtime.SideEffect {
-        println("[LibrariesSection] UI State: composeVersion=${state.composeVersion}, libraryVersions.size=${librariesState.libraryVersions.size}, isLoadingVersions=${librariesState.isLoadingVersions}, librariesLoaded=$librariesLoaded, showSkeletons=$showSkeletons")
-    }
     
     when {
         showError -> {

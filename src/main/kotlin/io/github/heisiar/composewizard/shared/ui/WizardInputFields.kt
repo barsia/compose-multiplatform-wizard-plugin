@@ -6,14 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,14 +18,7 @@ import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -299,14 +285,14 @@ fun ProjectLocationField(
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val folderIcon = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
-                    FolderOutlineIcon
+                val folderIconKey = if (io.github.heisiar.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                    WizardIconKeys.FolderOutline
                 } else {
-                    FolderIcon
+                    WizardIconKeys.Folder
                 }
                 
                 Icon(
-                    imageVector = folderIcon,
+                    key = folderIconKey,
                     contentDescription = "Browse folder",
                     tint = JewelTheme.globalColors.text.normal.copy(
                         alpha = if (isHovered) 0.85f else 0.75f

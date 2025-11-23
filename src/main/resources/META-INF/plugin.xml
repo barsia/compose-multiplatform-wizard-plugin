@@ -28,12 +28,12 @@
     <p>
       <strong>Privacy:</strong> This plugin collects anonymous usage statistics with your explicit consent to help improve the user experience.
       No personal data is collected. You can opt-out anytime in Settings.
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md">Privacy Policy</a>
+      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/PRIVACY.md">Privacy Policy</a>
     </p>
     
     <p>
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?title=%5BBUG%5D%20&amp;body=%2A%2APlugin%3A%2A%2A%20Compose%20Multiplatform%20Wizard%200.1.0%0A%2A%2AIDE%3A%2A%2A%20%3C%21--%20Android%20Studio%20%2F%20IntelliJ%20IDEA%20%2B%20version%20--%3E%0A%0A%2A%2ADescription%3A%2A%2A%0A%3C%21--%20Please%20describe%20the%20issue%20you%20encountered%20--%3E%0A%0A%2A%2ASteps%20to%20Reproduce%3A%2A%2A%0A1.%20%0A2.%20%0A3.%20%0A%0A%2A%2AExpected%20Result%3A%2A%2A%0A%3C%21--%20What%20did%20you%20expect%20to%20happen%3F%20--%3E%0A%0A%2A%2AActual%20Result%3A%2A%2A%0A%3C%21--%20What%20actually%20happened%3F%20--%3E%0A%0A%2A%2AScreenshots%20%2F%20Screencast%3A%2A%2A%0A%3C%21--%20If%20applicable%2C%20drag%20and%20drop%20screenshots%20or%20screencast%20here%20--%3E%0A%0A%2A%2ALogs%3A%2A%2A%0A%3C%21--%20Attach%20relevant%20logs%3A%20Open%20Help%20%E2%86%92%20Show%20Log%20in%20Finder%20%2F%20Explorer%20%E2%86%92%20Drag%20and%20drop%20the%20log%20file%20or%20paste%20error%20messages%20here%20--%3E">Report a bug</a> | 
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?title=%5BFEATURE%5D%20&amp;body=%2A%2AFeature%20Description%3A%2A%2A%0A%3C%21--%20Describe%20the%20feature%20you%27d%20like%20to%20see%20--%3E%0A%0A%2A%2AUse%20Case%3A%2A%2A%0A%3C%21--%20Why%20would%20this%20feature%20be%20useful%3F%20What%20problem%20does%20it%20solve%3F%20--%3E%0A%0A%2A%2AProposed%20Solution%3A%2A%2A%0A%3C%21--%20If%20you%20have%20ideas%20on%20how%20this%20could%20be%20implemented%2C%20share%20them%20here%20--%3E">Request a feature</a>
+      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=bug_report.yml">Report a bug</a> | 
+      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=feature_request.yml">Request a feature</a>
     </p>
   ]]></description>
   

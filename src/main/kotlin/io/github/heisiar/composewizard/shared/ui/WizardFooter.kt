@@ -59,7 +59,7 @@ fun WizardFooter(state: WizardState) {
             val bugIconInteractionSource = remember { MutableInteractionSource() }
             val isBugIconHovered by bugIconInteractionSource.collectIsHoveredAsState()
             
-            Tooltip(tooltip = { Text("Report a bug or feature request") }) {
+            Tooltip(tooltip = { Text("Report a bug") }) {
                 Box(
                     modifier = Modifier
                         .size(24.dp)
@@ -70,28 +70,9 @@ fun WizardFooter(state: WizardState) {
                                         val appInfo = ApplicationInfo.getInstance()
                                         val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
                                         val ideVersion = appInfo.fullVersion
-                                        val issueTitle = URLEncoder.encode("[BUG / FEATURE] ", "UTF-8")
-                                        val issueBody = URLEncoder.encode(
-                                            "**Plugin:** Compose Multiplatform Wizard 0.1.0\n" +
-                                            "**IDE:** $ideName $ideVersion\n\n" +
-                                            "**Description:**\n" +
-                                            "<!-- Please describe the issue you encountered -->\n\n" +
-                                            "**Steps to Reproduce:**\n" +
-                                            "1. \n" +
-                                            "2. \n" +
-                                            "3. \n\n" +
-                                            "**Expected Result:**\n" +
-                                            "<!-- What did you expect to happen? -->\n\n" +
-                                            "**Actual Result:**\n" +
-                                            "<!-- What actually happened? -->\n\n" +
-                                            "**Screenshots / Screencast:**\n" +
-                                            "<!-- If applicable, drag and drop screenshots or screencast here -->\n\n" +
-                                            "**Logs:**\n" +
-                                            "<!-- Attach relevant logs: Open Help → Show Log in Finder / Explorer → Drag and drop the log file or paste error messages here -->",
-                                            "UTF-8"
-                                        )
+                                        val environment = URLEncoder.encode("Compose Multiplatform Wizard 0.1.0 | $ideName $ideVersion", "UTF-8")
                                         Desktop.getDesktop().browse(
-                                            URI("https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?title=$issueTitle&body=$issueBody")
+                                            URI("https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=bug_report.yml&environment=$environment")
                                         )
                                     }
                                 } catch (e: Exception) {
@@ -104,11 +85,46 @@ fun WizardFooter(state: WizardState) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        BugIcon,
+                        key = WizardIconKeys.Bug,
                         contentDescription = "Report a bug",
                         modifier = Modifier.size(18.dp),
                         tint = JewelTheme.globalColors.text.normal.copy(
                             alpha = if (isBugIconHovered) 0.8f else 0.4f
+                        )
+                    )
+                }
+            }
+            
+            val featureIconInteractionSource = remember { MutableInteractionSource() }
+            val isFeatureIconHovered by featureIconInteractionSource.collectIsHoveredAsState()
+            
+            Tooltip(tooltip = { Text("Request a feature") }) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                try {
+                                    if (Desktop.isDesktopSupported()) {
+                                        Desktop.getDesktop().browse(
+                                            URI("https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=feature_request.yml")
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                            }
+                        }
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                        .hoverable(interactionSource = featureIconInteractionSource),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        key = WizardIconKeys.Feature,
+                        contentDescription = "Request a feature",
+                        modifier = Modifier.size(18.dp),
+                        tint = JewelTheme.globalColors.text.normal.copy(
+                            alpha = if (isFeatureIconHovered) 0.8f else 0.4f
                         )
                     )
                 }

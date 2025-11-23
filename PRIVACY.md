@@ -67,7 +67,7 @@ We may update this Privacy Policy from time to time. Any changes will be posted 
 
 ## Contact
 
-If you have questions about this Privacy Policy, please open an issue on GitHub: https://github.com/heisiar/compose-multiplatform-wizard-plugin/issues
+If you have questions about this Privacy Policy, please open an issue on GitHub: https://github.com/heisiar/compose-multiplatform-wizard-project/issues
 
 ## Compliance
 

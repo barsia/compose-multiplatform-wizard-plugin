@@ -1,50 +1,22 @@
 name: Feature Request
 description: Suggest a new feature or enhancement for the Compose Multiplatform Wizard plugin
-title: "[FEATURE] "
 labels: ["enhancement"]
-assignees: []
+assignees: ["heisiar"]
 
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for suggesting a new feature!
-
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: Please describe the feature you'd like to see
-      placeholder: Describe the feature...
+      description: Please describe the feature
+      value: |
+        **Feature Description:**
+        <!-- Describe the feature you'd like to see -->
+
+        **Use Case:**
+        <!-- Why would this feature be useful? What problem does it solve? -->
+
+        **Proposed Solution:**
+        <!-- If you have ideas on how this could be implemented, share them here -->
     validations:
       required: true
-
-  - type: textarea
-    id: use-case
-    attributes:
-      label: Use Case
-      description: Describe why this feature would be useful and when you would use it
-      placeholder: |
-        I need this feature when...
-        It would help me to...
-    validations:
-      required: false
-
-  - type: textarea
-    id: proposed-solution
-    attributes:
-      label: Proposed Solution
-      description: How do you imagine this feature should work?
-      placeholder: Describe how it should work...
-    validations:
-      required: false
-
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots / Mockups
-      description: If applicable, add mockups, sketches, or examples
-      placeholder: Paste screenshots or mockups here...
-    validations:
-      required: false
-

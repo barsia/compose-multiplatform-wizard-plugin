@@ -16,4 +16,8 @@ object WizardIconKeys {
     val Lock: PathIconKey = PathIconKey("icons/lock.svg", WizardIconKeys::class.java)
     val ExternalLink: PathIconKey = PathIconKey("icons/external-link.svg", WizardIconKeys::class.java)
     val ComposeWatermark: PathIconKey = PathIconKey("META-INF/compose.svg", WizardIconKeys::class.java)
+    val Bug: PathIconKey = PathIconKey("icons/bug.svg", WizardIconKeys::class.java)
+    val Feature: PathIconKey = PathIconKey("icons/feature.svg", WizardIconKeys::class.java)
+    val Folder: PathIconKey = PathIconKey("icons/folder.svg", WizardIconKeys::class.java)
+    val FolderOutline: PathIconKey = PathIconKey("icons/folder-outline.svg", WizardIconKeys::class.java)
 }
