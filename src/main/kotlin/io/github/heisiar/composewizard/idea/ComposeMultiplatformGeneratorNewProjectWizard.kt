@@ -93,11 +93,12 @@ class ComposeMultiplatformGeneratorNewProjectWizard : GeneratorNewProjectWizard 
             val gitEnabled = gitData?.git ?: false
             builder.initGit = gitEnabled
             
-            // Set contentEntryPath before calling setupProjectFromBuilder
+            // Set contentEntryPath
             val projectPath = project.basePath ?: throw IllegalStateException("Project path is null")
             builder.contentEntryPath = projectPath
             
-            setupProjectFromBuilder(project, builder)
+            // Call builder.commit() directly instead of internal setupProjectFromBuilder
+            builder.commit(project, null, null)
         }
     }
 }

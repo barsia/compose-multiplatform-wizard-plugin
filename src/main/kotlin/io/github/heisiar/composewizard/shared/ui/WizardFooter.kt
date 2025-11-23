@@ -66,6 +66,7 @@ fun WizardFooter(state: WizardState) {
                         .pointerInput(Unit) {
                             detectTapGestures {
                                 try {
+                                    AnalyticsLogger.logBugReportIconClicked()
                                     if (Desktop.isDesktopSupported()) {
                                         val appInfo = ApplicationInfo.getInstance()
                                         val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
@@ -105,6 +106,7 @@ fun WizardFooter(state: WizardState) {
                         .pointerInput(Unit) {
                             detectTapGestures {
                                 try {
+                                    AnalyticsLogger.logFeatureRequestIconClicked()
                                     if (Desktop.isDesktopSupported()) {
                                         Desktop.getDesktop().browse(
                                             URI("https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=feature_request.yml")
@@ -160,6 +162,7 @@ fun WizardFooter(state: WizardState) {
                                     
                                     if (newSwitcherVisibility && !wasSwitcherVisible) {
                                         AnalyticsLogger.logDevVersionsUnlocked()
+                                        AnalyticsLogger.logTripleClickVersionDiscovery()
                                     }
                                     state.devCheckboxVisible = newSwitcherVisibility
                                     io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxVisibleByUser = newSwitcherVisibility

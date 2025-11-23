@@ -213,6 +213,8 @@ class AnalyticsService {
         const val CATEGORY_VERSION = "version"
         const val CATEGORY_VALIDATION = "validation"
         const val CATEGORY_FIELD = "field"
+        const val CATEGORY_LIBRARY = "library"  // NEW: Library selection and versioning
+        const val CATEGORY_UI = "ui"  // NEW: UI interactions (icons, links, etc.)
         
         // Wizard actions
         const val ACTION_WIZARD_OPENED = "opened"
@@ -226,6 +228,7 @@ class AnalyticsService {
         const val ACTION_GIT_TOGGLED = "git_toggled"
         const val ACTION_DEV_VERSIONS_UNLOCKED = "dev_versions_unlocked"
         const val ACTION_DEV_VERSIONS_TOGGLED = "dev_versions_toggled"
+        const val ACTION_REPOSITORY_TOGGLED = "repository_toggled"  // NEW: JetBrains Maven vs Maven Central
         
         // Version actions
         const val ACTION_VERSION_DROPDOWN_OPENED = "dropdown_opened"
@@ -237,6 +240,17 @@ class AnalyticsService {
         
         // Field actions
         const val ACTION_FIELD_EDITED = "edited"
+        
+        // NEW: Library actions
+        const val ACTION_LIBRARY_TOGGLED = "toggled"  // Library checkbox on/off
+        const val ACTION_LIBRARY_VERSION_SELECTED = "version_selected"  // Library version changed
+        
+        // NEW: UI interaction actions
+        const val ACTION_BUG_ICON_CLICKED = "bug_icon_clicked"  // Bug icon in footer
+        const val ACTION_FEATURE_ICON_CLICKED = "feature_icon_clicked"  // Feature icon in footer
+        const val ACTION_BUG_LINK_CLICKED = "bug_link_clicked"  // Bug link in Settings -> Plugins
+        const val ACTION_FEATURE_LINK_CLICKED = "feature_link_clicked"  // Feature link in Settings -> Plugins
+        const val ACTION_TRIPLE_CLICK_VERSION = "triple_click_version"  // Dev/Release toggle discovery
     }
 }
 

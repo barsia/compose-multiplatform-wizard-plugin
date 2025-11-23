@@ -1,11 +1,11 @@
 package io.github.heisiar.composewizard.idea
 
 import com.intellij.ide.trustedProjects.TrustedProjects
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.externalSystem.importing.ImportSpecBuilder
 import com.intellij.openapi.externalSystem.service.project.manage.ExternalProjectsManagerImpl
 import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.startup.StartupManager
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.wizard.AbstractWizardIntegration
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
@@ -54,11 +54,14 @@ class IdeaWizardIntegration(
         
         ExternalProjectsManagerImpl.setupCreatedProject(project)
         
-        StartupManager.getInstance(project).runAfterOpened {
-            ExternalSystemUtil.refreshProjects(
-                ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
-            )
-        }
+        // Refresh Gradle project asynchronously using invokeLater
+        ApplicationManager.getApplication().invokeLater({
+            if (!project.isDisposed) {
+                ExternalSystemUtil.refreshProjects(
+                    ImportSpecBuilder(project, GradleConstants.SYSTEM_ID)
+                )
+            }
+        }, project.disposed)
     }
 }
 

@@ -107,5 +107,97 @@ object AnalyticsLogger {
             label = "$field:$errorType"
         )
     }
+    
+    // ========== New Analytics Events ==========
+    
+    /**
+     * Log when user toggles between JetBrains Maven and Maven Central repositories
+     * @param useJetBrainsMaven true if JetBrains Maven is enabled (dev versions)
+     */
+    fun logRepositorySourceToggled(useJetBrainsMaven: Boolean) {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_OPTIONS,
+            AnalyticsService.ACTION_REPOSITORY_TOGGLED,
+            label = if (useJetBrainsMaven) "jetbrains_maven" else "maven_central"
+        )
+    }
+    
+    /**
+     * Log when user selects/deselects a library
+     * @param libraryName Name of the library (e.g., "material3", "navigation")
+     * @param version Selected version of the library
+     * @param selected Whether the library was selected or deselected
+     */
+    fun logLibraryToggled(libraryName: String, version: String, selected: Boolean) {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_LIBRARY,
+            AnalyticsService.ACTION_LIBRARY_TOGGLED,
+            label = "$libraryName:$version:${if (selected) "on" else "off"}"
+        )
+    }
+    
+    /**
+     * Log when user changes library version
+     * @param libraryName Name of the library
+     * @param version New version selected
+     */
+    fun logLibraryVersionSelected(libraryName: String, version: String) {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_LIBRARY,
+            AnalyticsService.ACTION_LIBRARY_VERSION_SELECTED,
+            label = "$libraryName:$version"
+        )
+    }
+    
+    /**
+     * Log when user clicks the bug report icon in the footer
+     */
+    fun logBugReportIconClicked() {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_UI,
+            AnalyticsService.ACTION_BUG_ICON_CLICKED
+        )
+    }
+    
+    /**
+     * Log when user clicks the feature request icon in the footer
+     */
+    fun logFeatureRequestIconClicked() {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_UI,
+            AnalyticsService.ACTION_FEATURE_ICON_CLICKED
+        )
+    }
+    
+    /**
+     * Log when user opens bug report from Settings -> Plugins page
+     */
+    fun logBugReportLinkClicked() {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_UI,
+            AnalyticsService.ACTION_BUG_LINK_CLICKED
+        )
+    }
+    
+    /**
+     * Log when user opens feature request from Settings -> Plugins page
+     */
+    fun logFeatureRequestLinkClicked() {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_UI,
+            AnalyticsService.ACTION_FEATURE_LINK_CLICKED
+        )
+    }
+    
+    /**
+     * Log when user discovers dev/release toggle via triple-click on version
+     * This is a hidden feature that users need to discover
+     */
+    fun logTripleClickVersionDiscovery() {
+        analytics.logEvent(
+            AnalyticsService.CATEGORY_UI,
+            AnalyticsService.ACTION_TRIPLE_CLICK_VERSION
+        )
+    }
 }
 

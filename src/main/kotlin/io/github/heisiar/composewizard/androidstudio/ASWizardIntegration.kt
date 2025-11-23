@@ -1,7 +1,7 @@
 package io.github.heisiar.composewizard.androidstudio
 
-import com.intellij.openapi.GitRepositoryInitializer
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
@@ -96,9 +96,28 @@ class ASWizardIntegration : AbstractWizardIntegration() {
             // VFS refresh to ensure all files are visible
             root.refresh(false, true)
             
-            // Initialize Git using platform API (respects .gitignore)
+            // Initialize Git in background thread (NEVER on EDT!)
             if (shouldInitGit) {
-                GitRepositoryInitializer.getInstance()?.initRepository(project, root, true)
+                ApplicationManager.getApplication().executeOnPooledThread {
+                    try {
+                        // Step 1: Initialize Git repository using git command directly
+                        // We DON'T use GitRepositoryInitializer because it adds unwanted
+                        // "Project exclude paths" to .gitignore (like /composeApp/, /gradle/)
+                        // Our .gitignore was already created by ProjectCreator with correct content
+                        initGitDirectly(projectPath)
+                        
+                        // Step 2: Add all files using git command
+                        // This makes files appear as "green" (staged) in the IDE
+                        addFilesToGit(projectPath)
+                        
+                        // Step 3: Refresh VFS to update file statuses in IDE
+                        ApplicationManager.getApplication().invokeLater {
+                            root.refresh(false, true)
+                        }
+                    } catch (e: Exception) {
+                        thisLogger().error("Failed to initialize Git", e)
+                    }
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -108,6 +127,58 @@ class ASWizardIntegration : AbstractWizardIntegration() {
     override fun initializeGit(projectPath: String) {
         // Git initialization is handled in openProject() for AS
         // This is necessary because GitRepositoryInitializer requires an open project
+    }
+    
+    /**
+     * Initialize Git repository using git command directly.
+     * We avoid GitRepositoryInitializer because it pollutes .gitignore with unwanted exclude paths.
+     */
+    private fun initGitDirectly(projectPath: String): Boolean {
+        return try {
+            val projectDir = File(projectPath)
+            val initProcess = Runtime.getRuntime().exec(
+                arrayOf("git", "init"),
+                null,
+                projectDir
+            )
+            val exitCode = initProcess.waitFor()
+            if (exitCode == 0) {
+                thisLogger().info("Git repository initialized successfully")
+                true
+            } else {
+                thisLogger().warn("Git init failed with exit code $exitCode")
+                false
+            }
+        } catch (e: Exception) {
+            thisLogger().error("Failed to initialize Git repository", e)
+            false
+        }
+    }
+    
+    /**
+     * Add all project files to Git staging area.
+     * This makes files appear as "green" (staged) in the IDE.
+     */
+    private fun addFilesToGit(projectPath: String): Boolean {
+        return try {
+            val projectDir = File(projectPath)
+            val addProcess = Runtime.getRuntime().exec(
+                arrayOf("git", "add", "."),
+                null,
+                projectDir
+            )
+            val exitCode = addProcess.waitFor()
+            if (exitCode == 0) {
+                thisLogger().info("All files staged successfully")
+                true
+            } else {
+                thisLogger().warn("Git add failed with exit code $exitCode")
+                false
+            }
+        } catch (e: Exception) {
+            thisLogger().error("Failed to stage files", e)
+            false
+        }
     }
     
     override fun handleCreationError(
