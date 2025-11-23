@@ -100,7 +100,7 @@ intellijPlatform {
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.2.4+ and Android Studio 2025.2.1+</li>
+              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2.1+</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
