@@ -211,4 +211,220 @@ class WizardSettingsTest {
         assertFalse(settings.enableDevVersions)
         assertEquals("2.0.0", settings.lastPluginVersion)
     }
+    
+    // ========== Analytics Settings Tests (GDPR) ==========
+    
+    @Test
+    fun `default analyticsEnabled is false - GDPR opt-in required`() {
+        // GDPR requires opt-in, not opt-out
+        assertFalse(settings.analyticsEnabled)
+    }
+    
+    @Test
+    fun `default analyticsConsentGiven is false`() {
+        assertFalse(settings.analyticsConsentGiven)
+    }
+    
+    @Test
+    fun `default analyticsConsentDialogShown is false`() {
+        assertFalse(settings.analyticsConsentDialogShown)
+    }
+    
+    @Test
+    fun `default analyticsClientId is empty string`() {
+        assertEquals("", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `can enable analytics`() {
+        settings.analyticsEnabled = true
+        assertTrue(settings.analyticsEnabled)
+    }
+    
+    @Test
+    fun `can give analytics consent`() {
+        settings.analyticsConsentGiven = true
+        assertTrue(settings.analyticsConsentGiven)
+    }
+    
+    @Test
+    fun `can mark consent dialog as shown`() {
+        settings.analyticsConsentDialogShown = true
+        assertTrue(settings.analyticsConsentDialogShown)
+    }
+    
+    @Test
+    fun `can set analytics client ID`() {
+        val uuid = "550e8400-e29b-41d4-a716-446655440000"
+        settings.analyticsClientId = uuid
+        assertEquals(uuid, settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `can disable analytics after enabling`() {
+        settings.analyticsEnabled = true
+        assertTrue(settings.analyticsEnabled)
+        
+        settings.analyticsEnabled = false
+        assertFalse(settings.analyticsEnabled)
+    }
+    
+    @Test
+    fun `can withdraw consent after giving it - GDPR right to object`() {
+        // GDPR Article 21 - Right to object
+        settings.analyticsConsentGiven = true
+        assertTrue(settings.analyticsConsentGiven)
+        
+        settings.analyticsConsentGiven = false
+        assertFalse(settings.analyticsConsentGiven)
+    }
+    
+    @Test
+    fun `loadState copies all analytics properties`() {
+        // Given
+        val sourceSettings = WizardSettings().apply {
+            analyticsEnabled = true
+            analyticsConsentGiven = true
+            analyticsConsentDialogShown = true
+            analyticsClientId = "test-uuid-123"
+        }
+        
+        // When
+        settings.loadState(sourceSettings)
+        
+        // Then
+        assertTrue(settings.analyticsEnabled)
+        assertTrue(settings.analyticsConsentGiven)
+        assertTrue(settings.analyticsConsentDialogShown)
+        assertEquals("test-uuid-123", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `analytics settings can be toggled multiple times`() {
+        // Simulate user changing consent multiple times
+        settings.analyticsEnabled = true
+        settings.analyticsConsentGiven = true
+        assertTrue(settings.analyticsEnabled)
+        assertTrue(settings.analyticsConsentGiven)
+        
+        settings.analyticsEnabled = false
+        settings.analyticsConsentGiven = false
+        assertFalse(settings.analyticsEnabled)
+        assertFalse(settings.analyticsConsentGiven)
+        
+        settings.analyticsEnabled = true
+        settings.analyticsConsentGiven = true
+        assertTrue(settings.analyticsEnabled)
+        assertTrue(settings.analyticsConsentGiven)
+    }
+    
+    @Test
+    fun `all four analytics properties can be set independently`() {
+        // Test that all properties are independent
+        settings.analyticsEnabled = true
+        settings.analyticsConsentGiven = false
+        settings.analyticsConsentDialogShown = true
+        settings.analyticsClientId = "uuid"
+        
+        assertTrue(settings.analyticsEnabled)
+        assertFalse(settings.analyticsConsentGiven)
+        assertTrue(settings.analyticsConsentDialogShown)
+        assertEquals("uuid", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `analyticsClientId can be empty string`() {
+        settings.analyticsClientId = "test"
+        settings.analyticsClientId = ""
+        assertEquals("", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `analyticsClientId can store valid UUID format`() {
+        val validUUID = "123e4567-e89b-12d3-a456-426614174000"
+        settings.analyticsClientId = validUUID
+        assertEquals(validUUID, settings.analyticsClientId)
+    }
+    
+    // ========== Analytics Integration Tests ==========
+    
+    @Test
+    fun `typical user consent flow - agree`() {
+        // Simulate user agreeing to analytics
+        assertFalse(settings.analyticsConsentDialogShown)
+        
+        // User sees dialog and agrees
+        settings.analyticsConsentGiven = true
+        settings.analyticsEnabled = true
+        settings.analyticsConsentDialogShown = true
+        settings.analyticsClientId = "generated-uuid"
+        
+        // Verify state
+        assertTrue(settings.analyticsConsentGiven)
+        assertTrue(settings.analyticsEnabled)
+        assertTrue(settings.analyticsConsentDialogShown)
+        assertEquals("generated-uuid", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `typical user consent flow - decline`() {
+        // Simulate user declining analytics
+        assertFalse(settings.analyticsConsentDialogShown)
+        
+        // User sees dialog and declines
+        settings.analyticsConsentGiven = false
+        settings.analyticsEnabled = false
+        settings.analyticsConsentDialogShown = true
+        // clientId remains empty
+        
+        // Verify state
+        assertFalse(settings.analyticsConsentGiven)
+        assertFalse(settings.analyticsEnabled)
+        assertTrue(settings.analyticsConsentDialogShown)
+        assertEquals("", settings.analyticsClientId)
+    }
+    
+    @Test
+    fun `typical user consent flow - change mind later`() {
+        // User initially agrees
+        settings.analyticsConsentGiven = true
+        settings.analyticsEnabled = true
+        settings.analyticsConsentDialogShown = true
+        settings.analyticsClientId = "uuid"
+        
+        // User changes mind in settings
+        settings.analyticsEnabled = false
+        settings.analyticsConsentGiven = false
+        
+        // Verify state - dialog shown flag stays true, clientId preserved
+        assertFalse(settings.analyticsEnabled)
+        assertFalse(settings.analyticsConsentGiven)
+        assertTrue(settings.analyticsConsentDialogShown)
+        assertEquals("uuid", settings.analyticsClientId) // UUID preserved for potential re-enable
+    }
+    
+    @Test
+    fun `loadState preserves complete analytics state across restarts`() {
+        // Simulate app restart with persisted state
+        val persistedState = WizardSettings().apply {
+            analyticsEnabled = true
+            analyticsConsentGiven = true
+            analyticsConsentDialogShown = true
+            analyticsClientId = "persistent-uuid"
+        }
+        
+        // Fresh settings instance (simulating app restart)
+        val freshSettings = WizardSettings()
+        assertFalse(freshSettings.analyticsEnabled)
+        assertFalse(freshSettings.analyticsConsentGiven)
+        
+        // Load persisted state
+        freshSettings.loadState(persistedState)
+        
+        // Verify all analytics state is restored
+        assertTrue(freshSettings.analyticsEnabled)
+        assertTrue(freshSettings.analyticsConsentGiven)
+        assertTrue(freshSettings.analyticsConsentDialogShown)
+        assertEquals("persistent-uuid", freshSettings.analyticsClientId)
+    }
 }
