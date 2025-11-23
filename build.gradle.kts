@@ -77,18 +77,18 @@ intellijPlatform {
     pluginConfiguration {
         ideaVersion {
             // IDEA 2025.2.5+ (252.28238) and AS 2025.2.1+ (252.28238+)
-            sinceBuild = "252.28238"
+            sinceBuild = "252.25557"
             untilBuild = "262.*"
         }
-        
+
         name = "Compose Multiplatform Wizard"
         
         changeNotes = """
-            <h3>0.1.0 - First Public Release</h3>
+            <h3>0.1.0</h3>
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2.1+</li>
+              <li>Works in IntelliJ IDEA 2025.2.4+ and Android Studio 2025.2.1+</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
@@ -116,8 +116,8 @@ tasks {
     buildPlugin {
         archiveBaseName.set("compose-multiplatform-wizard-plugin")
         archiveVersion.set(project.version.toString())
-        // Add suffix based on target platform
-        archiveClassifier.set(if (runIntellijIdea) "ij" else "ai")
+        // Universal distribution for both IDEA and AS
+        archiveClassifier.set("")
     }
 }
 

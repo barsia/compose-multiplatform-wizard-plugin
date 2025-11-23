@@ -2,16 +2,7 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -23,7 +14,7 @@ import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import io.github.heisiar.composewizard.shared.PlatformDetector
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsLogger
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.painter.hints.HiDpi
@@ -123,19 +114,19 @@ fun WizardMainContent(
                 web = state.web,
                 onDesktopToggle = {
                     state.desktop = !state.desktop
-                    ComposeWizardUsageCollector.logPlatformToggled("Desktop", state.desktop)
+                    AnalyticsLogger.logPlatformToggled("Desktop", state.desktop)
                 },
                 onAndroidToggle = {
                     state.android = !state.android
-                    ComposeWizardUsageCollector.logPlatformToggled("Android", state.android)
+                    AnalyticsLogger.logPlatformToggled("Android", state.android)
                 },
                 onIosToggle = {
                     state.ios = !state.ios
-                    ComposeWizardUsageCollector.logPlatformToggled("iOS", state.ios)
+                    AnalyticsLogger.logPlatformToggled("iOS", state.ios)
                 },
                 onWebToggle = {
                     state.web = !state.web
-                    ComposeWizardUsageCollector.logPlatformToggled("Web", state.web)
+                    AnalyticsLogger.logPlatformToggled("Web", state.web)
                 }
             )
 
@@ -166,11 +157,11 @@ fun WizardMainContent(
                 tests = state.tests,
                 onGitToggle = {
                     state.git = !state.git
-                    ComposeWizardUsageCollector.logGitToggled(state.git)
+                    AnalyticsLogger.logGitToggled(state.git)
                 },
                 onTestsToggle = {
                     state.tests = !state.tests
-                    ComposeWizardUsageCollector.logTestsToggled(state.tests)
+                    AnalyticsLogger.logTestsToggled(state.tests)
                 }
             )
             }

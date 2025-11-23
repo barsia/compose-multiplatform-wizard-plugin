@@ -5,8 +5,8 @@ import com.intellij.ide.util.projectWizard.ModuleWizardStep
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import io.github.heisiar.composewizard.shared.WizardDefaults
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsLogger
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import java.awt.Dimension
 import java.io.File
 import javax.swing.JComponent
@@ -191,7 +191,7 @@ class ComposeWizardStep(
 
         val timeSpent = System.currentTimeMillis() - wizardStartTime
         val platformsCount = listOf(targetDesktop, targetAndroid, targetIOS, targetWeb).count { it }
-        ComposeWizardUsageCollector.logWizardCompleted(
+        AnalyticsLogger.logWizardCompleted(
             platformsCount = platformsCount,
             includeTests = includeTests,
             includeGit = initGit,

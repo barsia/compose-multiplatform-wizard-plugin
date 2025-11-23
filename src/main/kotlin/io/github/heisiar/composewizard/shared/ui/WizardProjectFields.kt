@@ -2,20 +2,13 @@ package io.github.heisiar.composewizard.shared.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.unit.dp
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsLogger
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Text
 
@@ -123,7 +116,7 @@ fun ComposeVersionFieldWrapper(state: WizardState, modifier: Modifier = Modifier
         onDevVersionsToggle = { 
             state.enableDevVersions = it
             io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersionsSetByUser = true
-            ComposeWizardUsageCollector.logDevVersionsToggled(it)
+            AnalyticsLogger.logDevVersionsToggled(it)
         },
         state = state
     )

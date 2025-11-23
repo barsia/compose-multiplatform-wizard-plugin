@@ -33,28 +33,26 @@ class ASWizardIntegration : AbstractWizardIntegration() {
         ApplicationManager.getApplication().invokeLater {
             try {
                 val projectManager = com.intellij.openapi.project.ex.ProjectManagerEx.getInstanceEx()
-                val openTask = com.intellij.ide.impl.OpenProjectTask {
-                    forceOpenInNewFrame = true
-                    isNewProject = false
-                    useDefaultProjectAsTemplate = false
-                    beforeOpen = { project ->
-                        // Configure project BEFORE opening (like Android Studio does)
-                        val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectPath))
-                        if (root != null) {
-                            // Synchronous VFS refresh
-                            root.refresh(false, true)
-                            
-                            // Configure Gradle and Git on EDT
-                            configureProjectBeforeOpen(project, projectPath, root)
-                        }
-                        true
+                
+                // Open project first, then configure
+                val newProject = projectManager.loadAndOpenProject(projectPath)
+                
+                if (newProject != null) {
+                    // Configure project AFTER opening
+                    val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectPath))
+                    if (root != null) {
+                        // Synchronous VFS refresh
+                        root.refresh(false, true)
+                        
+                        // Configure Gradle and Git
+                        configureProjectAfterOpen(newProject, projectPath, root)
                     }
                 }
                 
-                val newProject = projectManager.openProject(File(projectPath).toPath(), openTask)
+                val finalProject = newProject
                 
-                if (newProject != null) {
-                    openedProject = newProject
+                if (finalProject != null) {
+                    openedProject = finalProject
                 } else {
                     Messages.showErrorDialog(
                         "Failed to open the created project",
@@ -74,10 +72,10 @@ class ASWizardIntegration : AbstractWizardIntegration() {
     }
     
     /**
-     * Configure project in beforeOpen callback (like Android Studio does).
-     * This runs on EDT before project is fully opened.
+     * Configure project after opening.
+     * This runs on EDT after project is opened.
      */
-    private fun configureProjectBeforeOpen(
+    private fun configureProjectAfterOpen(
         project: com.intellij.openapi.project.Project,
         projectPath: String,
         root: com.intellij.openapi.vfs.VirtualFile

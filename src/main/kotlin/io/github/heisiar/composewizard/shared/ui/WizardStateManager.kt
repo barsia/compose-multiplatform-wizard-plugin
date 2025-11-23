@@ -1,15 +1,10 @@
 package io.github.heisiar.composewizard.shared.ui
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import io.github.heisiar.composewizard.shared.WizardDefaults
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsConsentDialog
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsLogger
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
 import java.io.File
 
 class WizardState {
@@ -96,7 +91,7 @@ fun SetupValidation(
                 newError.contains("reserved", ignoreCase = true) -> "reserved_name"
                 else -> "invalid_chars"
             }
-            ComposeWizardUsageCollector.logValidationError("project_name", errorType)
+            AnalyticsLogger.logValidationError("project_name", errorType)
         }
         
         state.projectNameError = newError
@@ -110,7 +105,7 @@ fun SetupValidation(
                 newError.contains("write", ignoreCase = true) -> "no_write_access"
                 else -> "invalid_path"
             }
-            ComposeWizardUsageCollector.logValidationError("project_location", errorType)
+            AnalyticsLogger.logValidationError("project_location", errorType)
         }
         state.projectPathError = newError
     }
@@ -123,7 +118,7 @@ fun SetupValidation(
                 newWarning.contains("not empty", ignoreCase = true) -> "directory_not_empty"
                 else -> "directory_not_empty"
             }
-            ComposeWizardUsageCollector.logValidationError("project_location", errorType)
+            AnalyticsLogger.logValidationError("project_location", errorType)
         }
         
         state.projectLocationWarning = newWarning
@@ -143,14 +138,14 @@ fun SetupValidation(
                 newError.contains("package", ignoreCase = true) -> "invalid_package_format"
                 else -> "invalid_package_format"
             }
-            ComposeWizardUsageCollector.logValidationError("project_id", errorType)
+            AnalyticsLogger.logValidationError("project_id", errorType)
         }
         state.projectIdError = newError
     }
 
     LaunchedEffect(state.hasNoTargets) {
         if (state.hasNoTargets) {
-            ComposeWizardUsageCollector.logValidationError("platforms", "no_platform_selected")
+            AnalyticsLogger.logValidationError("platforms", "no_platform_selected")
         }
     }
 
@@ -201,7 +196,7 @@ fun SetupPathSynchronization(
         }
         
         if (state.projectName != projectNameValue) {
-            ComposeWizardUsageCollector.logFieldEdited("project_name", state.projectName.isNotEmpty())
+            AnalyticsLogger.logFieldEdited("project_name", state.projectName.isNotEmpty())
         }
     }
     
@@ -222,7 +217,7 @@ fun SetupPathSynchronization(
             val expandedPath = WizardDefaults.expandPath(currentText)
             if (expandedPath != state.projectPath) {
                 state.projectPath = expandedPath
-                ComposeWizardUsageCollector.logFieldEdited("project_location", state.projectPath.isNotEmpty())
+                AnalyticsLogger.logFieldEdited("project_location", state.projectPath.isNotEmpty())
             }
         }
     }
@@ -234,12 +229,16 @@ fun SetupAnalytics(
     projectIdValue: String
 ) {
     LaunchedEffect(Unit) {
-        ComposeWizardUsageCollector.logWizardOpened()
+        // Show consent dialog if needed (first launch)
+        AnalyticsConsentDialog.showIfNeeded()
+        
+        // Log wizard opened (only if consent given)
+        AnalyticsLogger.logWizardOpened()
     }
     
     LaunchedEffect(state.projectId) {
         if (state.projectId != projectIdValue) {
-            ComposeWizardUsageCollector.logFieldEdited("project_id", state.projectId.isNotEmpty())
+            AnalyticsLogger.logFieldEdited("project_id", state.projectId.isNotEmpty())
         }
     }
 }

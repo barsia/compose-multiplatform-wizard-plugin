@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.intellij.openapi.application.ApplicationInfo
 import io.github.heisiar.composewizard.shared.PlatformDetector
-import io.github.heisiar.composewizard.shared.statistics.ComposeWizardUsageCollector
+import io.github.heisiar.composewizard.shared.analytics.AnalyticsLogger
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
@@ -143,7 +143,7 @@ fun WizardFooter(state: WizardState) {
                                     }
                                     
                                     if (newSwitcherVisibility && !wasSwitcherVisible) {
-                                        ComposeWizardUsageCollector.logDevVersionsUnlocked()
+                                        AnalyticsLogger.logDevVersionsUnlocked()
                                     }
                                     state.devCheckboxVisible = newSwitcherVisibility
                                     io.github.heisiar.composewizard.shared.settings.WizardSettings.getInstance().devCheckboxVisibleByUser = newSwitcherVisibility
