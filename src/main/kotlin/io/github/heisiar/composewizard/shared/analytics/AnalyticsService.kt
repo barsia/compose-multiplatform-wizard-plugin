@@ -48,12 +48,21 @@ class AnalyticsService {
     // Google Analytics 4 Measurement Protocol endpoint
     private val GA4_ENDPOINT = "https://www.google-analytics.com/mp/collect"
     
-    // GA4 credentials - REPLACE WITH YOUR OWN:
-    // Measurement ID format: G-XXXXXXXXXX (NOT UA-XXXXXXXXX-X)
-    private val GA4_MEASUREMENT_ID = "G-XXXXXXXXXX"
+    // GA4 credentials - loaded from analytics.properties (generated at build time from local.properties)
+    // Add to local.properties (NOT committed to git):
+    //   ga4.measurement.id=G-XXXXXXXXXX
+    //   ga4.api.secret=your_api_secret_here
+    private val GA4_MEASUREMENT_ID: String by lazy {
+        val props = java.util.Properties()
+        javaClass.classLoader.getResourceAsStream("analytics.properties")?.use { props.load(it) }
+        props.getProperty("ga4.measurement.id", "G-XXXXXXXXXX")
+    }
     
-    // API Secret - create at: Admin → Data Streams → Measurement Protocol API secrets
-    private val GA4_API_SECRET = "your_api_secret_here"
+    private val GA4_API_SECRET: String by lazy {
+        val props = java.util.Properties()
+        javaClass.classLoader.getResourceAsStream("analytics.properties")?.use { props.load(it) }
+        props.getProperty("ga4.api.secret", "your_api_secret_here")
+    }
     
     // Anonymous client ID (generated once per installation)
     private val clientId: String by lazy {

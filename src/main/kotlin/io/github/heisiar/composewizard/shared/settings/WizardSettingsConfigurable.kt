@@ -6,7 +6,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import javax.swing.BoxLayout
+import java.awt.FlowLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -29,25 +29,35 @@ class WizardSettingsConfigurable : Configurable {
         analyticsCheckbox = JBCheckBox("Enable anonymous usage statistics").apply {
             isSelected = settings.analyticsEnabled
             toolTipText = "Help improve the plugin by sharing anonymous usage data"
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseEntered(e: java.awt.event.MouseEvent?) {
+                    cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                }
+                override fun mouseExited(e: java.awt.event.MouseEvent?) {
+                    cursor = java.awt.Cursor.getDefaultCursor()
+                }
+            })
         }
         
         // Privacy info with clickable link
-        val privacyPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = JBUI.Borders.emptyLeft(25)
-            
-            add(JBLabel("<html><small>We collect anonymous usage statistics to improve the plugin.<br>No personal data is collected.</small></html>"))
-            
-            val privacyLink = HyperlinkLabel("Privacy Policy").apply {
+        val descriptionLabel = JBLabel("<html><small>We collect anonymous usage statistics to improve the plugin.</small></html>").apply {
+            border = JBUI.Borders.emptyLeft(30)
+        }
+        
+        val linkPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            border = JBUI.Borders.emptyLeft(32)
+            add(JBLabel("<html><small>No personal data is collected. </small></html>"))
+            add(HyperlinkLabel("Privacy Policy").apply {
                 setHyperlinkTarget("https://github.com/heisiar/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md")
-            }
-            add(privacyLink)
+                font = JBUI.Fonts.smallFont()
+            })
         }
         
         mainPanel = FormBuilder.createFormBuilder()
             .addComponent(JBLabel("<html><b>Analytics</b></html>"))
             .addComponent(analyticsCheckbox!!)
-            .addComponent(privacyPanel)
+            .addComponent(descriptionLabel)
+            .addComponent(linkPanel)
             .addComponentFillVertically(JPanel(), 0)
             .panel
         

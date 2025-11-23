@@ -1,3 +1,5 @@
+import java.util.*
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.2.21"
@@ -20,6 +22,16 @@ version = "0.1.0"
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
 val platformVersion = if (runIntellijIdea) "2025.2.5" else "2025.2.2.4"
+
+// Analytics secrets from local.properties (NOT committed to git)
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { stream -> localProperties.load(stream) }
+}
+
+val ga4MeasurementId: String = localProperties.getProperty("ga4.measurement.id") ?: "G-XXXXXXXXXX"
+val ga4ApiSecret: String = localProperties.getProperty("ga4.api.secret") ?: "your_api_secret_here"
 
 repositories {
     mavenCentral()
@@ -96,6 +108,27 @@ intellijPlatform {
 }
 
 tasks {
+    // Generate analytics config at build time from local.properties
+    val generateAnalyticsConfig by registering {
+        val outputDir = layout.buildDirectory.dir("generated/resources")
+        outputs.dir(outputDir)
+        
+        doLast {
+            val configFile = outputDir.get().asFile.resolve("analytics.properties")
+            configFile.parentFile.mkdirs()
+            configFile.writeText("""
+                # Auto-generated from local.properties - DO NOT EDIT
+                ga4.measurement.id=$ga4MeasurementId
+                ga4.api.secret=$ga4ApiSecret
+            """.trimIndent())
+        }
+    }
+    
+    processResources {
+        dependsOn(generateAnalyticsConfig)
+        from(layout.buildDirectory.dir("generated/resources"))
+    }
+    
     test {
         useJUnitPlatform()
         testLogging {

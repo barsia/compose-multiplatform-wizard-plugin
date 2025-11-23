@@ -32,6 +32,9 @@ config/
 
 local.properties
 
+# Analytics secrets (auto-generated from local.properties)
+src/main/resources/analytics.properties
+
 # Test fixtures (moved to src/test/resources/fixtures/)
 ProjectDesktop/
 ProjectWeb/

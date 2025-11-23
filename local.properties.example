@@ -1,0 +1,12 @@
+# Local configuration - DO NOT COMMIT
+# Copy this file to local.properties and fill in your values
+
+# Google Analytics 4 Configuration
+# Get these values from https://analytics.google.com/
+# 1. Create GA4 Property: Admin → Create Property
+# 2. Get Measurement ID: Admin → Data Streams (format: G-XXXXXXXXXX)
+# 3. Get API Secret: Admin → Data Streams → Measurement Protocol API secrets → Create
+
+ga4.measurement.id=G-XXXXXXXXXX
+ga4.api.secret=your_api_secret_here
+
