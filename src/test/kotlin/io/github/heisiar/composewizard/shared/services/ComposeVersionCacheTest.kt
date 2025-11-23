@@ -1,14 +1,28 @@
 package io.github.heisiar.composewizard.shared.services
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ComposeVersionCacheTest {
 
+    private val caches = mutableListOf<ComposeVersionCache>()
+    
+    @AfterEach
+    fun cleanup() {
+        // Dispose all caches to prevent thread leaks
+        caches.forEach { it.dispose() }
+        caches.clear()
+    }
+    
+    private fun createCache(): ComposeVersionCache {
+        return ComposeVersionCache().also { caches.add(it) }
+    }
+
     @Test
     fun `getStableVersions returns null while loading from GitHub`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions = cache.getStableVersions()
         
@@ -19,7 +33,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `getDevVersions returns null while loading from GitHub`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions = cache.getDevVersions()
         
@@ -30,7 +44,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `getStableVersionsBlocking returns versions within timeout`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions = cache.getStableVersionsBlocking(timeoutMs = 3000)
         
@@ -39,7 +53,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `getDevVersionsBlocking returns versions within timeout`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions = cache.getDevVersionsBlocking(timeoutMs = 3000)
         
@@ -48,7 +62,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `isLoadingStableVersions initially returns true`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val isLoading = cache.isLoadingStableVersions()
         
@@ -57,7 +71,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `isLoadingDevVersions initially returns true`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val isLoading = cache.isLoadingDevVersions()
         
@@ -66,7 +80,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `invalidateStableCache marks cache for refresh on next access`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         // First, get versions to populate cache
         val initialVersions = cache.getStableVersionsBlocking(timeoutMs = 5000)
@@ -82,7 +96,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `invalidateDevCache marks cache for refresh on next access`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         // First, get versions to populate cache
         val initialVersions = cache.getDevVersionsBlocking(timeoutMs = 5000)
@@ -98,7 +112,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `forceReloadStable triggers immediate background refresh`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         // First, populate cache
         val initialVersions = cache.getStableVersionsBlocking(timeoutMs = 5000)
@@ -117,7 +131,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `forceReloadDev triggers immediate background refresh`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         // First, populate cache
         val initialVersions = cache.getDevVersionsBlocking(timeoutMs = 5000)
@@ -136,7 +150,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `getStableVersions returns consistent results`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions1 = cache.getStableVersions()
         val versions2 = cache.getStableVersions()
@@ -146,7 +160,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `getDevVersions returns consistent results`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val versions1 = cache.getDevVersions()
         val versions2 = cache.getDevVersions()
@@ -156,7 +170,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `blocking method respects timeout parameter`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         val startTime = System.currentTimeMillis()
         cache.getStableVersionsBlocking(timeoutMs = 100)
@@ -167,7 +181,7 @@ class ComposeVersionCacheTest {
 
     @Test
     fun `loaded stable versions are in valid semver format`() {
-        val cache = ComposeVersionCache()
+        val cache = createCache()
         
         // Load versions from GitHub/Maven/fallback
         val versions = cache.getStableVersionsBlocking(timeoutMs = 5000)
