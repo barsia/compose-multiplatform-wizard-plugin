@@ -76,8 +76,8 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            // IDEA 2025.2.5+ (252) or AS 2025.2+ (252)
-            sinceBuild = "252.2.5"
+            // IDEA 2025.2.5+ (252.28238) and AS 2025.2.1+ (252.28238+)
+            sinceBuild = "252.28238"
             untilBuild = "262.*"
         }
         
@@ -88,7 +88,7 @@ intellijPlatform {
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2+</li>
+              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2.1+</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
