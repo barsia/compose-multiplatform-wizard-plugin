@@ -310,7 +310,7 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
                             .focusable(false)
                         )
                         
-                        // Privacy Policy link
+                        // EULA and Privacy Policy links
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -320,12 +320,35 @@ class AnalyticsConsentDialog : DialogWrapper(null, true) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                "EULA",
+                                fontSize = 12.sp,
+                                color = androidx.compose.ui.graphics.Color(0xFF589DF6), // IntelliJ link blue
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
+                                    .pointerInput(Unit) {
+                                        detectTapGestures {
+                                            BrowserUtil.browse("https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/EULA.md")
+                                        }
+                                    }
+                                    .semantics {
+                                        contentDescription = "Link to End-User License Agreement"
+                                    }
+                            )
+                            
+                            Text(
+                                " · ",
+                                fontSize = 12.sp,
+                                color = JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(horizontal = 2.dp)
+                            )
+                            
+                            Text(
                                 "Privacy Policy",
                                 fontSize = 12.sp,
                                 color = androidx.compose.ui.graphics.Color(0xFF589DF6), // IntelliJ link blue
                                 modifier = Modifier
                                     .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
-                                    .                                    pointerInput(Unit) {
+                                    .pointerInput(Unit) {
                                         detectTapGestures {
                                             BrowserUtil.browse("https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/PRIVACY.md")
                                         }

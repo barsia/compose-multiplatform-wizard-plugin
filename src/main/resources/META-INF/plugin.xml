@@ -6,7 +6,7 @@
   <description><![CDATA[
     <p>
       A project wizard for creating <strong>Compose Multiplatform</strong> applications.
-      Works in <strong>IntelliJ IDEA 2025.2.5+</strong> and <strong>Android Studio 2025.2.1+</strong>.
+      Works in <strong>IntelliJ IDEA 2025.3+</strong> and <strong>Android Studio (build 253+)</strong>.
     </p>
     
     <h3>Features:</h3>
@@ -24,6 +24,10 @@
       <li><strong>iOS:</strong> Native iOS apps via Kotlin/Native (requires macOS with Xcode)</li>
       <li><strong>Web:</strong> Browser apps via Kotlin/Wasm or Kotlin/JS</li>
     </ul>
+    
+    <p>
+      <strong>License:</strong> Proprietary. <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/EULA.md">EULA</a>
+    </p>
     
     <p>
       <strong>Privacy:</strong> This plugin collects anonymous usage statistics with your explicit consent to help improve the user experience.

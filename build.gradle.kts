@@ -18,10 +18,10 @@ java {
 group = "io.github.heisiar"
 version = "0.1.0"
 
-// Platform configuration: Build for IDEA 2025.2.5+ or AS 2025.2+
+// Platform configuration: Build for IDEA 2025.3+ or AS 2025.2.1+
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.2.5" else "2025.2.2.4"
+val platformVersion = if (runIntellijIdea) "2025.3" else "2025.2.1.7"
 
 // Analytics secrets from local.properties (NOT committed to git)
 val localProperties = Properties()
@@ -43,7 +43,7 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Base platform: IDEA 2025.2.5 or AS 2025.2.2.4
+        // Base platform: IDEA 2025.3 or AS 2025.2.1.7
         create(platformType, platformVersion)
         
         // Gradle support
@@ -88,9 +88,9 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            // IDEA 2025.2.5+ (252.28238) and AS 2025.2.1+ (252.28238+)
-            sinceBuild = "252.25557"
-            untilBuild = "262.*"
+            // IDEA 2025.3+ and AS 2025.2.3+ (both require build 253+)
+            sinceBuild = "253"
+            untilBuild = "263.*"
         }
 
         name = "Compose Multiplatform Wizard"
@@ -100,7 +100,7 @@ intellijPlatform {
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.2.5+ and Android Studio 2025.2.1+</li>
+              <li>Works in IntelliJ IDEA 2025.3+ and Android Studio (build 253+)</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
