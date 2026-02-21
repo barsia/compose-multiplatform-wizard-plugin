@@ -1,9 +1,9 @@
-import java.util.*
+import java.util.Properties
 
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.2.21"
-    id("org.jetbrains.intellij.platform") version "2.10.4"
+    id("org.jetbrains.intellij.platform") version "2.11.0"
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
 }
@@ -16,12 +16,16 @@ java {
 }
 
 group = "io.github.heisiar"
-version = "0.1.0"
+version = "0.1.1"
 
-// Platform configuration: Build for IDEA 2025.3+ or AS 2025.2.1+
+// Platform configuration:
+// - default target: Android Studio (downloaded from remote repositories)
+// - IDEA target: pass -PrunIntellijIdea=true
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
-val platformType = if (runIntellijIdea) "IC" else "AI"
-val platformVersion = if (runIntellijIdea) "2025.3" else "2025.2.1.7"
+val intellijIdeaVersion = project.findProperty("intellijIdeaVersion")?.toString() ?: "2025.3.2"
+// Pinned to the latest 253 AS build that is resolvable by intellij-platform-gradle-plugin 2.11.0.
+// Newer Panda patch/rc/canary artifacts use codename-based filenames and are not yet resolvable via androidStudio(...).
+val androidStudioVersion = project.findProperty("androidStudioVersion")?.toString() ?: "2025.3.1.5"
 
 // Analytics secrets from local.properties (NOT committed to git)
 val localProperties = Properties()
@@ -29,6 +33,10 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { stream -> localProperties.load(stream) }
 }
+
+val androidStudioPathFromGradleProperty = project.findProperty("androidStudioLocalPath")?.toString()?.takeIf { it.isNotBlank() }
+val androidStudioPathFromLocalProperties = localProperties.getProperty("androidStudio.local.path")?.takeIf { it.isNotBlank() }
+val androidStudioLocalPath = androidStudioPathFromGradleProperty ?: androidStudioPathFromLocalProperties
 
 val ga4MeasurementId: String = localProperties.getProperty("ga4.measurement.id") ?: "G-XXXXXXXXXX"
 val ga4ApiSecret: String = localProperties.getProperty("ga4.api.secret") ?: "your_api_secret_here"
@@ -43,8 +51,18 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Base platform: IDEA 2025.3 or AS 2025.2.1.7
-        create(platformType, platformVersion)
+        // Base platform:
+        // - IDEA with -PrunIntellijIdea=true
+        // - otherwise Android Studio (downloaded by default)
+        if (runIntellijIdea) {
+            intellijIdea(intellijIdeaVersion)
+        } else if (androidStudioLocalPath != null) {
+            local(androidStudioLocalPath)
+        } else {
+            androidStudio(androidStudioVersion) {
+                useInstaller = false
+            }
+        }
         
         // Gradle support
         bundledPlugin("com.intellij.gradle")
@@ -88,8 +106,8 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            // IDEA 2025.3+ and AS 2025.2.3+ (both require build 253+)
-            sinceBuild = "253"
+            // AS Panda 1 (253.29346) has broken plugin installation; minimum is Panda 2 (253.30387)
+            sinceBuild = "253.30387"
             untilBuild = "263.*"
         }
 
@@ -100,7 +118,7 @@ intellijPlatform {
             <ul>
               <li>First public release</li>
               <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA 2025.3+ and Android Studio (build 253+)</li>
+              <li>Works in IntelliJ IDEA and Android Studio (build 253+)</li>
               <li>Automatic library version resolution from Maven Central</li>
             </ul>
         """.trimIndent()
@@ -172,4 +190,3 @@ kover {
         }
     }
 }
-

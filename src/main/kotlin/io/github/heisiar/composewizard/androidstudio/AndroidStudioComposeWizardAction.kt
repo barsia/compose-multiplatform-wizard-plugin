@@ -1,11 +1,13 @@
 package io.github.heisiar.composewizard.androidstudio
 
-import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.DialogWrapper
+import io.github.heisiar.composewizard.shared.PlatformDetector
 import io.github.heisiar.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import io.github.heisiar.composewizard.shared.ui.ComposeWizardStep
 import java.awt.Dimension
@@ -16,11 +18,17 @@ import javax.swing.JComponent
  * Action for creating Compose Multiplatform projects in Android Studio.
  * Uses the SAME beautiful Compose UI as in IntelliJ IDEA!
  */
-class AndroidStudioComposeWizardAction : AnAction(
+class AndroidStudioComposeWizardAction : DumbAwareAction(
     "Compose Multiplatform Project",
     "Create a new Compose Multiplatform project with advanced Compose UI",
     null
 ) {
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    override fun update(e: AnActionEvent) {
+        e.presentation.isEnabledAndVisible = PlatformDetector.isAndroidStudio
+    }
     
     override fun actionPerformed(e: AnActionEvent) {
         val builder = ComposeMultiplatformModuleBuilder()
@@ -67,7 +75,7 @@ class AndroidStudioComposeWizardAction : AnAction(
  * Beautiful, consistent UI across both IDEs!
  */
 private class ComposeMultiplatformDialog(
-    private val builder: ComposeMultiplatformModuleBuilder
+    builder: ComposeMultiplatformModuleBuilder
 ) : DialogWrapper(null, true) {
     
     private val wizardStep = ComposeWizardStep(builder)
@@ -95,4 +103,3 @@ private class ComposeMultiplatformDialog(
         super.doOKAction()
     }
 }
-

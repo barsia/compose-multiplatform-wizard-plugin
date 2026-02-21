@@ -9,13 +9,12 @@
   </extensions>
   
   <!-- 
-    DISABLED for dynamic plugin loading support!
+    DISABLED to keep wizard entry points action-based.
     
     These extension points are NOT needed because we have Actions (File → New, Welcome Screen)
     that provide the same functionality with better user experience.
     
     Benefits of disabling:
-    - ✅ Plugin is now DYNAMIC in Android Studio (no restart required!)
     - ✅ Actions still work perfectly (File → New, Welcome Screen)
     - ✅ Same beautiful Compose UI
     - ✅ Less code to maintain
@@ -64,4 +63,3 @@
     </action>
   </actions>
 </idea-plugin>
-

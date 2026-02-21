@@ -11,8 +11,10 @@ A unified IntelliJ Platform plugin that provides project creation wizard for Com
 
 ## Compatibility
 
-- IntelliJ IDEA 2024.2+
-- Android Studio 2024.2+
+- Minimum IntelliJ Platform build: 253+
+- Verified targets:
+  - IntelliJ IDEA 2025.3
+  - Android Studio 2025.3.1.5 (downloadable via Gradle)
 
 ## Architecture
 
@@ -48,7 +50,7 @@ This plugin uses a unified codebase with platform-specific integrations:
   - `services/` - Version caching and other services
   - Template processing and validation
 - `idea/` - IntelliJ IDEA-specific wizard integration (New Project Wizard)
-- `androidstudio/` - Android Studio-specific wizard integration (Native AS wizard + actions)
+- `androidstudio/` - Android Studio-specific integration (Welcome Screen action in More Projects)
 
 ### Key Innovation: Shared Compose UI
 
@@ -361,30 +363,41 @@ The wizard displays a **Dev/Stable toggle** (switcher) above the Compose version
 ./gradlew buildPlugin
 ```
 
-### Testing
+To build a **single universal ZIP** (works in both IntelliJ IDEA and Android Studio), run:
 
-**Option 1: Using helper scripts (recommended):**
 ```bash
-# Test in Android Studio (default)
-./run-android-studio.sh
-
-# Test in IntelliJ IDEA  
-./run-idea.sh
+./gradlew buildPlugin
 ```
 
-**Option 2: Using Gradle directly:**
+By default Gradle targets Android Studio and downloads `2025.3.1.5` if needed.
+Optional override (use local Android Studio instead of downloading, recommended for newer AS patch/rc/canary releases):
+
 ```bash
-# Test in Android Studio (default - compiles against AS)
+./gradlew buildPlugin -PandroidStudioLocalPath="$HOME/Applications/Android Studio.app"
+```
+
+Output ZIP:
+
+```text
+build/distributions/compose-multiplatform-wizard-plugin-<version>.zip
+```
+
+### Testing
+
+```bash
+# Test in Android Studio (downloads target IDE if needed)
 ./gradlew runIde
 
 # Test in IntelliJ IDEA
 ./gradlew runIde -PrunIntellijIdea=true
 ```
 
-**Important**: The plugin **compiles against Android Studio** by default to have access to AS wizard API. This allows the wizard to appear in the native "Phone and Tablet" section of AS New Project wizard.
+**Important**:
+- By default Gradle targets Android Studio `2025.3.1.5` (downloaded automatically when local installation is not configured).
+- Use `-PrunIntellijIdea=true` to force IntelliJ IDEA target.
 
 The plugin will automatically:
-- Download the appropriate IDE (AS 2025.2.1.7 or IDEA 2025.2.4)
+- Use local Android Studio (if configured) or download Android Studio
 - Install the plugin
 - Launch the IDE with the plugin enabled
 - Show which platform is running in the console
@@ -394,42 +407,51 @@ The plugin will automatically:
 **During development, you MUST verify compilation for both platforms:**
 
 ```bash
-# 1. Verify Android Studio compilation (includes androidstudio/ code)
+# 1. Verify Android Studio compilation (downloaded automatically if needed)
 ./gradlew compileKotlin
 
-# 2. Verify IntelliJ IDEA compilation (excludes androidstudio/ code)
+# 2. Verify IntelliJ IDEA compilation
 ./gradlew compileKotlin -PrunIntellijIdea=true
 ```
 
-**Why?** The `androidstudio/` package uses Android Studio-specific APIs (`com.android.tools.*`) that are not available in IntelliJ IDEA. The build system conditionally excludes this code when compiling for IDEA. Both compilations must succeed to ensure the plugin works correctly in both IDEs.
+**Why?** The plugin must compile and run in both IDEs. Verifying both targets catches platform-specific regressions before release.
 
 ## Publishing to Marketplace
 
-### Build for Android Studio Target
+### Build Universal ZIP (IDEA + Android Studio)
 
-**Always build the Marketplace distribution using the Android Studio target:**
+Build the Marketplace ZIP with Android Studio target:
 
 ```bash
 ./gradlew buildPlugin
 ```
 
-This creates a plugin JAR that includes the `androidstudio/` code. The resulting plugin will:
+Optional: set path once in `local.properties` to use local AS instead of downloading:
+
+```properties
+androidStudio.local.path=/Users/<your-user>/Applications/Android Studio.app
+```
+
+Then build with:
+
+```bash
+./gradlew buildPlugin
+```
+
+This creates one plugin ZIP that includes the `androidstudio/` code. The resulting plugin will:
 
 ✅ **Work in both IntelliJ IDEA and Android Studio** from a single distribution  
-✅ **Provide full functionality in Android Studio** (native wizard + actions)  
-✅ **Provide IDEA wizard in IntelliJ IDEA** (AS-specific code won't load due to optional dependencies)  
+✅ **Provide Android Studio entry via Welcome Screen → More Projects** (after `SDK Manager`)  
+✅ **Provide IDEA wizard in IntelliJ IDEA**  
 ✅ **Appear as ONE plugin in JetBrains Marketplace**
 
 ### How It Works
 
-The plugin uses **optional dependencies** in `plugin.xml`:
+The plugin uses a single descriptor (`plugin.xml`) for both IDEs:
 
-```xml
-<depends optional="true" config-file="plugin-android.xml">org.jetbrains.android</depends>
-```
-
-- **In Android Studio**: Both `plugin.xml` and `plugin-android.xml` load → full functionality
-- **In IntelliJ IDEA**: Only `plugin.xml` loads → IDEA wizard works, AS code stays dormant
+- **In IntelliJ IDEA**: entry is shown in the New Project wizard (`newProjectWizard.generator`)
+- **In Android Studio**: entry is shown in Welcome Screen → More Projects (`WelcomeScreen.QuickStart`)
+- The Android Studio action is hidden at runtime outside Android Studio
 
 This architecture ensures **one plugin distribution works universally** across both IDEs without runtime errors.
 
@@ -438,4 +460,3 @@ This architecture ensures **one plugin distribution works universally** across b
 This software is proprietary and confidential. See [EULA](EULA.md) for the complete End-User License Agreement.
 
 **Copyright © 2025 Heisiar. All rights reserved.**
-

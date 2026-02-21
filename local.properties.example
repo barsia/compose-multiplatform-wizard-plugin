@@ -10,3 +10,7 @@
 ga4.measurement.id=G-XXXXXXXXXX
 ga4.api.secret=your_api_secret_here
 
+# Optional: local Android Studio installation path for Gradle runIde/build.
+# If set, Android Studio target is used without downloading from remote repositories.
+# Useful when you need a newer AS patch/rc/canary build than the default downloadable version.
+# androidStudio.local.path=/Users/<your-user>/Applications/Android Studio.app

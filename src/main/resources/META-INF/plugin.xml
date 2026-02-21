@@ -1,4 +1,4 @@
-<idea-plugin allow-bundled-update="true">
+<idea-plugin allow-bundled-update="true" require-restart="true">
   <id>io.github.heisiar.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
   <vendor url="https://github.com/heisiar">heisiar</vendor>
@@ -6,7 +6,7 @@
   <description><![CDATA[
     <p>
       A project wizard for creating <strong>Compose Multiplatform</strong> applications.
-      Works in <strong>IntelliJ IDEA 2025.3+</strong> and <strong>Android Studio (build 253+)</strong>.
+      Works in <strong>IntelliJ IDEA 2025.3.2+</strong> and <strong>Android Studio Panda 2 (2025.3.2)+</strong>.
     </p>
     
     <h3>Features:</h3>
@@ -81,4 +81,3 @@
       displayName="Compose Multiplatform Wizard"/>
   </extensions>
 </idea-plugin>
-
