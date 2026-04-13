@@ -3,7 +3,7 @@ import java.util.Properties
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.2.21"
-    id("org.jetbrains.intellij.platform") version "2.11.0"
+    id("org.jetbrains.intellij.platform") version "2.14.0"
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
     id("org.jetbrains.kotlinx.kover") version "0.8.3"
 }
@@ -15,7 +15,7 @@ java {
     }
 }
 
-group = "io.github.heisiar"
+group = "io.github.barsia"
 version = "0.1.1"
 
 // Platform configuration:
@@ -23,7 +23,9 @@ version = "0.1.1"
 // - IDEA target: pass -PrunIntellijIdea=true
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
 val intellijIdeaVersion = project.findProperty("intellijIdeaVersion")?.toString() ?: "2025.3.2"
-// Pinned to the latest 253 AS build that is resolvable by intellij-platform-gradle-plugin 2.11.0.
+val pluginVerifierIdeVersion = project.findProperty("pluginVerifierIdeVersion")?.toString()
+val pluginVerifierIdeParts = pluginVerifierIdeVersion?.split("-", limit = 2)
+// Pinned to the latest 253 AS build that is resolvable by the current intellij-platform-gradle-plugin.
 // Newer Panda patch/rc/canary artifacts use codename-based filenames and are not yet resolvable via androidStudio(...).
 val androidStudioVersion = project.findProperty("androidStudioVersion")?.toString() ?: "2025.3.1.5"
 
@@ -103,6 +105,20 @@ dependencies {
 
 intellijPlatform {
     buildSearchableOptions = false
+
+    pluginVerification {
+        if (!pluginVerifierIdeVersion.isNullOrBlank()) {
+            withGroovyBuilder {
+                "ides" {
+                    if (pluginVerifierIdeParts != null && pluginVerifierIdeParts.size == 2) {
+                        "create"(pluginVerifierIdeParts[0], pluginVerifierIdeParts[1])
+                    } else {
+                        "create"(pluginVerifierIdeVersion)
+                    }
+                }
+            }
+        }
+    }
     
     pluginConfiguration {
         ideaVersion {
@@ -114,6 +130,13 @@ intellijPlatform {
         name = "Compose Multiplatform Wizard"
         
         changeNotes = """
+            <h3>0.1.1</h3>
+            <ul>
+              <li>Declared Gradle plugin dependency required for IntelliJ IDEA compatibility checks</li>
+              <li>Updated Marketplace metadata, privacy links, and issue tracker links for the public repository</li>
+              <li>Relicensed the project under Apache License 2.0</li>
+            </ul>
+
             <h3>0.1.0</h3>
             <ul>
               <li>First public release</li>

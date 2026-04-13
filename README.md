@@ -457,6 +457,6 @@ This architecture ensures **one plugin distribution works universally** across b
 
 ## License
 
-This software is proprietary and confidential. See [EULA](EULA.md) for the complete End-User License Agreement.
+This project is open source and licensed under the [Apache License 2.0](LICENSE).
 
-**Copyright © 2025 Heisiar. All rights reserved.**
+**Copyright © 2026 barsia**

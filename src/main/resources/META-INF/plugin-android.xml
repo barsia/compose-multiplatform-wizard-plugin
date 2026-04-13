@@ -25,17 +25,17 @@
   -->
   <!--
   <extensions defaultExtensionNs="com.android.tools.idea.wizard.template">
-    <wizardTemplateProvider implementation="io.github.heisiar.composewizard.androidstudio.ComposeMultiplatformTemplateProvider"/>
+    <wizardTemplateProvider implementation="io.github.barsia.composewizard.androidstudio.ComposeMultiplatformTemplateProvider"/>
   </extensions>
   
   <extensions defaultExtensionNs="com.intellij">
-    <moduleBuilder builderClass="io.github.heisiar.composewizard.androidstudio.project.ComposeMultiplatformProjectBuilder" order="first"/>
+    <moduleBuilder builderClass="io.github.barsia.composewizard.androidstudio.project.ComposeMultiplatformProjectBuilder" order="first"/>
   </extensions>
   -->
   
   <!-- Welcome Screen tooltip listener -->
   <applicationListeners>
-    <listener class="io.github.heisiar.composewizard.androidstudio.WelcomeScreenTooltipListener" 
+    <listener class="io.github.barsia.composewizard.androidstudio.WelcomeScreenTooltipListener" 
               topic="com.intellij.ide.AppLifecycleListener"/>
   </applicationListeners>
   
@@ -47,7 +47,7 @@
   -->
   <actions>
     <action id="ComposeMultiplatform.NewProject.AS"
-            class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
+            class="io.github.barsia.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project..."
             description="Create a new Compose Multiplatform project with advanced Compose UI"
             icon="/META-INF/compose.svg">
@@ -55,7 +55,7 @@
     </action>
     
     <action id="ComposeMultiplatform.WelcomeScreen.AS"
-            class="io.github.heisiar.composewizard.androidstudio.AndroidStudioComposeWizardAction"
+            class="io.github.barsia.composewizard.androidstudio.AndroidStudioComposeWizardAction"
             text="Compose Multiplatform Project"
             description="Create a new Compose Multiplatform project with advanced Compose UI"
             icon="/META-INF/compose.svg">

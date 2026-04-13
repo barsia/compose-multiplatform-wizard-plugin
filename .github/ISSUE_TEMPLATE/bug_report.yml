@@ -1,15 +1,15 @@
 name: Bug Report
 description: Report a bug or issue with the Compose Multiplatform Wizard plugin
 labels: ["bug"]
-assignees: ["heisiar"]
+assignees: ["barsia"]
 
 body:
   - type: input
     id: environment
     attributes:
       label: Plugin Version and IDE
-      description: E.g., Compose Multiplatform Wizard 0.1.0 | Android Studio 2025.2.3
-      placeholder: "Compose Multiplatform Wizard 0.1.0 | Android Studio 2025.2.3"
+      description: E.g., Compose Multiplatform Wizard 0.1.1 | Android Studio 2026.1.1
+      placeholder: "Compose Multiplatform Wizard 0.1.1 | Android Studio 2026.1.1"
     validations:
       required: false
 

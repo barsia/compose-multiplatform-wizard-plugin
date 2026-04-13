@@ -1,7 +1,7 @@
 <idea-plugin allow-bundled-update="true" require-restart="true">
-  <id>io.github.heisiar.compose-multiplatform-wizard</id>
+  <id>io.github.barsia.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
-  <vendor url="https://github.com/heisiar">heisiar</vendor>
+  <vendor url="https://github.com/barsia">barsia</vendor>
   
   <description><![CDATA[
     <p>
@@ -26,18 +26,23 @@
     </ul>
     
     <p>
-      <strong>License:</strong> Proprietary. <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/EULA.md">EULA</a>
+      <strong>License:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/LICENSE">Apache License 2.0</a><br/>
+      <strong>Developer EULA:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/EULA.md">EULA</a>
     </p>
-    
+
     <p>
       <strong>Privacy:</strong> This plugin collects anonymous usage statistics with your explicit consent to help improve the user experience.
       No personal data is collected. You can opt-out anytime in Settings.
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/blob/main/PRIVACY.md">Privacy Policy</a>
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md">Privacy Policy</a>
     </p>
-    
+
     <p>
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=bug_report.yml">Report a bug</a> | 
-      <a href="https://github.com/heisiar/compose-multiplatform-wizard-project/issues/new?template=feature_request.yml">Request a feature</a>
+      <strong>Source code:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin">github.com/barsia/compose-multiplatform-wizard-plugin</a>
+    </p>
+
+    <p>
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/issues/new?template=bug_report.yml">Report a bug</a> | 
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/issues/new?template=feature_request.yml">Request a feature</a>
     </p>
   ]]></description>
   
@@ -46,6 +51,9 @@
   
   <!-- Base dependency - available everywhere -->
   <depends>org.jetbrains.kotlin</depends>
+
+  <!-- Required because IDEA integration links the generated project via Gradle APIs -->
+  <depends>com.intellij.gradle</depends>
   
   <!-- Compose Desktop UI -->
   <depends>com.intellij.modules.compose</depends>
@@ -63,21 +71,21 @@
   <extensions defaultExtensionNs="com.intellij">
     <!-- New Project Wizard generator - supports dynamic plugin loading! -->
     <newProjectWizard.generator 
-      implementation="io.github.heisiar.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
+      implementation="io.github.barsia.composewizard.idea.ComposeMultiplatformGeneratorNewProjectWizard"/>
     
     <!-- Application-level service for caching Compose versions -->
     <applicationService 
-      serviceImplementation="io.github.heisiar.composewizard.shared.services.ComposeVersionCache"/>
+      serviceImplementation="io.github.barsia.composewizard.shared.services.ComposeVersionCache"/>
     
     <!-- Analytics service (Google Analytics with user consent) -->
     <applicationService 
-      serviceImplementation="io.github.heisiar.composewizard.shared.analytics.AnalyticsService"/>
+      serviceImplementation="io.github.barsia.composewizard.shared.analytics.AnalyticsService"/>
     
     <!-- Settings UI -->
     <applicationConfigurable 
       parentId="tools"
-      instance="io.github.heisiar.composewizard.shared.settings.WizardSettingsConfigurable"
-      id="io.github.heisiar.composewizard.settings"
+      instance="io.github.barsia.composewizard.shared.settings.WizardSettingsConfigurable"
+      id="io.github.barsia.composewizard.settings"
       displayName="Compose Multiplatform Wizard"/>
   </extensions>
 </idea-plugin>

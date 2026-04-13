@@ -1,44 +1,33 @@
-# Gradle
+# OS files
+.DS_Store
+
+# Build tools
 .gradle/
+.kotlin/
 build/
-bin/
 out/
 target/
-.kotlin/
+bin/
 
-# IntelliJ Platform SDK
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# IntelliJ Platform sandbox and caches
 .intellijPlatform/
 .app-sandbox/
 system/
 config/
 
-# IDE
-.idea/
-.idea/workspace.xml
-.idea/tasks.xml
-*.iml
-
-# Gradle wrapper (optional) - only root level
-/gradle/
-/gradlew
-/gradlew.bat
-
-# macOS
-.DS_Store
-
-# Build artifacts
-*.jar
-*.zip
-!gradle-wrapper.jar
-
+# Local project configuration
 local.properties
+.claude/settings.local.json
 
-# Analytics secrets (auto-generated from local.properties)
+# Generated resources with local secrets
 src/main/resources/analytics.properties
 
-# Test fixtures (moved to src/test/resources/fixtures/)
+# Historical local test fixture outputs
 ProjectDesktop/
 ProjectWeb/
 ProjectIos/
-ProjectAndroid/
 ProjectAndroid/

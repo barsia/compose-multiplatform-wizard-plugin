@@ -1,6 +1,6 @@
 # Privacy Policy for Compose Multiplatform Wizard
 
-**Last Updated:** November 23, 2025
+**Last Updated:** April 13, 2026
 
 ## Introduction
 
@@ -67,7 +67,7 @@ We may update this Privacy Policy from time to time. Any changes will be posted 
 
 ## Contact
 
-If you have questions about this Privacy Policy, please open an issue on GitHub: https://github.com/heisiar/compose-multiplatform-wizard-project/issues
+If you have questions about this Privacy Policy, please open an issue on GitHub: https://github.com/barsia/compose-multiplatform-wizard-plugin/issues
 
 ## Compliance
 

@@ -1,7 +1,7 @@
 name: Feature Request
 description: Suggest a new feature or enhancement for the Compose Multiplatform Wizard plugin
 labels: ["enhancement"]
-assignees: ["heisiar"]
+assignees: ["barsia"]
 
 body:
   - type: textarea
