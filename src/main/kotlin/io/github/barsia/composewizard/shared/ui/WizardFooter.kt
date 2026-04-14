@@ -7,9 +7,21 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -71,7 +83,7 @@ fun WizardFooter(state: WizardState) {
                                         val appInfo = ApplicationInfo.getInstance()
                                         val ideName = if (PlatformDetector.isAndroidStudio) "Android Studio" else "IntelliJ IDEA"
                                         val ideVersion = appInfo.fullVersion
-                                        val environment = URLEncoder.encode("Compose Multiplatform Wizard 0.1.1 | $ideName $ideVersion", "UTF-8")
+                                        val environment = URLEncoder.encode("Compose Multiplatform Wizard 0.1.2 | $ideName $ideVersion", "UTF-8")
                                         Desktop.getDesktop().browse(
                                             URI("https://github.com/barsia/compose-multiplatform-wizard-plugin/issues/new?template=bug_report.yml&environment=$environment")
                                         )
@@ -133,7 +145,7 @@ fun WizardFooter(state: WizardState) {
             }
             
             Text(
-                text = "v0.1.1",
+                text = "v0.1.2",
                 style = JewelTheme.defaultTextStyle,
                 color = JewelTheme.globalColors.text.normal.copy(alpha = 0.4f),
                 modifier = Modifier.pointerInput(Unit) {

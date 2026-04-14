@@ -1,25 +1,20 @@
 package io.github.barsia.composewizard.shared.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -29,7 +24,6 @@ import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
-import org.jetbrains.jewel.ui.component.Tooltip
 import java.awt.Cursor
 
 @Composable
@@ -160,121 +154,93 @@ private fun PlatformItem(
 fun OptionsSection(
     git: Boolean,
     tests: Boolean,
+    agentsMd: Boolean,
     onGitToggle: () -> Unit,
     onTestsToggle: () -> Unit,
+    onAgentsMdToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth().padding(start = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (io.github.barsia.composewizard.shared.PlatformDetector.isAndroidStudio) {
+                CheckboxOption(
+                    checked = git,
+                    onToggle = onGitToggle,
+                    label = "Create Git repository",
+                    modifier = Modifier.weight(1f)
+                )
+
+                CheckboxOption(
+                    checked = tests,
+                    onToggle = onTestsToggle,
+                    label = "Add sample tests",
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                CheckboxOption(
+                    checked = tests,
+                    onToggle = onTestsToggle,
+                    label = "Add sample tests",
+                    modifier = Modifier.weight(1f)
+                )
+
+                CheckboxOption(
+                    checked = agentsMd,
+                    onToggle = onAgentsMdToggle,
+                    label = "Add AGENTS.md / CLAUDE.md",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
         if (io.github.barsia.composewizard.shared.PlatformDetector.isAndroidStudio) {
-            // In Android Studio, show both Git and Tests checkboxes side by side
-            CheckboxOption(
-                checked = git,
-                onToggle = onGitToggle,
-                label = "Create Git repository",
-                modifier = Modifier.weight(1f)
-            )
-            
-            CheckboxOption(
-                checked = tests,
-                onToggle = onTestsToggle,
-                label = "Add sample tests",
-                modifier = Modifier.weight(1f)
-            )
-        } else {
-            // In IntelliJ IDEA, Git checkbox is provided by GitNewProjectWizardStep (above)
-            // Show only Tests checkbox, taking full width
-            CheckboxOption(
-                checked = tests,
-                onToggle = onTestsToggle,
-                label = "Add sample tests",
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CheckboxOption(
+                    checked = agentsMd,
+                    onToggle = onAgentsMdToggle,
+                    label = "Add AGENTS.md / CLAUDE.md blueprint",
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CheckboxOption(
     checked: Boolean,
     onToggle: () -> Unit,
     label: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    iconKey: org.jetbrains.jewel.ui.icon.IconKey? = null,
-    useColoredIcon: Boolean = false,
-    trailingContent: (@Composable () -> Unit)? = null,
-    disabledTooltip: String = "Included in the base template and cannot be disabled"
+    modifier: Modifier = Modifier
 ) {
-    val content = @Composable {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
             .height(28.dp)
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            org.jetbrains.jewel.ui.component.CheckboxRow(
-                checked = checked,
-                onCheckedChange = { onToggle() },
-                enabled = enabled,
-                modifier = Modifier
-                    .pointerHoverIcon(
-                        if (enabled) PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
-                        else PointerIcon(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR))
-                    )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (iconKey != null) {
-                        Icon(
-                            key = iconKey,
-                            contentDescription = label,
-                            modifier = Modifier.size(16.dp),
-                            tint = if (useColoredIcon) {
-                                Color.Unspecified
-                            } else if (enabled) {
-                                JewelTheme.globalColors.text.normal
-                            } else {
-                                JewelTheme.globalColors.text.normal.copy(alpha = 0.5f)
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(
-                        text = label,
-                        style = JewelTheme.defaultTextStyle,
-                        color = if (enabled) JewelTheme.globalColors.text.normal 
-                                else JewelTheme.globalColors.text.normal.copy(alpha = 0.5f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-        if (trailingContent != null) {
-            Spacer(modifier = Modifier.width(6.dp))
-            trailingContent()
-        }
-    }
-    }
-    
-    if (!enabled) {
-        Tooltip(
-            tooltip = { Text(disabledTooltip) },
-            tooltipPlacement = TooltipPlacement.ComponentRect(
-                anchor = Alignment.TopCenter,
-                alignment = Alignment.TopCenter
-            )
+        org.jetbrains.jewel.ui.component.CheckboxRow(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            modifier = Modifier
+                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)))
         ) {
-            content()
+            Text(
+                text = label,
+                style = JewelTheme.defaultTextStyle,
+                color = JewelTheme.globalColors.text.normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
-    } else {
-        content()
     }
 }
 

@@ -64,6 +64,7 @@ class ProjectConfigTest {
         every { builder.targetIOS } returns false
         every { builder.targetWeb } returns false
         every { builder.includeTests } returns true
+        every { builder.includeAgentsMd } returns false
         every { builder.initGit } returns true
         every { builder.enableDevVersions } returns false
         every { builder.lifecycleVersion } returns null

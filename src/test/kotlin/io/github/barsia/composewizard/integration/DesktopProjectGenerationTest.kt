@@ -346,7 +346,7 @@ class DesktopProjectGenerationTest {
                 "Release mode should have includeGroupAndSubgroups for com.android"
             )
             assertTrue(
-                !settingsGradle.contains("maven.pkg.jetbrains.space"),
+                !settingsGradle.contains("packages.jetbrains.team"),
                 "Release mode should not contain dev repository"
             )
         }
@@ -376,7 +376,7 @@ class DesktopProjectGenerationTest {
                 "Dev mode should not have includeGroupAndSubgroups"
             )
             assertTrue(
-                settingsGradle.contains("maven(\"https://maven.pkg.jetbrains.space/public/p/compose/dev\")"),
+                settingsGradle.contains("maven(\"https://packages.jetbrains.team/maven/p/cmp/dev\")"),
                 "Dev mode should contain compose dev repository"
             )
             assertTrue(

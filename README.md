@@ -1,56 +1,22 @@
 # Compose Multiplatform Wizard Plugin
 
-A unified IntelliJ Platform plugin that provides project creation wizard for Compose Multiplatform projects.
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Compose%20Multiplatform%20Wizard-000000?logo=jetbrains)](https://plugins.jetbrains.com/plugin/29108-compose-multiplatform-wizard)
+
+An IntelliJ Platform plugin that provides a project creation wizard for Compose Multiplatform projects. Works in both IntelliJ IDEA and Android Studio from a single distribution.
 
 ## Features
 
-- **Universal Support**: Works in IntelliJ IDEA and Android Studio
+- **Dual IDE Support**: Single ZIP works in both IntelliJ IDEA and Android Studio
 - **Multi-platform Templates**: Create projects for Desktop, Android, iOS, and Web
 - **Smart Configuration**: Platform-specific integration that adapts to the IDE
 - **Shared Core**: Common template processing logic across both IDEs
 
 ## Compatibility
 
-- Minimum IntelliJ Platform build: 253+
+- Minimum IntelliJ Platform build: 261+
 - Verified targets:
-  - IntelliJ IDEA 2025.3
-  - Android Studio 2025.3.1.5 (downloadable via Gradle)
-
-## Architecture
-
-This plugin uses a unified codebase with platform-specific integrations:
-
-- `shared/` - Common logic shared across both IDEs:
-  - `ui/` - **Shared Compose UI** - Single wizard UI built with Jetpack Compose that works in IDEA and AS
-    - **Main Wizard** (164 lines):
-      - `ComposeWizardStep.kt` - Main wizard step implementation using `ModuleWizardStep`
-      - `WizardMainContent.kt` - Main UI layout and composition (orchestration layer)
-    - **Project Fields** (135 lines):
-      - `WizardProjectFields.kt` - Platform-specific field layouts (AS/IDEA)
-      - `WizardInputFields.kt` - Input components (ProjectNameField, PackageNameField, ProjectLocationField)
-    - **Version Selection** (255 lines):
-      - `WizardVersionField.kt` - Compose version selection with Dev/Stable toggle
-    - **Libraries** (state + UI components):
-      - `LibrariesState.kt` - State manager for library versions and loading (73 lines)
-      - `LibraryVersionDropdown.kt` - Dropdown component for library version selection (190 lines)
-      - `LibrariesSection.kt` - Full libraries section UI (278 lines)
-    - **Platforms & Options** (213 lines):
-      - `WizardPlatformsAndOptions.kt` - Platform selection and project options (Git, Tests)
-    - **UI Components**:
-      - `WizardUIComponents.kt` - Reusable UI components (CompactSwitch, ProjectPathHint, PlatformCheckbox)
-      - `WizardIcons.kt` - Icon definitions (175 lines)
-      - `WizardValidationComponents.kt` - Validation popups (196 lines)
-      - `WizardLibraryComponents.kt` - Library-specific UI (SkeletonText, indicators, copy icon) (179 lines)
-      - `WizardFooter.kt` - Footer with version info and error display (79 lines)
-    - **Utilities**:
-      - `WizardVersionUtils.kt` - Version comparison utilities
-      - `WizardLayoutUtils.kt` - Layout constants and modifiers
-      - `WizardStateManager.kt` - State management and validation logic
-  - `models/` - Data models and builders (`ComposeMultiplatformModuleBuilder`)
-  - `services/` - Version caching and other services
-  - Template processing and validation
-- `idea/` - IntelliJ IDEA-specific wizard integration (New Project Wizard)
-- `androidstudio/` - Android Studio-specific integration (Welcome Screen action in More Projects)
+  - IntelliJ IDEA 2026.1.1
+  - Android Studio builds based on IntelliJ Platform 261+ (local installation recommended)
 
 ### Key Innovation: Shared Compose UI
 
@@ -67,19 +33,6 @@ Both IntelliJ IDEA and Android Studio use the **same Compose UI components** for
 - `LibrariesState` - Dedicated state manager for library version loading and caching
 - Separation of concerns: UI components (presentation) vs. state logic (business logic)
 - Reactive updates via Compose state and coroutines
-
-**Component Hierarchy:**
-```
-WizardMainContent (orchestration)
-├── ProjectFields (platform-specific layouts)
-│   ├── AndroidStudioProjectFields
-│   └── IntellijIdeaProjectFields
-├── PlatformsSection (platform toggles)
-├── LibrariesSection (library configuration)
-│   └── LibraryVersionDropdown (per-library UI)
-├── OptionsSection (Git, Tests)
-└── WizardFooter (version info, errors)
-```
 
 **File Size Discipline:**
 - All files strictly under 300 lines (excluding imports)
@@ -303,17 +256,17 @@ The wizard displays a **Dev/Stable toggle** (switcher) above the Compose version
 
 **For Regular Users:**
 
-| Current State | Triple-Click Action | Result | Feedback |
-|---------------|---------------------|--------|----------|
-| Toggle hidden | Triple-click | ✅ Toggle shown | Logged to usage statistics |
-| Toggle shown + **Stable** selected | Triple-click | ✅ Toggle hidden | Auto-switches to Stable mode + saves setting |
-| Toggle shown + **Dev** selected | Triple-click | ❌ **Blocked** | Shake animation + Tooltip: "You can hide the toggle after switching to Stable" |
+| Current State                      | Triple-Click Action | Result          | Feedback                                                                       |
+|------------------------------------|---------------------|-----------------|--------------------------------------------------------------------------------|
+| Toggle hidden                      | Triple-click        | ✅ Toggle shown  |                                                                                |
+| Toggle shown + **Stable** selected | Triple-click        | ✅ Toggle hidden | Auto-switches to Stable mode + saves setting                                   |
+| Toggle shown + **Dev** selected    | Triple-click        | ❌ **Blocked**   | Shake animation + Tooltip: "You can hide the toggle after switching to Stable" |
 
 **For Internal Mode:**
 
-| Current State | Triple-Click Action | Result | Feedback |
-|---------------|---------------------|--------|----------|
-| Any state (Dev/Stable) | Triple-click | ❌ **Always blocked** | Shake animation + Tooltip: "Dev/Stable toggle is always visible in internal mode" |
+| Current State          | Triple-Click Action | Result               | Feedback                                                                          |
+|------------------------|---------------------|----------------------|-----------------------------------------------------------------------------------|
+| Any state (Dev/Stable) | Triple-click        | ❌ **Always blocked** | Shake animation + Tooltip: "Dev/Stable toggle is always visible in internal mode" |
 
 ### Protection Logic
 
@@ -350,12 +303,26 @@ The wizard displays a **Dev/Stable toggle** (switcher) above the Compose version
 - Hiding toggle automatically disables Dev mode
 - Internal mode overrides user preference for visibility
 
+## AGENTS.md / CLAUDE.md Generation
+
+The wizard can generate an `AGENTS.md` blueprint for AI coding assistants (GitHub Copilot, Codex, Claude Code, etc.). The content is tailored to the selected platforms and includes:
+
+- **Commands** — build, run, and test commands (only for targets the agent can execute)
+- **Coding Standards** — KMP conventions: `commonMain` for shared code, `expect`/`actual`, version catalog, Compose resources
+- **Pitfalls** — common mistakes: platform-specific deps in `commonMain`, manual xcodeproj edits, Wasm compatibility
+
+`CLAUDE.md` is created as a **symlink** pointing to `AGENTS.md` so both files stay in sync.
+
+### Windows Note
+
+Creating symlinks on Windows requires **Developer Mode** enabled or administrator privileges. If symlink creation fails, only `AGENTS.md` is created.
+
 ## Development
 
 ### Requirements
 
 - JDK 21
-- Gradle 8.5+
+- Gradle 9.0+
 
 ### Building
 
@@ -363,44 +330,25 @@ The wizard displays a **Dev/Stable toggle** (switcher) above the Compose version
 ./gradlew buildPlugin
 ```
 
-To build a **single universal ZIP** (works in both IntelliJ IDEA and Android Studio), run:
+Set the path to local Android Studio in `local.properties` (recommended):
 
-```bash
-./gradlew buildPlugin
+```properties
+androidStudio.local.path=/Users/<your-user>/Applications/Android Studio.app
 ```
 
-By default Gradle targets Android Studio and downloads `2025.3.1.5` if needed.
-Optional override (use local Android Studio instead of downloading, recommended for newer AS patch/rc/canary releases):
+If not set, Gradle builds against IntelliJ IDEA by default. The resulting ZIP works in both IDEs.
 
-```bash
-./gradlew buildPlugin -PandroidStudioLocalPath="$HOME/Applications/Android Studio.app"
-```
-
-Output ZIP:
-
-```text
-build/distributions/compose-multiplatform-wizard-plugin-<version>.zip
-```
+Output ZIP in `build/distributions/`.
 
 ### Testing
 
 ```bash
-# Test in Android Studio (downloads target IDE if needed)
+# Test in Android Studio
 ./gradlew runIde
 
 # Test in IntelliJ IDEA
 ./gradlew runIde -PrunIntellijIdea=true
 ```
-
-**Important**:
-- By default Gradle targets Android Studio `2025.3.1.5` (downloaded automatically when local installation is not configured).
-- Use `-PrunIntellijIdea=true` to force IntelliJ IDEA target.
-
-The plugin will automatically:
-- Use local Android Studio (if configured) or download Android Studio
-- Install the plugin
-- Launch the IDE with the plugin enabled
-- Show which platform is running in the console
 
 #### Dual Compilation Verification
 
@@ -418,42 +366,18 @@ The plugin will automatically:
 
 ## Publishing to Marketplace
 
-### Build Universal ZIP (IDEA + Android Studio)
-
-Build the Marketplace ZIP with Android Studio target:
-
 ```bash
 ./gradlew buildPlugin
 ```
 
-Optional: set path once in `local.properties` to use local AS instead of downloading:
-
-```properties
-androidStudio.local.path=/Users/<your-user>/Applications/Android Studio.app
-```
-
-Then build with:
-
-```bash
-./gradlew buildPlugin
-```
-
-This creates one plugin ZIP that includes the `androidstudio/` code. The resulting plugin will:
-
-✅ **Work in both IntelliJ IDEA and Android Studio** from a single distribution  
-✅ **Provide Android Studio entry via Welcome Screen → More Projects** (after `SDK Manager`)  
-✅ **Provide IDEA wizard in IntelliJ IDEA**  
-✅ **Appear as ONE plugin in JetBrains Marketplace**
+Upload the single ZIP from `build/distributions/` to JetBrains Marketplace. It works in both IDEA and AS.
 
 ### How It Works
 
-The plugin uses a single descriptor (`plugin.xml`) for both IDEs:
+The plugin uses a shared codebase with a single `plugin.xml`. Android Studio support is loaded conditionally via `optional="true"` dependency on `org.jetbrains.android`:
 
 - **In IntelliJ IDEA**: entry is shown in the New Project wizard (`newProjectWizard.generator`)
 - **In Android Studio**: entry is shown in Welcome Screen → More Projects (`WelcomeScreen.QuickStart`)
-- The Android Studio action is hidden at runtime outside Android Studio
-
-This architecture ensures **one plugin distribution works universally** across both IDEs without runtime errors.
 
 ## License
 

@@ -12,8 +12,12 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.util.xmlb.XmlSerializerUtil
 import io.github.barsia.composewizard.shared.LibraryType
 import io.github.barsia.composewizard.shared.settings.WizardSettings
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 @Service(Service.Level.APP)
 @State(
@@ -330,17 +334,13 @@ class ComposeVersionCache : Disposable, PersistentStateComponent<ComposeVersionC
     
     fun forceReloadStable() {
         coreCache.forceReloadStable {
-            // DO NOT invalidate library cache here!
-            // Library versions are independent from Compose version list
-            // Invalidating here causes skeletons on every Releases/Dev switch
+            invalidateLibraryCache()
         }
     }
-    
+
     fun forceReloadDev() {
         coreCache.forceReloadDev {
-            // DO NOT invalidate library cache here!
-            // Library versions are independent from Compose version list
-            // Invalidating here causes skeletons on every Releases/Dev switch
+            invalidateLibraryCache()
         }
     }
     

@@ -105,6 +105,15 @@ object WizardDefaults {
      * Hidden by default, can be enabled via easter egg (triple-click version).
      */
     const val ENABLE_DEV_VERSIONS = false
+
+    /**
+     * Default: Create AGENTS.md with a CLAUDE.md symlink.
+     *
+     * Generates an AI assistant instructions file describing the project structure,
+     * build commands, and libraries. CLAUDE.md symlink ensures compatibility with
+     * both GitHub Copilot/Codex (AGENTS.md) and Claude Code (CLAUDE.md).
+     */
+    const val INCLUDE_AGENTS_MD = false
     
     // ========== Compose Version ==========
     

@@ -1,7 +1,10 @@
 package io.github.barsia.composewizard.shared.services
 
 import org.junit.jupiter.api.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ComposeVersionServiceTest {
 
@@ -44,6 +47,25 @@ class ComposeVersionServiceTest {
         )
         
         assertEquals(devVersions, devVersions, "Dev versions should maintain original order")
+    }
+
+    @Test
+    fun `dev versions source points to new packages jetbrains team repository`() {
+        val serviceSource = ComposeVersionService::class.java
+            .getResource("/" + ComposeVersionService::class.java.name.replace('.', '/') + ".class")
+        assertNotNull(serviceSource, "ComposeVersionService class should be available")
+
+        val sourceFile = java.io.File(System.getProperty("user.dir"), "src/main/kotlin/io/github/barsia/composewizard/shared/services/ComposeVersionService.kt")
+        val content = sourceFile.readText()
+
+        assertTrue(
+            content.contains("https://packages.jetbrains.team/maven/p/cmp/dev/org/jetbrains/compose/org.jetbrains.compose.gradle.plugin/"),
+            "ComposeVersionService should use the new JetBrains Team Maven repository for dev versions"
+        )
+        assertFalse(
+            content.contains("maven.pkg.jetbrains.space/public/p/compose/dev"),
+            "ComposeVersionService should not use the old JetBrains Space dev repository anymore"
+        )
     }
 
     @Test
@@ -112,4 +134,3 @@ class ComposeVersionServiceTest {
         assertTrue(v1.third > v2.third, "Patch version 2 > 1")
     }
 }
-

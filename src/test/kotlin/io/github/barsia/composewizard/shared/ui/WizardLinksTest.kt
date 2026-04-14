@@ -10,12 +10,10 @@ import kotlin.test.assertTrue
  * Checked links:
  * 1. Report a bug icon in wizard footer
  * 2. Request a feature icon in wizard footer
- * 3. Privacy Policy link in Settings
- * 4. License and Privacy Policy links in consent dialog
- * 5. Release Notes link for Compose Version
- * 6. Privacy Policy link in plugin.xml
- * 7. Bug report and feature request links in plugin.xml
- * 8. Open-source metadata in docs and descriptor
+ * 3. Release Notes link for Compose Version
+ * 4. Privacy Policy link in plugin.xml
+ * 5. Bug report and feature request links in plugin.xml
+ * 6. Open-source metadata in docs and descriptor
  */
 class WizardLinksTest {
     
@@ -41,7 +39,7 @@ class WizardLinksTest {
         )
 
         assertTrue(
-            content.contains("Compose Multiplatform Wizard 0.1.1"),
+            content.contains("Compose Multiplatform Wizard 0.1.2"),
             "Bug icon environment should use the current plugin version"
         )
         
@@ -79,54 +77,6 @@ class WizardLinksTest {
     }
     
     @Test
-    fun `settings privacy policy link is correct`() {
-        val settingsFile = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/settings/WizardSettingsConfigurable.kt")
-        assertTrue(settingsFile.exists(), "WizardSettingsConfigurable.kt should exist")
-        
-        val content = settingsFile.readText()
-        
-        // Check link text
-        assertTrue(
-            content.contains("""HyperlinkLabel("Privacy Policy")"""),
-            "Settings should have 'Privacy Policy' link (capital P)"
-        )
-        
-        // Check URL
-        assertTrue(
-            content.contains("https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md"),
-            "Settings Privacy Policy should link to the current repository PRIVACY.md"
-        )
-    }
-    
-    @Test
-    fun `consent dialog license and privacy links are correct`() {
-        val dialogFile = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/analytics/AnalyticsConsentDialog.kt")
-        assertTrue(dialogFile.exists(), "AnalyticsConsentDialog.kt should exist")
-        
-        val content = dialogFile.readText()
-        
-        // Check link text
-        assertTrue(
-            content.contains(""""License""""),
-            "Consent dialog should have 'License' link"
-        )
-        assertTrue(
-            content.contains(""""Privacy Policy""""),
-            "Consent dialog should have 'Privacy Policy' link"
-        )
-        
-        // Check URL
-        assertTrue(
-            content.contains("https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/LICENSE"),
-            "Consent dialog license should link to the current repository LICENSE"
-        )
-        assertTrue(
-            content.contains("https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md"),
-            "Consent dialog Privacy Policy should link to the current repository PRIVACY.md"
-        )
-    }
-    
-    @Test
     fun `compose version release notes link is correct`() {
         val versionFieldFile = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/ui/WizardVersionField.kt")
         assertTrue(versionFieldFile.exists(), "WizardVersionField.kt should exist")
@@ -156,13 +106,17 @@ class WizardLinksTest {
     fun `plugin xml has correct privacy policy link`() {
         val pluginXml = File(projectRoot, "src/main/resources/META-INF/plugin.xml")
         assertTrue(pluginXml.exists(), "plugin.xml should exist")
-        
+
         val content = pluginXml.readText()
         
         // Check link text
         assertTrue(
             content.contains("""<a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md">Privacy Policy</a>"""),
             "plugin.xml should have Privacy Policy link to the current repository"
+        )
+        assertTrue(
+            content.contains("does not collect usage analytics or personal data"),
+            "plugin.xml should describe the plugin as analytics-free"
         )
     }
     
@@ -202,7 +156,7 @@ class WizardLinksTest {
         val content = pluginXml.readText()
 
         assertTrue(
-            content.contains("""<vendor url="https://github.com/barsia">barsia</vendor>"""),
+            content.contains("""<vendor url="https://barsia.github.io">Siarhei Baradulia</vendor>"""),
             "plugin.xml should expose the new vendor branding"
         )
         assertTrue(
@@ -301,6 +255,40 @@ class WizardLinksTest {
         assertTrue(
             content.contains("does not add restrictions beyond the Apache License 2.0"),
             "EULA should remain compatible with the open-source license"
+        )
+    }
+
+    @Test
+    fun `plugin no longer bundles analytics configuration or consent ui`() {
+        val buildScript = File(projectRoot, "build.gradle.kts")
+        val pluginXml = File(projectRoot, "src/main/resources/META-INF/plugin.xml")
+        val settingsFile = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/settings/WizardSettingsConfigurable.kt")
+        val consentDialog = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/analytics/AnalyticsConsentDialog.kt")
+        val stateManager = File(projectRoot, "src/main/kotlin/io/github/barsia/composewizard/shared/ui/WizardStateManager.kt")
+
+        assertTrue(
+            !buildScript.readText().contains("generateAnalyticsConfig"),
+            "build.gradle.kts should not generate analytics.properties anymore"
+        )
+        assertTrue(
+            !buildScript.readText().contains("analytics.properties"),
+            "build.gradle.kts should not package analytics.properties anymore"
+        )
+        assertTrue(
+            !pluginXml.readText().contains("shared.analytics.AnalyticsService"),
+            "plugin.xml should not register analytics service anymore"
+        )
+        assertTrue(
+            !settingsFile.exists(),
+            "settings UI should be removed together with analytics consent controls"
+        )
+        assertTrue(
+            !stateManager.readText().contains("AnalyticsConsentDialog"),
+            "wizard state manager should not show analytics consent anymore"
+        )
+        assertTrue(
+            !consentDialog.exists(),
+            "AnalyticsConsentDialog should be removed when analytics is disabled"
         )
     }
 }

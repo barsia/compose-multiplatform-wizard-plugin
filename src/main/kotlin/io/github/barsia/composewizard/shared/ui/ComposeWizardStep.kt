@@ -31,6 +31,7 @@ class ComposeWizardStep(
     private var composeVersionValue = WizardDefaults.COMPOSE_VERSION
     private var initGit = WizardDefaults.INIT_GIT
     private var includeTests = WizardDefaults.INCLUDE_TESTS
+    private var includeAgentsMd = WizardDefaults.INCLUDE_AGENTS_MD
     private var targetDesktop = WizardDefaults.TARGET_DESKTOP
     private var targetAndroid = WizardDefaults.TARGET_ANDROID
     private var targetIOS = WizardDefaults.TARGET_IOS
@@ -76,6 +77,7 @@ class ComposeWizardStep(
                         targetWeb = targetWeb,
                         initGit = initGit,
                         includeTests = includeTests,
+                        includeAgentsMd = includeAgentsMd,
                         enableDevVersionsValue = enableDevVersions,
                         builder = builder,
                         revalidationTrigger = revalidationTrigger.intValue,
@@ -105,6 +107,7 @@ class ComposeWizardStep(
         targetWeb = state.web
         initGit = state.git
         includeTests = state.tests
+        includeAgentsMd = state.agentsMd
         includeMaterial3 = state.includeMaterial3
         includeMaterial3Adaptive = state.includeMaterial3Adaptive
         includeNavigation = state.includeNavigation
@@ -177,6 +180,7 @@ class ComposeWizardStep(
         builder.targetWeb = targetWeb
         builder.initGit = initGit
         builder.includeTests = includeTests
+        builder.includeAgentsMd = includeAgentsMd
         builder.enableDevVersions = io.github.barsia.composewizard.shared.settings.WizardSettings.getInstance().enableDevVersions
         builder.includeMaterial3 = includeMaterial3
         builder.includeMaterial3Adaptive = includeMaterial3Adaptive

@@ -113,6 +113,7 @@ object ProjectCreator {
                 targetIOS = builder.targetIOS,
                 targetWeb = builder.targetWeb,
                 includeTests = builder.includeTests,
+                includeAgentsMd = builder.includeAgentsMd,
                 initGit = builder.initGit,
                 enableDevVersions = builder.enableDevVersions,
                 lifecycleVersion = lifecycleVersion,
@@ -152,6 +153,9 @@ object ProjectCreator {
             
             if (builder.includeTests) {
                 composer.addFeature(io.github.barsia.composewizard.composer.features.TestsFeature())
+            }
+            if (builder.includeAgentsMd) {
+                composer.addFeature(io.github.barsia.composewizard.composer.features.AgentsMdFeature())
             }
             if (builder.initGit) {
                 composer.addFeature(io.github.barsia.composewizard.composer.features.GitFeature())

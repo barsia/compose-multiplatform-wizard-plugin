@@ -21,9 +21,9 @@ You may use, reproduce, modify, and distribute the Plugin in accordance with the
 
 The Plugin depends on third-party components that remain subject to their own licenses and terms.
 
-## 4. Privacy and Analytics
+## 4. Privacy
 
-If analytics are enabled, the Plugin requests explicit user consent before sending anonymous usage statistics. Details are described in [PRIVACY.md](PRIVACY.md).
+The Plugin does not collect usage analytics. Its current data practices are described in [PRIVACY.md](PRIVACY.md).
 
 ## 5. Warranty Disclaimer
 

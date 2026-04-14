@@ -33,6 +33,7 @@ class ComposeMultiplatformModuleBuilder : ModuleBuilder() {
     var targetWeb: Boolean = WizardDefaults.TARGET_WEB
     var initGit: Boolean = WizardDefaults.INIT_GIT
     var includeTests: Boolean = WizardDefaults.INCLUDE_TESTS
+    var includeAgentsMd: Boolean = WizardDefaults.INCLUDE_AGENTS_MD
     var enableDevVersions: Boolean = WizardDefaults.ENABLE_DEV_VERSIONS
     
     var kotlinVersion: String = ""

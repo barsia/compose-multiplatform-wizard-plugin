@@ -12,6 +12,7 @@ data class ProjectConfig(
     val targetIOS: Boolean = false,
     val targetWeb: Boolean = false,
     val includeTests: Boolean = false,
+    val includeAgentsMd: Boolean = false,
     val initGit: Boolean = false,
     val enableDevVersions: Boolean = false,
     
@@ -58,6 +59,7 @@ data class ProjectConfig(
                 targetIOS = builder.targetIOS,
                 targetWeb = builder.targetWeb,
                 includeTests = builder.includeTests,
+                includeAgentsMd = builder.includeAgentsMd,
                 initGit = builder.initGit,
                 enableDevVersions = builder.enableDevVersions,
                 

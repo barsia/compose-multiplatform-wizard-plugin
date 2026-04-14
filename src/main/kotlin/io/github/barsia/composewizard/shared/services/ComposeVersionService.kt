@@ -8,7 +8,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Service for fetching Compose Multiplatform versions from Maven repositories.
@@ -35,7 +34,7 @@ class ComposeVersionService {
     
     companion object {
         private const val STABLE_MAVEN_URL = "https://repo1.maven.org/maven2/org/jetbrains/compose/compose-gradle-plugin/"
-        private const val DEV_MAVEN_URL = "https://maven.pkg.jetbrains.space/public/p/compose/dev/org/jetbrains/compose/compose-gradle-plugin/"
+        private const val DEV_MAVEN_URL = "https://packages.jetbrains.team/maven/p/cmp/dev/org/jetbrains/compose/org.jetbrains.compose.gradle.plugin/"
     }
     
     suspend fun fetchAvailableVersions(includeDevVersions: Boolean): List<String> = withContext(Dispatchers.IO) {
@@ -95,10 +94,7 @@ class ComposeVersionService {
             
                 if (connection.responseCode == 200) {
                     connection.inputStream.use { input ->
-                        val dbFactory = DocumentBuilderFactory.newInstance()
-                        val dBuilder = dbFactory.newDocumentBuilder()
-                        val doc = dBuilder.parse(input)
-                        doc.documentElement.normalize()
+                        val doc = SafeXmlParser.parse(input)
                         
                         val versionNodes = doc.getElementsByTagName("version")
                         val versions = mutableListOf<String>()
@@ -158,4 +154,3 @@ class ComposeVersionService {
         throw java.io.IOException("Failed to fetch versions from Maven after 5 attempts", lastException)
     }
 }
-

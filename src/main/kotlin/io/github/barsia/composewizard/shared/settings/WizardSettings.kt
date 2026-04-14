@@ -1,6 +1,10 @@
 package io.github.barsia.composewizard.shared.settings
 
-import com.intellij.openapi.components.*
+import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.State
+import com.intellij.openapi.components.Storage
+import com.intellij.openapi.components.service
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @State(
@@ -30,12 +34,6 @@ class WizardSettings : PersistentStateComponent<WizardSettings> {
      */
     var githubToken: String = ""
     
-    // Analytics settings (GDPR compliant)
-    var analyticsEnabled: Boolean = false  // User can disable in settings
-    var analyticsConsentGiven: Boolean = false  // Explicit consent required
-    var analyticsConsentDialogShown: Boolean = false  // Track if dialog was shown
-    var analyticsClientId: String = ""  // Anonymous UUID for GA
-    
     override fun getState(): WizardSettings {
         return this
     }
@@ -51,4 +49,3 @@ class WizardSettings : PersistentStateComponent<WizardSettings> {
         }
     }
 }
-

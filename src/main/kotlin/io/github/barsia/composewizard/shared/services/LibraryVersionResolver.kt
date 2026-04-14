@@ -178,10 +178,8 @@ class LibraryVersionResolver(
             }
             
             if (cached != null) {
-                logger.info("Using cached web UI result for $composeVersion")
                 if (cached.pageExists) cached else null
             } else {
-                logger.info("Fetching web UI for $composeVersion")
                 var isNetworkError = false
                 val fetchedResult = try {
                     libraryVersionService.fetchLibraryVersionsFromWebUI(composeVersion)
@@ -190,16 +188,14 @@ class LibraryVersionResolver(
                     isNetworkError = true
                     null
                 }
-                
+
                 synchronized(webUIResultsCache) {
                     webUIResultsCache[composeVersion] = fetchedResult
                 }
-                
+
                 if (isNetworkError || fetchedResult == null || !fetchedResult.pageExists) {
-                    logger.info("Web UI result for $composeVersion: pageExists=${fetchedResult?.pageExists}, error=$isNetworkError")
                     null
                 } else {
-                    logger.info("Successfully fetched web UI for $composeVersion with ${fetchedResult.versions.size} libraries")
                     fetchedResult
                 }
             }
@@ -222,45 +218,16 @@ class LibraryVersionResolver(
             return
         }
         
-        logger.info("Library ${type.displayName} not found for $composeVersion, checking fallback versions")
-        
-        val libraryAvailableVersions = getLibraryAvailableVersions(type)
-        if (libraryAvailableVersions.isNotEmpty()) {
-            val stableLibraryVersions = libraryAvailableVersions
-                .filter { !it.contains("+dev", ignoreCase = true) }
-                .filter { !it.contains("-alpha") && !it.contains("-beta") && !it.contains("-rc") && !it.contains("-dev") }
-                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-            
-            val latestStableVersion = stableLibraryVersions.firstOrNull()
-            if (latestStableVersion != null) {
-                logger.info("Found latest stable ${type.displayName} version in Maven: $latestStableVersion")
-                cacheLibrary(composeVersion, type, latestStableVersion, isFromFallback = true)
-                return
-            }
-            
-            val latestVersion = libraryAvailableVersions
-                .filter { !it.contains("+dev", ignoreCase = true) }
-                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
-                .firstOrNull()
-            
-            if (latestVersion != null) {
-                logger.info("Found latest ${type.displayName} version in Maven: $latestVersion")
-                cacheLibrary(composeVersion, type, latestVersion, isFromFallback = true)
-                return
-            }
-        }
-        
+        // 1. Try nearby Compose versions (bundles + GitHub release pages)
         val availableVersions = getAvailableVersions()
-        logger.info("Available Compose versions from Maven: ${availableVersions.take(10).joinToString()}")
-        
-        // For NavigationEvent and Navigation3, which appeared later, try newer versions first
+
         val shouldTryNewerVersions = (type == LibraryType.NAVIGATION_EVENT || type == LibraryType.NAVIGATION3) &&
                                       !VersionComparison.isComposeVersionLessThan(composeVersion, "1.10.0-alpha02")
-        
+
         val fallbackVersions = if (shouldTryNewerVersions) {
             availableVersions
                 .filter { version ->
-                    !version.contains("+dev") && 
+                    !version.contains("+dev") &&
                     !VersionComparison.isComposeVersionLessThan(version, composeVersion) &&
                     version != composeVersion
                 }
@@ -268,40 +235,31 @@ class LibraryVersionResolver(
         } else {
             ComposeFallbackVersionGenerator.generateFallbackVersions(composeVersion, availableVersions)
         }
-        
-        logger.info("Trying ${fallbackVersions.size} fallback versions for ${type.displayName}: ${fallbackVersions.joinToString()}")
-        
+
         for (fallbackVersion in fallbackVersions) {
-            logger.info("Checking fallback version $fallbackVersion for ${type.displayName}")
-            
             val fallbackBundle = ComposeVersions.getLibraryBundle(fallbackVersion)
             val fallbackBundleVersion = fallbackBundle?.getVersion(type)
             if (fallbackBundleVersion != null) {
-                logger.info("Found ${type.displayName} in bundle for fallback version $fallbackVersion: $fallbackBundleVersion")
                 cacheLibrary(composeVersion, type, fallbackBundleVersion, isFromFallback = true)
                 return
             }
-            logger.info("Not found in bundle for $fallbackVersion, checking GitHub...")
-            
+
             delay(100)
-            
+
             val fallbackMutex = synchronized(webUIFetchMutexes) {
                 webUIFetchMutexes.getOrPut(fallbackVersion) { Mutex() }
             }
-            
+
             val fallbackResult = fallbackMutex.withLock {
                 val cached = synchronized(webUIResultsCache) {
                     webUIResultsCache[fallbackVersion]
                 }
-                
+
                 if (cached != null) {
-                    logger.info("Using cached GitHub result for $fallbackVersion")
                     if (cached.pageExists) cached else null
                 } else {
-                    logger.info("Fetching GitHub for $fallbackVersion...")
                     try {
                         val fetched = libraryVersionService.fetchLibraryVersionsFromWebUI(fallbackVersion)
-                        logger.info("GitHub fetch result for $fallbackVersion: pageExists=${fetched.pageExists}, libraries=${fetched.versions.size}")
                         synchronized(webUIResultsCache) {
                             webUIResultsCache[fallbackVersion] = fetched
                         }
@@ -312,27 +270,30 @@ class LibraryVersionResolver(
                     }
                 }
             }
-            
+
             val fallbackLibVersion = fallbackResult?.versions?.get(type)
             if (fallbackLibVersion != null) {
-                logger.info("Found ${type.displayName} in web UI for fallback version $fallbackVersion: $fallbackLibVersion")
                 cacheLibrary(composeVersion, type, fallbackLibVersion, isFromFallback = true)
                 return
-            } else {
-                logger.info("${type.displayName} not found in GitHub for $fallbackVersion")
             }
         }
-        
-        logger.warn("No version found for ${type.displayName} after checking all fallback versions and GitHub, trying bundle as last resort")
-        
-        val bundle = ComposeVersions.getLibraryBundle(composeVersion)
-        val bundleVersion = bundle?.getVersion(type)
-        if (bundleVersion != null) {
-            logger.info("Using bundle version as last resort: $bundleVersion")
-            cacheLibrary(composeVersion, type, bundleVersion, isFromFallback = true)
-            return
+
+        // 2. If Compose fallback didn't help, try latest library version from Maven
+        val libraryAvailableVersions = getLibraryAvailableVersions(type)
+        if (libraryAvailableVersions.isNotEmpty()) {
+            val latestVersion = libraryAvailableVersions
+                .filter { !it.contains("+dev", ignoreCase = true) }
+                .sortedWith(compareByDescending { ComposeVersionComparator.parse(it) })
+                .firstOrNull()
+
+            if (latestVersion != null) {
+                cacheLibrary(composeVersion, type, latestVersion, isFromFallback = true)
+                return
+            }
         }
-        
+
+        logger.warn("No version found for ${type.displayName} after all fallback strategies")
+
         cacheLibrary(composeVersion, type, "NOT_FOUND", isFromFallback = false)
     }
     

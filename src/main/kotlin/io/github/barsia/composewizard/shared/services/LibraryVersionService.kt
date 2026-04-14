@@ -5,7 +5,6 @@ import io.github.barsia.composewizard.shared.utils.ComposeVersionComparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Base class for library version services.
@@ -34,10 +33,7 @@ open class LibraryVersionService {
             
             if (connection.responseCode == 200) {
                 connection.inputStream.use { input ->
-                    val dbFactory = DocumentBuilderFactory.newInstance()
-                    val dBuilder = dbFactory.newDocumentBuilder()
-                    val doc = dBuilder.parse(input)
-                    doc.documentElement.normalize()
+                    val doc = SafeXmlParser.parse(input)
                     
                     val versionList = doc.getElementsByTagName("version")
                     val versions = mutableListOf<String>()

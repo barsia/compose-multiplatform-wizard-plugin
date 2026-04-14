@@ -16,20 +16,19 @@ java {
 }
 
 group = "io.github.barsia"
-version = "0.1.1"
+version = "0.1.2"
 
 // Platform configuration:
-// - default target: Android Studio (downloaded from remote repositories)
-// - IDEA target: pass -PrunIntellijIdea=true
+// - default target: IntelliJ IDEA (resolves reliably in clean environments)
+// - Android Studio target: provide -PandroidStudioLocalPath=... or set androidStudio.local.path in local.properties
 val runIntellijIdea = project.findProperty("runIntellijIdea")?.toString()?.toBoolean() ?: false
-val intellijIdeaVersion = project.findProperty("intellijIdeaVersion")?.toString() ?: "2025.3.2"
+val intellijIdeaVersion = project.findProperty("intellijIdeaVersion")?.toString() ?: "2025.3.4"
 val pluginVerifierIdeVersion = project.findProperty("pluginVerifierIdeVersion")?.toString()
 val pluginVerifierIdeParts = pluginVerifierIdeVersion?.split("-", limit = 2)
 // Pinned to the latest 253 AS build that is resolvable by the current intellij-platform-gradle-plugin.
 // Newer Panda patch/rc/canary artifacts use codename-based filenames and are not yet resolvable via androidStudio(...).
 val androidStudioVersion = project.findProperty("androidStudioVersion")?.toString() ?: "2025.3.1.5"
 
-// Analytics secrets from local.properties (NOT committed to git)
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -39,9 +38,7 @@ if (localPropertiesFile.exists()) {
 val androidStudioPathFromGradleProperty = project.findProperty("androidStudioLocalPath")?.toString()?.takeIf { it.isNotBlank() }
 val androidStudioPathFromLocalProperties = localProperties.getProperty("androidStudio.local.path")?.takeIf { it.isNotBlank() }
 val androidStudioLocalPath = androidStudioPathFromGradleProperty ?: androidStudioPathFromLocalProperties
-
-val ga4MeasurementId: String = localProperties.getProperty("ga4.measurement.id") ?: "G-XXXXXXXXXX"
-val ga4ApiSecret: String = localProperties.getProperty("ga4.api.secret") ?: "your_api_secret_here"
+val useAndroidStudio = !runIntellijIdea && androidStudioLocalPath != null
 
 repositories {
     mavenCentral()
@@ -54,16 +51,12 @@ repositories {
 dependencies {
     intellijPlatform {
         // Base platform:
-        // - IDEA with -PrunIntellijIdea=true
-        // - otherwise Android Studio (downloaded by default)
-        if (runIntellijIdea) {
-            intellijIdea(intellijIdeaVersion)
-        } else if (androidStudioLocalPath != null) {
-            local(androidStudioLocalPath)
+        // - default: IntelliJ IDEA
+        // - Android Studio only when a local installation path is provided
+        if (useAndroidStudio) {
+            local(androidStudioLocalPath!!)
         } else {
-            androidStudio(androidStudioVersion) {
-                useInstaller = false
-            }
+            intellijIdea(intellijIdeaVersion)
         }
         
         // Gradle support
@@ -71,7 +64,7 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         
         // Android plugin - only for AS
-        if (!runIntellijIdea) {
+        if (useAndroidStudio) {
             bundledPlugin("org.jetbrains.android")
         }
         
@@ -122,54 +115,28 @@ intellijPlatform {
     
     pluginConfiguration {
         ideaVersion {
-            // AS Panda 1 (253.29346) has broken plugin installation; minimum is Panda 2 (253.30387)
-            sinceBuild = "253.30387"
+            sinceBuild = "253.30387.90"
             untilBuild = "263.*"
         }
 
         name = "Compose Multiplatform Wizard"
         
         changeNotes = """
-            <h3>0.1.1</h3>
+            <h3>0.1.2</h3>
             <ul>
-              <li>Declared Gradle plugin dependency required for IntelliJ IDEA compatibility checks</li>
-              <li>Updated Marketplace metadata, privacy links, and issue tracker links for the public repository</li>
-              <li>Relicensed the project under Apache License 2.0</li>
-            </ul>
-
-            <h3>0.1.0</h3>
-            <ul>
-              <li>First public release</li>
-              <li>Create Compose Multiplatform projects for Desktop, Android, iOS, and Web</li>
-              <li>Works in IntelliJ IDEA and Android Studio (build 253+)</li>
-              <li>Automatic library version resolution from Maven Central</li>
+              <li>Compatibility: IntelliJ Platform 253.30387.90+ (IDEA 2025.3+, Android Studio Panda 2+)</li>
+              <li>Added "Add AGENTS.md / CLAUDE.md blueprint" option for AI coding assistants</li>
+              <li>Fixed library version resolution for dev Compose versions</li>
+              <li>Fixed Refresh button not invalidating library version cache</li>
+              <li>Updated dev Maven repository URL</li>
+              <li>Hardened remote XML parsing against XXE in version resolution code paths</li>
+              <li>Removed plugin analytics and consent flow</li>
             </ul>
         """.trimIndent()
     }
 }
 
 tasks {
-    // Generate analytics config at build time from local.properties
-    val generateAnalyticsConfig by registering {
-        val outputDir = layout.buildDirectory.dir("generated/resources")
-        outputs.dir(outputDir)
-        
-        doLast {
-            val configFile = outputDir.get().asFile.resolve("analytics.properties")
-            configFile.parentFile.mkdirs()
-            configFile.writeText("""
-                # Auto-generated from local.properties - DO NOT EDIT
-                ga4.measurement.id=$ga4MeasurementId
-                ga4.api.secret=$ga4ApiSecret
-            """.trimIndent())
-        }
-    }
-    
-    processResources {
-        dependsOn(generateAnalyticsConfig)
-        from(layout.buildDirectory.dir("generated/resources"))
-    }
-    
     test {
         useJUnitPlatform()
         testLogging {
@@ -190,7 +157,7 @@ tasks {
     buildPlugin {
         archiveBaseName.set("compose-multiplatform-wizard-plugin")
         archiveVersion.set(project.version.toString())
-        // Universal distribution for both IDEA and AS
+        // Single distribution for both IDEA and AS
         archiveClassifier.set("")
     }
 }

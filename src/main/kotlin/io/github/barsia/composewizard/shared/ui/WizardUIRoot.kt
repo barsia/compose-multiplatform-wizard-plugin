@@ -25,6 +25,7 @@ fun WizardUIRoot(
     targetWeb: Boolean,
     initGit: Boolean,
     includeTests: Boolean,
+    includeAgentsMd: Boolean,
     enableDevVersionsValue: Boolean,
     builder: ComposeMultiplatformModuleBuilder,
     revalidationTrigger: Int,
@@ -71,6 +72,7 @@ fun WizardUIRoot(
         state.web = targetWeb
         state.git = initGit
         state.tests = includeTests
+        state.agentsMd = includeAgentsMd
         state.devCheckboxVisible = devCheckboxVisible
         state.enableDevVersions = enableDevVersions
     }

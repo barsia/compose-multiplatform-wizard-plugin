@@ -8,58 +8,35 @@ This Privacy Policy explains how the Compose Multiplatform Wizard plugin ("the P
 
 ## Data Collection
 
-### What We Collect
+The Plugin does **not** collect usage analytics, personal data, project contents, or telemetry.
 
-The Plugin collects **anonymous usage statistics** using Google Analytics to help improve the user experience. The data collected includes:
+## Network Access
 
-- **Plugin version** - To understand which version users are running
-- **IDE type** - Whether you're using IntelliJ IDEA or Android Studio
-- **Feature usage** - Which features you use (e.g., which platforms you select, which options you enable)
-- **Anonymous usage patterns** - How you interact with the wizard
+The Plugin performs on-demand network requests only when needed for version resolution and compatibility data shown in the wizard. These requests go to public endpoints such as:
 
-### What We DON'T Collect
+- JetBrains-hosted Compose metadata
+- GitHub release/tag pages used for Compose version checks
+- Maven Central metadata for library versions
 
-We **do not** collect:
+These requests are not used to identify you and are not linked to an analytics profile.
 
-- Your name, email, or any personal information
-- Your IP address (anonymized by Google Analytics)
-- Your project names, code, or any project-specific data
-- Any sensitive or confidential information
-- Any data that can identify you personally
+## Local Storage
 
-## How We Use Your Data
+The Plugin stores only local UI and cache state required for normal operation, such as:
 
-The collected data is used solely to:
+- whether developer versions are enabled
+- whether optional UI sections are expanded
+- cached version metadata
 
-- Understand which features are most used
-- Identify areas for improvement
-- Fix bugs and improve stability
-- Make informed decisions about future development
-
-## Your Consent
-
-- **Explicit consent required**: The Plugin will ask for your permission before collecting any data
-- **First launch dialog**: You'll see a consent dialog when you first use the Plugin
-- **Opt-out anytime**: You can disable analytics at any time in Settings → Tools → Compose Multiplatform Wizard
-
-## Data Storage and Security
-
-- Data is sent to Google Analytics servers
-- Google Analytics complies with GDPR and other privacy regulations
-- IP addresses are anonymized
-- No personal data is stored by the Plugin
-
-## Third-Party Services
-
-The Plugin uses **Google Analytics** for collecting anonymous usage statistics. Google Analytics' privacy policy can be found at: https://policies.google.com/privacy
+This state stays inside the IDE configuration/cache directories on your machine.
 
 ## Your Rights (GDPR)
 
 If you are in the European Union, you have the right to:
 
-- **Access**: Request information about what data we collect
-- **Deletion**: Request deletion of your data
-- **Opt-out**: Disable analytics at any time
+- **Access**: Request information about the data practices described here
+- **Deletion**: Delete local IDE/plugin state from your machine
+- **Restriction**: Block the Plugin's network access using your system or IDE controls
 
 ## Changes to This Policy
 
@@ -75,8 +52,7 @@ This Plugin complies with:
 
 - **GDPR** (General Data Protection Regulation)
 - **JetBrains Marketplace Content Moderation Policy**
-- **Google Analytics Terms of Service**
 
 ---
 
-**Summary**: We only collect anonymous usage data with your explicit consent, and you can disable it anytime. No personal information is collected.
+**Summary**: The Plugin does not collect analytics or personal data. It only performs on-demand requests to public metadata endpoints needed for its functionality.

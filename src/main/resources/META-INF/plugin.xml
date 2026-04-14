@@ -1,12 +1,12 @@
 <idea-plugin allow-bundled-update="true" require-restart="true">
-  <id>io.github.barsia.compose-multiplatform-wizard</id>
+  <id>io.github.heisiar.compose-multiplatform-wizard</id>
   <name>Compose Multiplatform Wizard</name>
-  <vendor url="https://github.com/barsia">barsia</vendor>
+  <vendor url="https://barsia.github.io">Siarhei Baradulia</vendor>
   
   <description><![CDATA[
     <p>
       A project wizard for creating <strong>Compose Multiplatform</strong> applications.
-      Works in <strong>IntelliJ IDEA 2025.3.2+</strong> and <strong>Android Studio Panda 2 (2025.3.2)+</strong>.
+      Works in <strong>IntelliJ IDEA 2026.1+</strong> and <strong>Android Studio builds based on IntelliJ Platform 261+</strong>.
     </p>
     
     <h3>Features:</h3>
@@ -26,23 +26,9 @@
     </ul>
     
     <p>
-      <strong>License:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/LICENSE">Apache License 2.0</a><br/>
-      <strong>Developer EULA:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/EULA.md">EULA</a>
-    </p>
-
-    <p>
-      <strong>Privacy:</strong> This plugin collects anonymous usage statistics with your explicit consent to help improve the user experience.
-      No personal data is collected. You can opt-out anytime in Settings.
-      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md">Privacy Policy</a>
-    </p>
-
-    <p>
-      <strong>Source code:</strong> <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin">github.com/barsia/compose-multiplatform-wizard-plugin</a>
-    </p>
-
-    <p>
-      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/issues/new?template=bug_report.yml">Report a bug</a> | 
-      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/issues/new?template=feature_request.yml">Request a feature</a>
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/EULA.md">Developer EULA</a> |
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin/blob/main/PRIVACY.md">Privacy Policy</a> |
+      <a href="https://github.com/barsia/compose-multiplatform-wizard-plugin">Source code</a>
     </p>
   ]]></description>
   
@@ -77,15 +63,5 @@
     <applicationService 
       serviceImplementation="io.github.barsia.composewizard.shared.services.ComposeVersionCache"/>
     
-    <!-- Analytics service (Google Analytics with user consent) -->
-    <applicationService 
-      serviceImplementation="io.github.barsia.composewizard.shared.analytics.AnalyticsService"/>
-    
-    <!-- Settings UI -->
-    <applicationConfigurable 
-      parentId="tools"
-      instance="io.github.barsia.composewizard.shared.settings.WizardSettingsConfigurable"
-      id="io.github.barsia.composewizard.settings"
-      displayName="Compose Multiplatform Wizard"/>
   </extensions>
 </idea-plugin>

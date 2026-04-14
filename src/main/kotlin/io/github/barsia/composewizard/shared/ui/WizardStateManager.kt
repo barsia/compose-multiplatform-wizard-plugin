@@ -1,8 +1,13 @@
 package io.github.barsia.composewizard.shared.ui
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import io.github.barsia.composewizard.shared.WizardDefaults
-import io.github.barsia.composewizard.shared.analytics.AnalyticsConsentDialog
 import io.github.barsia.composewizard.shared.analytics.AnalyticsLogger
 import io.github.barsia.composewizard.shared.models.ComposeMultiplatformModuleBuilder
 import java.io.File
@@ -18,6 +23,7 @@ class WizardState {
     var web by mutableStateOf(false)
     var git by mutableStateOf(false)
     var tests by mutableStateOf(false)
+    var agentsMd by mutableStateOf(false)
     var enableDevVersions by mutableStateOf(false)
     var devCheckboxVisible by mutableStateOf(false)
     var isLocationSynced by mutableStateOf(true)
@@ -229,10 +235,6 @@ fun SetupAnalytics(
     projectIdValue: String
 ) {
     LaunchedEffect(Unit) {
-        // Show consent dialog if needed (first launch)
-        AnalyticsConsentDialog.showIfNeeded()
-        
-        // Log wizard opened (only if consent given)
         AnalyticsLogger.logWizardOpened()
     }
     
@@ -242,4 +244,3 @@ fun SetupAnalytics(
         }
     }
 }
-
